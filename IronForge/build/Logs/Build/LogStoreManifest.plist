@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>12</integer>
+	<key>logs</key>
+	<dict>
+		<key>F76ADD57-9996-4FCF-8B33-8F24FA089E0B</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>F76ADD57-9996-4FCF-8B33-8F24FA089E0B.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>6</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>IronForge project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>IronForge</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project IronForge with scheme IronForge</string>
+			<key>timeStartedRecording</key>
+			<real>790726862.948897</real>
+			<key>timeStoppedRecording</key>
+			<real>790726874.01568997</real>
+			<key>title</key>
+			<string>Building project IronForge with scheme IronForge</string>
+			<key>uniqueIdentifier</key>
+			<string>F76ADD57-9996-4FCF-8B33-8F24FA089E0B</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

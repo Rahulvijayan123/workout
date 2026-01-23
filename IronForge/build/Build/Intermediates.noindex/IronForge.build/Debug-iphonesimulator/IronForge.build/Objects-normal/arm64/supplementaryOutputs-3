@@ -1,0 +1,23 @@
+{
+  "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/FrequencyView.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/FrequencyView.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/FrequencyView.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/FrequencyView.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/FrequencyView.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/FrequencyView.swiftdeps"
+  },
+  "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/GoalsView.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GoalsView.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GoalsView.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GoalsView.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GoalsView.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GoalsView.swiftdeps"
+  },
+  "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/GymTypeView.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GymTypeView.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GymTypeView.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GymTypeView.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GymTypeView.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/GymTypeView.swiftdeps"
+  }
+}

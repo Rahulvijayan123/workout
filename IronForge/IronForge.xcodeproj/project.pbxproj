@@ -1,0 +1,573 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1A8A3C58DCD14D1184D03693 /* ExerciseLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDF08A0B7BC4620991935C8 /* ExerciseLoader.swift */; };
+
+		4CE4D84D31D44A29B396423E /* FreeExerciseDBModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 538347BCF895478EB1E85681 /* FreeExerciseDBModels.swift */; };
+
+		98D4B38AB1B94CEB82F370B3 /* exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = AA20921D9E5C475483C6997A /* exercises.json */; };
+
+		AAA0000000000001 /* IronForgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000001 /* IronForgeApp.swift */; };
+		AAA0000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000002 /* ContentView.swift */; };
+		AAA0000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BBB0000000000003 /* Assets.xcassets */; };
+		AAA0000000000004 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000004 /* UserProfile.swift */; };
+		AAA0000000000005 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000005 /* DesignSystem.swift */; };
+		AAA0000000000006 /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000006 /* OnboardingContainerView.swift */; };
+		AAA0000000000007 /* HealthKitOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000007 /* HealthKitOnboardingView.swift */; };
+		AAA0000000000008 /* PersonalInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000008 /* PersonalInfoView.swift */; };
+		AAA0000000000009 /* ExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000009 /* ExperienceView.swift */; };
+		AAA0000000000010 /* GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000010 /* GoalsView.swift */; };
+		AAA0000000000011 /* FrequencyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000011 /* FrequencyView.swift */; };
+		AAA0000000000012 /* GymTypeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000012 /* GymTypeView.swift */; };
+		AAA0000000000013 /* WorkoutSplitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000013 /* WorkoutSplitView.swift */; };
+		AAA0000000000014 /* MaxesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000014 /* MaxesView.swift */; };
+		AAA0000000000015 /* FitnessDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000015 /* FitnessDetailsView.swift */; };
+		AAA0000000000016 /* OnboardingCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000016 /* OnboardingCompleteView.swift */; };
+		AAA0000000000017 /* MainAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000017 /* MainAppView.swift */; };
+		AAA0000000000018 /* HealthKitConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000018 /* HealthKitConnectView.swift */; };
+		AAA0000000000019 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000019 /* HealthKitService.swift */; };
+		AAA0000000000020 /* HealthKitMetric.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000020 /* HealthKitMetric.swift */; };
+		AAA0000000000021 /* HealthKitSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000021 /* HealthKitSelection.swift */; };
+		AAA0000000000022 /* HealthKitDateHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000022 /* HealthKitDateHelpers.swift */; };
+		AAA0000000000023 /* HKWorkoutSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000023 /* HKWorkoutSummary.swift */; };
+		AAA0000000000024 /* DailyBiometrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000024 /* DailyBiometrics.swift */; };
+		AAA0000000000025 /* DailyBiometricsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000025 /* DailyBiometricsRepository.swift */; };
+		AAA0000000000026 /* ReadinessPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000026 /* ReadinessPreview.swift */; };
+		AAA0000000000027 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000027 /* Exercise.swift */; };
+		AAA0000000000028 /* WorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000028 /* WorkoutModels.swift */; };
+		AAA0000000000029 /* ProgressionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000029 /* ProgressionEngine.swift */; };
+		AAA0000000000030 /* ExerciseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000030 /* ExerciseRepository.swift */; };
+		AAA0000000000031 /* WorkoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000031 /* WorkoutStore.swift */; };
+		AAA0000000000032 /* WorkoutsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000032 /* WorkoutsRootView.swift */; };
+		AAA0000000000033 /* TrainingEngine in Frameworks */ = {isa = PBXBuildFile; productRef = PPP0000000000001 /* TrainingEngine */; };
+		AAA0000000000034 /* TrainingEngineBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000034 /* TrainingEngineBridge.swift */; };
+		AAA0000000000035 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000035 /* SupabaseConfig.swift */; };
+		AAA0000000000036 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000036 /* SupabaseService.swift */; };
+		AAA0000000000037 /* DataSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000037 /* DataSyncService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		6DDF08A0B7BC4620991935C8 /* ExerciseLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repositories/ExerciseLoader.swift; sourceTree = SOURCE_ROOT; };
+
+		538347BCF895478EB1E85681 /* FreeExerciseDBModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/FreeExerciseDBModels.swift; sourceTree = SOURCE_ROOT; };
+
+		AA20921D9E5C475483C6997A /* exercises.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/exercises.json; sourceTree = SOURCE_ROOT; };
+
+		BBB0000000000001 /* IronForgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IronForgeApp.swift; sourceTree = SOURCE_ROOT; };
+		BBB0000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		BBB0000000000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		BBB0000000000004 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		BBB0000000000005 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		BBB0000000000006 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
+		BBB0000000000007 /* HealthKitOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitOnboardingView.swift; sourceTree = "<group>"; };
+		BBB0000000000008 /* PersonalInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalInfoView.swift; sourceTree = "<group>"; };
+		BBB0000000000009 /* ExperienceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperienceView.swift; sourceTree = "<group>"; };
+		BBB0000000000010 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsView.swift; sourceTree = "<group>"; };
+		BBB0000000000011 /* FrequencyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequencyView.swift; sourceTree = "<group>"; };
+		BBB0000000000012 /* GymTypeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymTypeView.swift; sourceTree = "<group>"; };
+		BBB0000000000013 /* WorkoutSplitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSplitView.swift; sourceTree = "<group>"; };
+		BBB0000000000014 /* MaxesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaxesView.swift; sourceTree = "<group>"; };
+		BBB0000000000015 /* FitnessDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessDetailsView.swift; sourceTree = "<group>"; };
+		BBB0000000000016 /* OnboardingCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCompleteView.swift; sourceTree = "<group>"; };
+		BBB0000000000017 /* MainAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainAppView.swift; sourceTree = "<group>"; };
+		BBB0000000000018 /* HealthKitConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitConnectView.swift; sourceTree = "<group>"; };
+		BBB0000000000019 /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
+		BBB0000000000020 /* HealthKitMetric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitMetric.swift; sourceTree = "<group>"; };
+		BBB0000000000021 /* HealthKitSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitSelection.swift; sourceTree = "<group>"; };
+		BBB0000000000022 /* HealthKitDateHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitDateHelpers.swift; sourceTree = "<group>"; };
+		BBB0000000000023 /* HKWorkoutSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HKWorkoutSummary.swift; sourceTree = "<group>"; };
+		BBB0000000000024 /* DailyBiometrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyBiometrics.swift; sourceTree = "<group>"; };
+		BBB0000000000025 /* DailyBiometricsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyBiometricsRepository.swift; sourceTree = "<group>"; };
+		BBB0000000000026 /* ReadinessPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessPreview.swift; sourceTree = "<group>"; };
+		BBB0000000000027 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exercise.swift; sourceTree = "<group>"; };
+		BBB0000000000028 /* WorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutModels.swift; sourceTree = "<group>"; };
+		BBB0000000000029 /* ProgressionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressionEngine.swift; sourceTree = "<group>"; };
+		BBB0000000000030 /* ExerciseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseRepository.swift; sourceTree = "<group>"; };
+		BBB0000000000031 /* WorkoutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutStore.swift; sourceTree = "<group>"; };
+		BBB0000000000032 /* WorkoutsRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutsRootView.swift; sourceTree = "<group>"; };
+		BBB0000000000034 /* TrainingEngineBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingEngineBridge.swift; sourceTree = "<group>"; };
+		BBB0000000000035 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
+		BBB0000000000036 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		BBB0000000000037 /* DataSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSyncService.swift; sourceTree = "<group>"; };
+		CCC0000000000001 /* IronForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IronForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DDD0000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAA0000000000033 /* TrainingEngine in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EEE0000000000001 = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000001 /* IronForgeApp.swift */,
+				EEE0000000000002 /* Views */,
+				EEE0000000000003 /* Models */,
+				EEE0000000000004 /* Design */,
+				EEE0000000000007 /* HealthKit */,
+				EEE0000000000008 /* Repositories */,
+				EEE0000000000010 /* Services */,
+				EEE0000000000011 /* Config */,
+				EEE0000000000009 /* Resources */,
+				BBB0000000000003 /* Assets.xcassets */,
+				EEE0000000000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EEE0000000000002 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000002 /* ContentView.swift */,
+				BBB0000000000017 /* MainAppView.swift */,
+				BBB0000000000032 /* WorkoutsRootView.swift */,
+				EEE0000000000006 /* Onboarding */,
+			);
+			path = Views;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000003 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000004 /* UserProfile.swift */,
+				BBB0000000000024 /* DailyBiometrics.swift */,
+				BBB0000000000026 /* ReadinessPreview.swift */,
+				BBB0000000000027 /* Exercise.swift */,
+				538347BCF895478EB1E85681 /* FreeExerciseDBModels.swift */,
+				BBB0000000000028 /* WorkoutModels.swift */,
+				BBB0000000000029 /* ProgressionEngine.swift */,
+			);
+			path = Models;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000004 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000005 /* DesignSystem.swift */,
+			);
+			path = Design;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000009 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				AA20921D9E5C475483C6997A /* exercises.json */,
+			);
+			path = Resources;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CCC0000000000001 /* IronForge.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EEE0000000000006 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000006 /* OnboardingContainerView.swift */,
+				BBB0000000000007 /* HealthKitOnboardingView.swift */,
+				BBB0000000000018 /* HealthKitConnectView.swift */,
+				BBB0000000000008 /* PersonalInfoView.swift */,
+				BBB0000000000009 /* ExperienceView.swift */,
+				BBB0000000000010 /* GoalsView.swift */,
+				BBB0000000000011 /* FrequencyView.swift */,
+				BBB0000000000012 /* GymTypeView.swift */,
+				BBB0000000000013 /* WorkoutSplitView.swift */,
+				BBB0000000000014 /* MaxesView.swift */,
+				BBB0000000000015 /* FitnessDetailsView.swift */,
+				BBB0000000000016 /* OnboardingCompleteView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		EEE0000000000007 /* HealthKit */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000019 /* HealthKitService.swift */,
+				BBB0000000000020 /* HealthKitMetric.swift */,
+				BBB0000000000021 /* HealthKitSelection.swift */,
+				BBB0000000000022 /* HealthKitDateHelpers.swift */,
+				BBB0000000000023 /* HKWorkoutSummary.swift */,
+			);
+			path = HealthKit;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000008 /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000025 /* DailyBiometricsRepository.swift */,
+				BBB0000000000030 /* ExerciseRepository.swift */,
+				6DDF08A0B7BC4620991935C8 /* ExerciseLoader.swift */,
+				BBB0000000000031 /* WorkoutStore.swift */,
+			);
+			path = Repositories;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000010 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000034 /* TrainingEngineBridge.swift */,
+				BBB0000000000036 /* SupabaseService.swift */,
+				BBB0000000000037 /* DataSyncService.swift */,
+			);
+			path = Services;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000011 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				BBB0000000000035 /* SupabaseConfig.swift */,
+			);
+			path = Config;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FFF0000000000001 /* IronForge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = GGG0000000000001 /* Build configuration list for PBXNativeTarget "IronForge" */;
+			buildPhases = (
+				HHH0000000000001 /* Sources */,
+				DDD0000000000001 /* Frameworks */,
+				III0000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = IronForge;
+			packageProductDependencies = (
+				PPP0000000000001 /* TrainingEngine */,
+			);
+			productName = IronForge;
+			productReference = CCC0000000000001 /* IronForge.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		JJJ0000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					FFF0000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = KKK0000000000001 /* Build configuration list for PBXProject "IronForge" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EEE0000000000001;
+			packageReferences = (
+				QQQ0000000000001 /* XCLocalSwiftPackageReference "TrainingEngine" */,
+			);
+			productRefGroup = EEE0000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FFF0000000000001 /* IronForge */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		III0000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98D4B38AB1B94CEB82F370B3 /* exercises.json in Resources */,
+				AAA0000000000003 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		HHH0000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A8A3C58DCD14D1184D03693 /* ExerciseLoader.swift in Sources */,
+				4CE4D84D31D44A29B396423E /* FreeExerciseDBModels.swift in Sources */,
+				AAA0000000000001 /* IronForgeApp.swift in Sources */,
+				AAA0000000000002 /* ContentView.swift in Sources */,
+				AAA0000000000004 /* UserProfile.swift in Sources */,
+				AAA0000000000005 /* DesignSystem.swift in Sources */,
+				AAA0000000000006 /* OnboardingContainerView.swift in Sources */,
+				AAA0000000000007 /* HealthKitOnboardingView.swift in Sources */,
+				AAA0000000000008 /* PersonalInfoView.swift in Sources */,
+				AAA0000000000009 /* ExperienceView.swift in Sources */,
+				AAA0000000000010 /* GoalsView.swift in Sources */,
+				AAA0000000000011 /* FrequencyView.swift in Sources */,
+				AAA0000000000012 /* GymTypeView.swift in Sources */,
+				AAA0000000000013 /* WorkoutSplitView.swift in Sources */,
+				AAA0000000000014 /* MaxesView.swift in Sources */,
+				AAA0000000000015 /* FitnessDetailsView.swift in Sources */,
+				AAA0000000000016 /* OnboardingCompleteView.swift in Sources */,
+				AAA0000000000017 /* MainAppView.swift in Sources */,
+				AAA0000000000018 /* HealthKitConnectView.swift in Sources */,
+				AAA0000000000019 /* HealthKitService.swift in Sources */,
+				AAA0000000000020 /* HealthKitMetric.swift in Sources */,
+				AAA0000000000021 /* HealthKitSelection.swift in Sources */,
+				AAA0000000000022 /* HealthKitDateHelpers.swift in Sources */,
+				AAA0000000000023 /* HKWorkoutSummary.swift in Sources */,
+				AAA0000000000024 /* DailyBiometrics.swift in Sources */,
+				AAA0000000000025 /* DailyBiometricsRepository.swift in Sources */,
+				AAA0000000000026 /* ReadinessPreview.swift in Sources */,
+				AAA0000000000027 /* Exercise.swift in Sources */,
+				AAA0000000000028 /* WorkoutModels.swift in Sources */,
+				AAA0000000000029 /* ProgressionEngine.swift in Sources */,
+				AAA0000000000030 /* ExerciseRepository.swift in Sources */,
+				AAA0000000000031 /* WorkoutStore.swift in Sources */,
+				AAA0000000000032 /* WorkoutsRootView.swift in Sources */,
+				AAA0000000000034 /* TrainingEngineBridge.swift in Sources */,
+				AAA0000000000035 /* SupabaseConfig.swift in Sources */,
+				AAA0000000000036 /* SupabaseService.swift in Sources */,
+				AAA0000000000037 /* DataSyncService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		LLL0000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		LLL0000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		MMM0000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "IronForge reads your health data to personalize your training recommendations.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ironforge.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		MMM0000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "IronForge reads your health data to personalize your training recommendations.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ironforge.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		GGG0000000000001 /* Build configuration list for PBXNativeTarget "IronForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				MMM0000000000001 /* Debug */,
+				MMM0000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		KKK0000000000001 /* Build configuration list for PBXProject "IronForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				LLL0000000000001 /* Debug */,
+				LLL0000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		QQQ0000000000001 /* XCLocalSwiftPackageReference "TrainingEngine" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../ios/Atlas/TrainingEngine;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		PPP0000000000001 /* TrainingEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TrainingEngine;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = JJJ0000000000001 /* Project object */;
+}

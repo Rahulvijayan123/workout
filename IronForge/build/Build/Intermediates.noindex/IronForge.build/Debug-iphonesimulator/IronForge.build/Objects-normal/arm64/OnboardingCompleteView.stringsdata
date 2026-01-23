@@ -1,0 +1,40 @@
+{
+  "source": "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/OnboardingCompleteView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "You're All Set!",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Welcome to IronForge, %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "YOUR PROFILE",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "START TRAINING",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 131
+        }
+      }
+    ]
+  },
+  "version": 1
+}

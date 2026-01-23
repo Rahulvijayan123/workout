@@ -1,0 +1,48 @@
+{
+  "source": "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/GymTypeView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "YOUR GYM",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 16
+        }
+      },
+      {
+        "comment": "",
+        "key": "Where do you train?",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "We'll customize your workouts based on available equipment and optimize exercise selection for your environment.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "WHY THIS MATTERS",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "CONTINUE",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 86
+        }
+      }
+    ]
+  },
+  "version": 1
+}

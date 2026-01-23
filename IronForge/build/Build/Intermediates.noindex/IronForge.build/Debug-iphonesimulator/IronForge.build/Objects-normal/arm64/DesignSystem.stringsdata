@@ -1,0 +1,16 @@
+{
+  "source": "/Users/rahulvijayan/Atlas 3/IronForge/Design/DesignSystem.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 513
+        }
+      }
+    ]
+  },
+  "version": 1
+}

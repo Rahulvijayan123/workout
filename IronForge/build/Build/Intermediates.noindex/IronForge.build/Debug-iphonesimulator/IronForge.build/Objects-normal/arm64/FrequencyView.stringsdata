@@ -1,0 +1,80 @@
+{
+  "source": "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/FrequencyView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "TRAINING FREQUENCY",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "How many days\ncan you train?",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "DAYS PER WEEK",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "1 day",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "7 days",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 95
+        }
+      },
+      {
+        "comment": "",
+        "key": "For optimal muscle growth, 4-5 days per week allows for adequate training volume while ensuring proper recovery.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "TIP",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "CONTINUE",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 168
+        }
+      }
+    ]
+  },
+  "version": 1
+}

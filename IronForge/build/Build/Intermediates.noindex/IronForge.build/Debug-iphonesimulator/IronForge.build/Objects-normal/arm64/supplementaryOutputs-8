@@ -1,0 +1,23 @@
+{
+  "/Users/rahulvijayan/Atlas 3/IronForge/Models/Exercise.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/Exercise.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/Exercise.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/Exercise.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/Exercise.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/Exercise.swiftdeps"
+  },
+  "/Users/rahulvijayan/Atlas 3/IronForge/Models/ReadinessPreview.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/ReadinessPreview.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/ReadinessPreview.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/ReadinessPreview.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/ReadinessPreview.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/ReadinessPreview.swiftdeps"
+  },
+  "/Users/rahulvijayan/Atlas 3/IronForge/Repositories/DailyBiometricsRepository.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/DailyBiometricsRepository.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/DailyBiometricsRepository.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/DailyBiometricsRepository.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/DailyBiometricsRepository.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/DailyBiometricsRepository.swiftdeps"
+  }
+}

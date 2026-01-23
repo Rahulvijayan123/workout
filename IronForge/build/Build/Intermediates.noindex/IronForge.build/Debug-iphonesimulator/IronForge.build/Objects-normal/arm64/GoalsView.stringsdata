@@ -1,0 +1,48 @@
+{
+  "source": "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/GoalsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "YOUR GOALS",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 16
+        }
+      },
+      {
+        "comment": "",
+        "key": "What do you want\nto achieve?",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select all that apply",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld goal%@ selected",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "CONTINUE",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 71
+        }
+      }
+    ]
+  },
+  "version": 1
+}

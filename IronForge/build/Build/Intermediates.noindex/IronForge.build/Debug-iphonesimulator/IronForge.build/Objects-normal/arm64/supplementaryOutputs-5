@@ -1,0 +1,23 @@
+{
+  "/Users/rahulvijayan/Atlas 3/IronForge/Views/MainAppView.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/MainAppView.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/MainAppView.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/MainAppView.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/MainAppView.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/MainAppView.swiftdeps"
+  },
+  "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/HealthKitConnectView.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/HealthKitConnectView.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/HealthKitConnectView.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/HealthKitConnectView.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/HealthKitConnectView.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/HealthKitConnectView.swiftdeps"
+  },
+  "/Users/rahulvijayan/Atlas 3/IronForge/Views/Onboarding/OnboardingCompleteView.swift" : {
+    "const-values" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/OnboardingCompleteView.swiftconstvalues",
+    "dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/OnboardingCompleteView.d",
+    "diagnostics" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/OnboardingCompleteView.dia",
+    "object" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/OnboardingCompleteView.o",
+    "swift-dependencies" : "/Users/rahulvijayan/Atlas 3/IronForge/build/Build/Intermediates.noindex/IronForge.build/Debug-iphonesimulator/IronForge.build/Objects-normal/arm64/OnboardingCompleteView.swiftdeps"
+  }
+}
