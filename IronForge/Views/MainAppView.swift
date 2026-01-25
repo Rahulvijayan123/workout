@@ -1,9 +1,11 @@
 import SwiftUI
 import SwiftData
+import HealthKit
 
 struct MainAppView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var workoutStore: WorkoutStore
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedTab: Tab = .home
     
     enum Tab: CaseIterable {
@@ -64,6 +66,27 @@ struct MainAppView: View {
             CustomTabBar(selectedTab: $selectedTab)
         }
         .ignoresSafeArea(.keyboard)
+        .task {
+            // Refresh HealthKit data on app launch
+            await refreshHealthKitData()
+        }
+    }
+    
+    /// Refresh HealthKit data from the Health app
+    private func refreshHealthKitData() async {
+        let healthKit = HealthKitService()
+        guard healthKit.isAvailable() else {
+            print("[HealthKit] Not available on this device")
+            return
+        }
+        
+        print("[HealthKit] Refreshing data...")
+        let repo = DailyBiometricsRepository(
+            modelContext: modelContext,
+            healthKit: healthKit
+        )
+        await repo.refreshDailyBiometrics(lastNDays: 30)
+        print("[HealthKit] Refresh complete")
     }
 }
 
@@ -301,10 +324,19 @@ struct HomeView: View {
                     )
                     
                     // Recent Sessions
-                    RecentSessionsCard()
+                    RecentSessionsCard(
+                        sessions: workoutStore.sessions,
+                        onSessionTap: { session in
+                            // Navigate to workout details - handled by switching to workouts tab
+                            selectedTab = .workouts
+                        }
+                    )
                     
                     // Week Progress
-                    WeekProgressCard()
+                    WeekProgressCard(
+                        sessions: workoutStore.sessions,
+                        targetDays: appState.userProfile.weeklyFrequency
+                    )
                     
                     Spacer(minLength: 140)
                 }
@@ -813,6 +845,18 @@ struct HexagonShape: Shape {
 
 // MARK: - Recent Sessions Card
 struct RecentSessionsCard: View {
+    let sessions: [WorkoutSession]
+    var onSessionTap: ((WorkoutSession) -> Void)? = nil
+    
+    private var recentSessions: [WorkoutSession] {
+        // Get completed sessions (with endedAt), sorted by date, take first 3
+        sessions
+            .filter { $0.endedAt != nil }
+            .sorted { $0.startedAt > $1.startedAt }
+            .prefix(3)
+            .map { $0 }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -823,14 +867,30 @@ struct RecentSessionsCard: View {
                 
                 Spacer()
                 
-                Text("See All")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color(red: 0.6, green: 0.3, blue: 1.0))
+                if sessions.count > 3 {
+                    Text("See All")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color(red: 0.6, green: 0.3, blue: 1.0))
+                }
             }
             
-            VStack(spacing: 10) {
-                RecentSessionRow(name: "PULL DAY", date: "Yesterday", duration: "52m", sets: 24)
-                RecentSessionRow(name: "PUSH DAY", date: "2 days ago", duration: "48m", sets: 22)
+            if recentSessions.isEmpty {
+                Text("No workouts yet. Start your first session!")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.5))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(recentSessions) { session in
+                        Button {
+                            onSessionTap?(session)
+                        } label: {
+                            RecentSessionRow(session: session)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
         .padding(18)
@@ -874,10 +934,41 @@ struct RecentSessionsCard: View {
 }
 
 struct RecentSessionRow: View {
-    let name: String
-    let date: String
-    let duration: String
-    let sets: Int
+    let session: WorkoutSession
+    
+    private var formattedDate: String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(session.startedAt) {
+            return "Today"
+        } else if calendar.isDateInYesterday(session.startedAt) {
+            return "Yesterday"
+        } else {
+            let days = calendar.dateComponents([.day], from: session.startedAt, to: now).day ?? 0
+            if days < 7 {
+                return "\(days) days ago"
+            } else {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MMM d"
+                return formatter.string(from: session.startedAt)
+            }
+        }
+    }
+    
+    private var duration: String {
+        guard let endedAt = session.endedAt else { return "--" }
+        let seconds = Int(endedAt.timeIntervalSince(session.startedAt))
+        let minutes = seconds / 60
+        if minutes >= 60 {
+            return "\(minutes / 60)h \(minutes % 60)m"
+        }
+        return "\(minutes)m"
+    }
+    
+    private var totalSets: Int {
+        session.exercises.reduce(0) { $0 + $1.sets.filter { $0.isCompleted }.count }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -891,10 +982,10 @@ struct RecentSessionRow: View {
                 )
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(name)
+                Text(session.name.uppercased())
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
-                Text(date)
+                Text(formattedDate)
                     .font(.system(size: 11))
                     .foregroundColor(.white.opacity(0.4))
             }
@@ -905,10 +996,14 @@ struct RecentSessionRow: View {
                 Text(duration)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.7))
-                Text("\(sets) sets")
+                Text("\(totalSets) sets")
                     .font(.system(size: 10))
                     .foregroundColor(.white.opacity(0.35))
             }
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white.opacity(0.3))
         }
         .padding(12)
         .background(
@@ -920,10 +1015,53 @@ struct RecentSessionRow: View {
 
 // MARK: - Week Progress Card
 struct WeekProgressCard: View {
-    let days = ["M", "T", "W", "T", "F", "S", "S"]
-    let completed = [true, true, false, false, false, false, false]
-    let today = 2
+    let sessions: [WorkoutSession]
+    let targetDays: Int // User's weekly frequency goal
+    
+    let dayLabels = ["M", "T", "W", "T", "F", "S", "S"]
     let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
+    
+    private var calendar: Calendar { Calendar.current }
+    
+    /// Get the start of the current week (Monday)
+    private var weekStart: Date {
+        let now = Date()
+        var cal = calendar
+        cal.firstWeekday = 2 // Monday
+        let components = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)
+        return cal.date(from: components) ?? now
+    }
+    
+    /// Array of which days this week have completed sessions
+    private var completedDays: [Bool] {
+        let weekSessions = sessions.filter { session in
+            guard session.endedAt != nil else { return false }
+            return session.startedAt >= weekStart
+        }
+        
+        var completed = [false, false, false, false, false, false, false]
+        for session in weekSessions {
+            // Get weekday (1 = Sunday, 2 = Monday, ..., 7 = Saturday)
+            let weekday = calendar.component(.weekday, from: session.startedAt)
+            // Convert to Monday-first index (0 = Monday, 6 = Sunday)
+            let index = (weekday + 5) % 7
+            if index >= 0 && index < 7 {
+                completed[index] = true
+            }
+        }
+        return completed
+    }
+    
+    /// Index of today (0 = Monday, 6 = Sunday)
+    private var todayIndex: Int {
+        let weekday = calendar.component(.weekday, from: Date())
+        return (weekday + 5) % 7
+    }
+    
+    /// Count of completed days this week
+    private var completedCount: Int {
+        completedDays.filter { $0 }.count
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -935,7 +1073,7 @@ struct WeekProgressCard: View {
                 
                 Spacer()
                 
-                Text("2/4")
+                Text("\(completedCount)/\(targetDays)")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(.white.opacity(0.7))
             }
@@ -943,12 +1081,12 @@ struct WeekProgressCard: View {
             HStack(spacing: 6) {
                 ForEach(0..<7, id: \.self) { i in
                     VStack(spacing: 8) {
-                        Text(days[i])
+                        Text(dayLabels[i])
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(i == today ? neonPurple : .white.opacity(0.4))
+                            .foregroundColor(i == todayIndex ? neonPurple : .white.opacity(0.4))
                         
                         ZStack {
-                            if completed[i] {
+                            if completedDays[i] {
                                 Circle()
                                     .fill(
                                         LinearGradient(
@@ -963,7 +1101,7 @@ struct WeekProgressCard: View {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(.white)
-                            } else if i == today {
+                            } else if i == todayIndex {
                                 Circle()
                                     .fill(Color.white.opacity(0.05))
                                     .frame(width: 32, height: 32)

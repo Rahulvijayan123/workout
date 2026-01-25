@@ -1,7 +1,7 @@
 import Foundation
 import HealthKit
 
-final class HealthKitService {
+final class HealthKitService: @unchecked Sendable {
     private let healthStore: HKHealthStore
     private let calendar: Calendar
     

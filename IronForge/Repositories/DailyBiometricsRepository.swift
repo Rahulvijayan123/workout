@@ -17,34 +17,36 @@ final class DailyBiometricsRepository {
     /// Pulls the last N days of daily aggregates for whichever metrics are currently authorized and stores them locally.
     ///
     /// - Important: This function is intentionally best-effort. It never throws and never blocks onboarding.
+    /// - Note: For read-only HealthKit permissions, we cannot check authorization status reliably.
+    ///   iOS does not reveal whether the user granted read access. We just attempt to fetch data
+    ///   and handle empty results gracefully.
     func refreshDailyBiometrics(lastNDays: Int) async {
         guard lastNDays > 0 else { return }
         guard healthKit.isAvailable() else { return }
         
-        func isAuthorized(_ metric: HealthKitMetric) -> Bool {
-            guard let type = metric.objectType() else { return false }
-            return healthKit.permissionState(for: type) == .authorized
-        }
+        // Note: We don't check authorization status for read permissions because
+        // iOS never tells us whether read access was granted. We just try to fetch
+        // the data and it will return empty if access was denied.
         
-        let sleepByDay: [Date: Double] = isAuthorized(.sleepAnalysis)
-            ? (try? await healthKit.fetchDailySleepMinutes(lastNDays: lastNDays)) ?? [:]
-            : [:]
+        print("[HealthKit] Fetching sleep data...")
+        let sleepByDay: [Date: Double] = (try? await healthKit.fetchDailySleepMinutes(lastNDays: lastNDays)) ?? [:]
+        print("[HealthKit] Sleep data: \(sleepByDay.count) days")
         
-        let hrvByDay: [Date: Double] = isAuthorized(.heartRateVariabilitySDNN)
-            ? (try? await healthKit.fetchDailyAvgHRV(lastNDays: lastNDays)) ?? [:]
-            : [:]
+        print("[HealthKit] Fetching HRV data...")
+        let hrvByDay: [Date: Double] = (try? await healthKit.fetchDailyAvgHRV(lastNDays: lastNDays)) ?? [:]
+        print("[HealthKit] HRV data: \(hrvByDay.count) days")
         
-        let restingHRByDay: [Date: Double] = isAuthorized(.restingHeartRate)
-            ? (try? await healthKit.fetchDailyAvgRestingHR(lastNDays: lastNDays)) ?? [:]
-            : [:]
+        print("[HealthKit] Fetching resting HR data...")
+        let restingHRByDay: [Date: Double] = (try? await healthKit.fetchDailyAvgRestingHR(lastNDays: lastNDays)) ?? [:]
+        print("[HealthKit] Resting HR data: \(restingHRByDay.count) days")
         
-        let activeEnergyByDay: [Date: Double] = isAuthorized(.activeEnergyBurned)
-            ? (try? await healthKit.fetchDailyActiveEnergy(lastNDays: lastNDays)) ?? [:]
-            : [:]
+        print("[HealthKit] Fetching active energy data...")
+        let activeEnergyByDay: [Date: Double] = (try? await healthKit.fetchDailyActiveEnergy(lastNDays: lastNDays)) ?? [:]
+        print("[HealthKit] Active energy data: \(activeEnergyByDay.count) days")
         
-        let stepsByDay: [Date: Double] = isAuthorized(.stepCount)
-            ? (try? await healthKit.fetchDailySteps(lastNDays: lastNDays)) ?? [:]
-            : [:]
+        print("[HealthKit] Fetching steps data...")
+        let stepsByDay: [Date: Double] = (try? await healthKit.fetchDailySteps(lastNDays: lastNDays)) ?? [:]
+        print("[HealthKit] Steps data: \(stepsByDay.count) days")
         
         let allDays = Set(sleepByDay.keys)
             .union(hrvByDay.keys)

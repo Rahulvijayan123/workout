@@ -52,6 +52,8 @@ private struct WorkoutsDashboardView: View {
     let onCreateTemplate: () -> Void
     let onEditTemplate: (WorkoutTemplate) -> Void
     
+    @State private var selectedSession: WorkoutSession?
+    
     private var recentBiometrics: [DailyBiometrics] {
         Array(dailyBiometrics.suffix(60))
     }
@@ -164,11 +166,243 @@ private struct WorkoutsDashboardView: View {
             } else {
                 VStack(spacing: 10) {
                     ForEach(workoutStore.sessions.prefix(5)) { session in
-                        SessionRow(session: session)
+                        SessionRow(session: session) {
+                            selectedSession = session
+                        }
                     }
                 }
             }
         }
+        .sheet(item: $selectedSession) { session in
+            SessionDetailView(session: session)
+        }
+    }
+}
+
+// MARK: - Session Detail View
+private struct SessionDetailView: View {
+    let session: WorkoutSession
+    @Environment(\.dismiss) private var dismiss
+    
+    private var duration: String {
+        guard let endedAt = session.endedAt else { return "--" }
+        let seconds = Int(endedAt.timeIntervalSince(session.startedAt))
+        let minutes = seconds / 60
+        if minutes >= 60 {
+            return "\(minutes / 60)h \(minutes % 60)m"
+        }
+        return "\(minutes)m"
+    }
+    
+    private var totalSets: Int {
+        session.exercises.reduce(0) { $0 + $1.sets.filter { $0.isCompleted }.count }
+    }
+    
+    private var totalVolume: Double {
+        session.exercises.reduce(0) { total, exercise in
+            total + exercise.sets.filter { $0.isCompleted }.reduce(0) { $0 + ($1.weight * Double($1.reps)) }
+        }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.ironBackground
+                    .ignoresSafeArea()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Summary Card
+                        summaryCard
+                        
+                        // Exercises
+                        exercisesSection
+                        
+                        Spacer(minLength: 40)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                }
+            }
+            .navigationTitle(session.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private var summaryCard: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 20) {
+                summaryItem(title: "Duration", value: duration, icon: "clock.fill")
+                summaryItem(title: "Sets", value: "\(totalSets)", icon: "number")
+                summaryItem(title: "Volume", value: formatVolume(totalVolume), icon: "scalemass.fill")
+            }
+            
+            Divider()
+                .background(Color.white.opacity(0.1))
+            
+            HStack {
+                Text(session.startedAt.formatted(date: .complete, time: .shortened))
+                    .font(IronFont.body(13))
+                    .foregroundColor(.ironTextTertiary)
+                
+                Spacer()
+                
+                if session.wasDeload {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Deload")
+                    }
+                    .font(IronFont.bodySemibold(12))
+                    .foregroundColor(.orange)
+                }
+            }
+        }
+        .padding(18)
+        .liquidGlass()
+    }
+    
+    private func summaryItem(title: String, value: String, icon: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.ironPurple)
+            
+            Text(value)
+                .font(IronFont.headerMedium(18))
+                .foregroundColor(.ironTextPrimary)
+            
+            Text(title)
+                .font(IronFont.label(10))
+                .foregroundColor(.ironTextTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var exercisesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("EXERCISES")
+                .font(IronFont.label(11))
+                .tracking(2)
+                .foregroundColor(.ironTextTertiary)
+            
+            VStack(spacing: 12) {
+                ForEach(session.exercises) { exercise in
+                    exerciseCard(exercise)
+                }
+            }
+        }
+    }
+    
+    private func exerciseCard(_ exercise: ExercisePerformance) -> some View {
+        let completedSets = exercise.sets.filter { $0.isCompleted }
+        let maxWeight = completedSets.map(\.weight).max() ?? 0
+        let totalReps = completedSets.map(\.reps).reduce(0, +)
+        
+        return VStack(alignment: .leading, spacing: 12) {
+            // Exercise header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(exercise.exercise.displayName.uppercased())
+                        .font(IronFont.bodySemibold(15))
+                        .tracking(1)
+                        .foregroundColor(.ironTextPrimary)
+                    
+                    Text("\(exercise.exercise.target.capitalized) • \(exercise.exercise.equipment.capitalized)")
+                        .font(IronFont.body(12))
+                        .foregroundColor(.ironTextTertiary)
+                }
+                
+                Spacer()
+                
+                // Completion badge
+                if exercise.isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.ironPurple)
+                }
+            }
+            
+            Divider()
+                .background(Color.white.opacity(0.1))
+            
+            // Summary stats
+            HStack(spacing: 16) {
+                statBadge(label: "Max", value: "\(formatWeight(maxWeight)) lb")
+                statBadge(label: "Sets", value: "\(completedSets.count)")
+                statBadge(label: "Reps", value: "\(totalReps)")
+            }
+            
+            // Individual sets
+            VStack(spacing: 6) {
+                ForEach(Array(completedSets.enumerated()), id: \.offset) { index, set in
+                    HStack {
+                        Text("Set \(index + 1)")
+                            .font(IronFont.body(12))
+                            .foregroundColor(.ironTextTertiary)
+                            .frame(width: 50, alignment: .leading)
+                        
+                        if set.isWarmup {
+                            Text("WARMUP")
+                                .font(IronFont.label(9))
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.orange.opacity(0.2)))
+                        }
+                        
+                        Spacer()
+                        
+                        Text("\(formatWeight(set.weight)) lb × \(set.reps)")
+                            .font(IronFont.bodySemibold(13))
+                            .foregroundColor(.ironTextPrimary)
+                        
+                        if let rpe = set.rpeObserved {
+                            Text("RPE \(Int(rpe))")
+                                .font(IronFont.body(11))
+                                .foregroundColor(.ironTextTertiary)
+                                .frame(width: 45, alignment: .trailing)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .liquidGlass()
+    }
+    
+    private func statBadge(label: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(IronFont.bodySemibold(14))
+                .foregroundColor(.ironTextPrimary)
+            Text(label)
+                .font(IronFont.label(9))
+                .foregroundColor(.ironTextTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.03))
+        .cornerRadius(8)
+    }
+    
+    private func formatWeight(_ w: Double) -> String {
+        if w == floor(w) { return "\(Int(w))" }
+        return String(format: "%.1f", w)
+    }
+    
+    private func formatVolume(_ v: Double) -> String {
+        if v >= 1000 {
+            return String(format: "%.1fk", v / 1000)
+        }
+        return "\(Int(v))"
     }
 }
 
@@ -286,38 +520,65 @@ private struct TemplateRow: View {
 
 private struct SessionRow: View {
     let session: WorkoutSession
+    let onTap: () -> Void
+    
+    private var totalSets: Int {
+        session.exercises.reduce(0) { $0 + $1.sets.filter { $0.isCompleted }.count }
+    }
+    
+    private var duration: String {
+        guard let endedAt = session.endedAt else { return "--" }
+        let seconds = Int(endedAt.timeIntervalSince(session.startedAt))
+        let minutes = seconds / 60
+        if minutes >= 60 {
+            return "\(minutes / 60)h \(minutes % 60)m"
+        }
+        return "\(minutes)m"
+    }
     
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(Color.ironPurple.opacity(0.18))
-                    .frame(width: 46, height: 46)
-                    .overlay(Circle().stroke(Color.ironPurple.opacity(0.35), lineWidth: 1))
-                Image(systemName: "checkmark")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.ironPurple)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(session.name.uppercased())
-                    .font(IronFont.bodySemibold(15))
-                    .tracking(1)
-                    .foregroundColor(.ironTextPrimary)
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.ironPurple.opacity(0.18))
+                        .frame(width: 46, height: 46)
+                        .overlay(Circle().stroke(Color.ironPurple.opacity(0.35), lineWidth: 1))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.ironPurple)
+                }
                 
-                Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(IronFont.body(13))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.name.uppercased())
+                        .font(IronFont.bodySemibold(15))
+                        .tracking(1)
+                        .foregroundColor(.ironTextPrimary)
+                    
+                    Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(IronFont.body(13))
+                        .foregroundColor(.ironTextTertiary)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(duration)
+                        .font(IronFont.bodySemibold(14))
+                        .foregroundColor(.ironTextSecondary)
+                    Text("\(totalSets) sets")
+                        .font(IronFont.body(11))
+                        .foregroundColor(.ironTextTertiary)
+                }
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.ironTextTertiary)
             }
-            
-            Spacer()
-            
-            Text("\(session.exercises.count)")
-                .font(IronFont.headerMedium(16))
-                .foregroundColor(.ironTextSecondary)
+            .padding(14)
+            .liquidGlass()
         }
-        .padding(14)
-        .liquidGlass()
+        .buttonStyle(.plain)
     }
 }
 

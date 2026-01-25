@@ -294,26 +294,26 @@ struct HealthKitConnectView: View {
                 }
             }
             
-            if !result.deniedMetrics.isEmpty {
-                Text("You can change this later in Settings.")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(.ironTextTertiary)
-                    .padding(.top, 4)
-            }
+            Text("Permissions requested. Data will sync if enabled in Settings → Health.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundColor(.ironTextTertiary)
+                .padding(.top, 4)
         }
         .padding(16)
         .liquidGlass()
     }
     
     private func permissionBadge(state: HealthKitService.PermissionState) -> some View {
+        // Note: For read-only HealthKit permissions, iOS never tells us the true state.
+        // "Denied" and "Not Determined" look the same to the API, so we show a neutral
+        // "Requested" state instead of misleading "Denied" labels.
         let (text, color, icon): (String, Color, String) = {
             switch state {
             case .authorized:
                 return ("Authorized", .green.opacity(0.9), "checkmark.circle.fill")
-            case .denied:
-                return ("Denied", .red.opacity(0.85), "xmark.circle.fill")
-            case .notDetermined:
-                return ("—", .ironTextTertiary, "minus.circle")
+            case .denied, .notDetermined:
+                // For read permissions, we can't know the true state, so show neutral
+                return ("Requested", .orange.opacity(0.85), "clock.circle.fill")
             }
         }()
         
