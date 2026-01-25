@@ -519,4 +519,286 @@ final class DataSyncService: ObservableObject {
         
         isSyncing = false
     }
+    
+    // MARK: - Data Pull (from Supabase to Local)
+    
+    /// Pull all data from Supabase and merge with local storage
+    func pullAllData(
+        into appState: AppState,
+        workoutStore: WorkoutStore
+    ) async {
+        guard supabase.isAuthenticated else { return }
+        
+        isSyncing = true
+        syncError = nil
+        
+        do {
+            // Pull user profile
+            if let dbProfile = try await supabase.fetchUserProfile() {
+                let localProfile = convertToLocalProfile(dbProfile, existing: appState.userProfile)
+                await MainActor.run {
+                    appState.userProfile = localProfile
+                    // Check if onboarding was completed
+                    if dbProfile.onboardingCompleted == true {
+                        appState.hasCompletedOnboarding = true
+                        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                    }
+                }
+            }
+            
+            // Pull lift states first (needed for templates/sessions)
+            let dbLiftStates = try await supabase.fetchLiftStates()
+            let localLiftStates = convertToLocalLiftStates(dbLiftStates)
+            
+            // Pull workout templates with exercises
+            let dbTemplates = try await supabase.fetchWorkoutTemplates()
+            var localTemplates: [WorkoutTemplate] = []
+            
+            for dbTemplate in dbTemplates {
+                if let templateId = dbTemplate.id {
+                    let dbExercises = try await supabase.fetchTemplateExercises(templateId: templateId)
+                    let localTemplate = convertToLocalTemplate(dbTemplate, exercises: dbExercises)
+                    localTemplates.append(localTemplate)
+                }
+            }
+            
+            // Pull workout sessions (last 50)
+            let dbSessions = try await supabase.fetchWorkoutSessions(limit: 50)
+            var localSessions: [WorkoutSession] = []
+            
+            for dbSession in dbSessions {
+                if let sessionId = dbSession.id {
+                    let dbExercises = try await supabase.fetchSessionExercises(sessionId: sessionId)
+                    var exercisesWithSets: [(DBSessionExercise, [DBSessionSet])] = []
+                    
+                    for dbExercise in dbExercises {
+                        if let exerciseId = dbExercise.id {
+                            let dbSets = try await supabase.fetchSessionSets(sessionExerciseId: exerciseId)
+                            exercisesWithSets.append((dbExercise, dbSets))
+                        }
+                    }
+                    
+                    let localSession = convertToLocalSession(dbSession, exercises: exercisesWithSets)
+                    localSessions.append(localSession)
+                }
+            }
+            
+            // Merge with local data (remote wins for conflicts, merge by ID for collections)
+            await MainActor.run {
+                // Merge lift states
+                var mergedLiftStates = workoutStore.exerciseStates
+                for (key, value) in localLiftStates {
+                    // Remote wins if it exists and is newer
+                    if let existing = mergedLiftStates[key] {
+                        if value.updatedAt > existing.updatedAt {
+                            mergedLiftStates[key] = value
+                        }
+                    } else {
+                        mergedLiftStates[key] = value
+                    }
+                }
+                
+                // Merge templates (by ID, remote wins)
+                var mergedTemplates = workoutStore.templates
+                for remoteTemplate in localTemplates {
+                    if let idx = mergedTemplates.firstIndex(where: { $0.id == remoteTemplate.id }) {
+                        // Remote wins if newer
+                        if remoteTemplate.updatedAt > mergedTemplates[idx].updatedAt {
+                            mergedTemplates[idx] = remoteTemplate
+                        }
+                    } else {
+                        mergedTemplates.append(remoteTemplate)
+                    }
+                }
+                
+                // Merge sessions (by ID, no duplicates)
+                var mergedSessions = workoutStore.sessions
+                let existingSessionIds = Set(mergedSessions.map { $0.id })
+                for remoteSession in localSessions {
+                    if !existingSessionIds.contains(remoteSession.id) {
+                        mergedSessions.append(remoteSession)
+                    }
+                }
+                // Sort by date descending
+                mergedSessions.sort { $0.startedAt > $1.startedAt }
+                
+                // Update workout store
+                workoutStore.mergeRemoteData(
+                    templates: mergedTemplates,
+                    sessions: mergedSessions,
+                    liftStates: mergedLiftStates
+                )
+            }
+            
+            lastSyncAt = Date()
+            await trackEvent(name: "data_pull_completed", category: "sync")
+            
+        } catch {
+            syncError = error
+            print("Pull error: \(error)")
+        }
+        
+        isSyncing = false
+    }
+    
+    // MARK: - Conversion Helpers (DB -> Local)
+    
+    private func convertToLocalProfile(_ db: DBUserProfile, existing: UserProfile) -> UserProfile {
+        var profile = existing
+        
+        if let name = db.displayName {
+            profile.name = name
+        }
+        if let age = db.age {
+            profile.age = age
+        }
+        if let sexStr = db.sex, let sex = Sex(rawValue: sexStr) {
+            profile.sex = sex
+        } else if let sexStr = db.sex {
+            // Try lowercase match
+            profile.sex = Sex.allCases.first { $0.rawValue.lowercased() == sexStr.lowercased() } ?? profile.sex
+        }
+        if let expStr = db.workoutExperience, let exp = WorkoutExperience(rawValue: expStr) {
+            profile.workoutExperience = exp
+        } else if let expStr = db.workoutExperience {
+            profile.workoutExperience = WorkoutExperience.allCases.first { $0.rawValue.lowercased() == expStr.lowercased() } ?? profile.workoutExperience
+        }
+        if let goals = db.fitnessGoals {
+            profile.goals = goals.compactMap { goalStr in
+                FitnessGoal(rawValue: goalStr) ?? FitnessGoal.allCases.first { $0.rawValue.lowercased() == goalStr.lowercased() }
+            }
+        }
+        if let freq = db.weeklyFrequency {
+            profile.weeklyFrequency = freq
+        }
+        if let gymStr = db.gymType, let gym = GymType(rawValue: gymStr) {
+            profile.gymType = gym
+        } else if let gymStr = db.gymType {
+            profile.gymType = GymType.allCases.first { $0.rawValue.lowercased() == gymStr.lowercased() } ?? profile.gymType
+        }
+        if let weightKg = db.bodyWeightKg {
+            profile.bodyWeightLbs = weightKg / 0.453592  // Convert kg to lbs
+        }
+        
+        return profile
+    }
+    
+    private func convertToLocalLiftStates(_ dbStates: [DBLiftState]) -> [String: ExerciseState] {
+        var result: [String: ExerciseState] = [:]
+        
+        for db in dbStates {
+            let weightLbs = db.lastWorkingWeightKg / 0.453592  // Convert kg to lbs
+            let rollingE1rmLbs = db.rollingE1rmKg.map { $0 / 0.453592 }
+            let trend = ExerciseState.E1RMTrend(rawValue: db.e1rmTrend ?? "insufficient") ?? .insufficient
+            let history: [ExerciseState.E1RMSampleLite] = (db.e1rmHistory ?? []).enumerated().map { idx, valueKg in
+                ExerciseState.E1RMSampleLite(
+                    date: db.lastSessionAt ?? Date().addingTimeInterval(TimeInterval(-idx * 86400)),
+                    value: valueKg / 0.453592
+                )
+            }
+            
+            let state = ExerciseState(
+                exerciseId: db.exerciseId,
+                currentWorkingWeight: weightLbs,
+                failuresCount: db.consecutiveFailures ?? 0,
+                rollingE1RM: rollingE1rmLbs,
+                e1rmTrend: trend,
+                e1rmHistory: history,
+                lastDeloadAt: db.lastDeloadAt,
+                successfulSessionsCount: db.successfulSessionsCount ?? 0,
+                updatedAt: db.updatedAt ?? Date()
+            )
+            
+            result[db.exerciseId] = state
+        }
+        
+        return result
+    }
+    
+    private func convertToLocalTemplate(_ db: DBWorkoutTemplate, exercises: [DBTemplateExercise]) -> WorkoutTemplate {
+        let localExercises = exercises.map { dbEx -> WorkoutTemplateExercise in
+            let exerciseRef = ExerciseRef(
+                id: dbEx.exerciseId,
+                name: dbEx.exerciseName,
+                bodyPart: dbEx.exerciseTarget ?? "other",
+                equipment: dbEx.exerciseEquipment ?? "other",
+                target: dbEx.exerciseTarget ?? "other"
+            )
+            
+            let incrementLbs = (dbEx.incrementKg ?? 2.27) / 0.453592  // Convert kg to lbs
+            
+            return WorkoutTemplateExercise(
+                id: UUID(uuidString: dbEx.id ?? UUID().uuidString) ?? UUID(),
+                exercise: exerciseRef,
+                setsTarget: dbEx.setsTarget,
+                repRangeMin: dbEx.repRangeMin,
+                repRangeMax: dbEx.repRangeMax,
+                targetRIR: dbEx.targetRir ?? 2,
+                restSeconds: dbEx.restSeconds ?? 120,
+                increment: incrementLbs,
+                deloadFactor: dbEx.deloadFactor ?? ProgressionDefaults.deloadFactor,
+                failureThreshold: dbEx.failureThreshold ?? ProgressionDefaults.failureThreshold
+            )
+        }
+        
+        return WorkoutTemplate(
+            id: UUID(uuidString: db.id ?? UUID().uuidString) ?? UUID(),
+            name: db.name,
+            exercises: localExercises,
+            createdAt: db.createdAt ?? Date(),
+            updatedAt: db.updatedAt ?? Date()
+        )
+    }
+    
+    private func convertToLocalSession(_ db: DBWorkoutSession, exercises: [(DBSessionExercise, [DBSessionSet])]) -> WorkoutSession {
+        let localExercises = exercises.map { (dbEx, dbSets) -> ExercisePerformance in
+            let exerciseRef = ExerciseRef(
+                id: dbEx.exerciseId,
+                name: dbEx.exerciseName,
+                bodyPart: dbEx.exerciseTarget ?? "other",
+                equipment: dbEx.exerciseEquipment ?? "other",
+                target: dbEx.exerciseTarget ?? "other"
+            )
+            
+            let localSets = dbSets.map { dbSet -> WorkoutSet in
+                let weightLbs = dbSet.weightKg / 0.453592  // Convert kg to lbs
+                return WorkoutSet(
+                    id: UUID(uuidString: dbSet.id ?? UUID().uuidString) ?? UUID(),
+                    reps: dbSet.reps,
+                    weight: weightLbs,
+                    isCompleted: dbSet.isCompleted ?? true,
+                    rirObserved: dbSet.rirObserved,
+                    rpeObserved: dbSet.rpeObserved,
+                    isWarmup: dbSet.isWarmup ?? false,
+                    notes: dbSet.notes
+                )
+            }
+            
+            let incrementLbs = (dbEx.incrementKg ?? 2.27) / 0.453592
+            
+            return ExercisePerformance(
+                id: UUID(uuidString: dbEx.id ?? UUID().uuidString) ?? UUID(),
+                exercise: exerciseRef,
+                setsTarget: dbEx.setsTarget,
+                repRangeMin: dbEx.repRangeMin,
+                repRangeMax: dbEx.repRangeMax,
+                increment: incrementLbs,
+                deloadFactor: dbEx.deloadFactor ?? ProgressionDefaults.deloadFactor,
+                failureThreshold: dbEx.failureThreshold ?? ProgressionDefaults.failureThreshold,
+                sets: localSets,
+                isCompleted: dbEx.isCompleted ?? true
+            )
+        }
+        
+        return WorkoutSession(
+            id: UUID(uuidString: db.id ?? UUID().uuidString) ?? UUID(),
+            templateId: db.templateId.flatMap { UUID(uuidString: $0) },
+            name: db.name,
+            startedAt: db.startedAt,
+            endedAt: db.endedAt,
+            wasDeload: db.wasDeload ?? false,
+            deloadReason: db.deloadReason,
+            exercises: localExercises
+        )
+    }
 }

@@ -100,6 +100,12 @@ public enum DoubleProgressionPolicy {
             let lbToKg = 0.453592
             if abs(ratio - lbToKg) < 0.08 || abs(ratio - kgToLb) < 0.25 {
                 currentLoad = liftState.lastWorkingWeight
+            } else if ratio > 1.25 {
+                // If history-derived load is far above the current baseline, the "last result" is likely
+                // stale (e.g., the most recent exposure was a deload / return-to-training session that
+                // we intentionally exclude from progression history). Avoid huge jumps by using the
+                // lift state's baseline instead.
+                currentLoad = liftState.lastWorkingWeight
             }
         }
         

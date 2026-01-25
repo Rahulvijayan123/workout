@@ -959,9 +959,51 @@ public enum Engine {
             // - lastDeloadDate
             // - failureCount (reset on a successful deload; increment if the user still failed)
             if session.wasDeload {
+                // Special case: if this deload session is the *first exposure after a long gap* for this lift,
+                // we should update the working baseline. Otherwise, we can get a huge (unsafe/unrealistic)
+                // "bounce-back" next session because:
+                // - deload sessions don't update lastWorkingWeight / rollingE1RM
+                // - but they *do* update lastSessionDate (removing detraining reduction)
+                //
+                // Treat long-gap deloads as "return-to-training" exposures.
+                let daysSinceLast: Int = {
+                    var cal = Calendar(identifier: .gregorian)
+                    cal.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+                    guard let last = state.lastSessionDate else { return Int.max }
+                    let lastDay = cal.startOfDay(for: last)
+                    let today = cal.startOfDay(for: session.date)
+                    return cal.dateComponents([.day], from: lastDay, to: today).day ?? 0
+                }()
+                
                 state.lastSessionDate = session.date
                 state.lastDeloadDate = session.date
                 state.failureCount = anyFailure ? (state.failureCount + 1) : 0
+                
+                let priorW = state.lastWorkingWeight.value
+                let currentW = proposedLastWorkingWeight.value
+                let ratio = (priorW > 0 && currentW > 0) ? (currentW / priorW) : 1.0
+                let isLargeBaselineShift = ratio < 0.75 || ratio > 1.35
+                
+                if daysSinceLast >= 28 || isLargeBaselineShift {
+                    // Update baseline load + performance signals to reflect the new (post-hiatus) reality.
+                    state.lastWorkingWeight = proposedLastWorkingWeight
+                    
+                    // Update rolling e1RM with exponential smoothing.
+                    let alpha = 0.3
+                    if state.rollingE1RM > 0 {
+                        state.rollingE1RM = alpha * sessionE1RM + (1 - alpha) * state.rollingE1RM
+                    } else {
+                        state.rollingE1RM = sessionE1RM
+                    }
+                    
+                    // Update trend based on e1RM history.
+                    state.e1rmHistory.append(E1RMSample(date: session.date, value: sessionE1RM))
+                    if state.e1rmHistory.count > 10 {
+                        state.e1rmHistory.removeFirst(state.e1rmHistory.count - 10)
+                    }
+                    state.trend = TrendCalculator.compute(from: state.e1rmHistory)
+                }
+                
                 updatedStates.append(state)
                 continue
             }

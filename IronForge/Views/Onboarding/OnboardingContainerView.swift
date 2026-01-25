@@ -15,6 +15,7 @@ enum OnboardingStep: Int, CaseIterable {
 
 struct OnboardingContainerView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var workoutStore: WorkoutStore
     @State private var currentStep: OnboardingStep = .healthKit
     
     let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
@@ -153,6 +154,16 @@ struct OnboardingContainerView: View {
     
     private func completeOnboarding() {
         appState.completeOnboarding()
+        
+        // Perform full sync to Supabase after onboarding
+        Task {
+            await DataSyncService.shared.performFullSync(
+                profile: appState.userProfile,
+                templates: workoutStore.templates,
+                sessions: workoutStore.sessions,
+                liftStates: workoutStore.exerciseStates
+            )
+        }
     }
 }
 
@@ -258,4 +269,5 @@ struct LiquidLightProgressBar: View {
 #Preview {
     OnboardingContainerView()
         .environmentObject(AppState())
+        .environmentObject(WorkoutStore())
 }

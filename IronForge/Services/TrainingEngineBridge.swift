@@ -922,18 +922,6 @@ enum TrainingEngineBridge {
     }
 }
 
-// MARK: - ExerciseRef Extension for Convenience Init
-
-extension ExerciseRef {
-    init(id: String, name: String, bodyPart: String, equipment: String, target: String) {
-        self.id = id
-        self.name = name
-        self.bodyPart = bodyPart
-        self.equipment = equipment
-        self.target = target
-    }
-}
-
 // MARK: - Readiness scoring (DailyBiometrics → 0–100 score)
 //
 // This lives in this file so it is guaranteed to be part of the app target (Xcode project),

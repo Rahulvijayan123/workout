@@ -55,88 +55,112 @@ struct MainAppView: View {
                     ProfileView()
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                // Reserve space for the floating dock
+                Color.clear.frame(height: 100)
+            }
             
-            // Custom Tab Bar
+            // Custom Floating Tab Bar
             CustomTabBar(selectedTab: $selectedTab)
         }
         .ignoresSafeArea(.keyboard)
     }
 }
 
-// MARK: - Custom Tab Bar
+// MARK: - Custom Floating Dock Tab Bar
 struct CustomTabBar: View {
     @Binding var selectedTab: MainAppView.Tab
     @Namespace private var animation
     
-    let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
-    
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(MainAppView.Tab.allCases, id: \.self) { tab in
-                TabBarItem(
-                    tab: tab,
-                    isSelected: selectedTab == tab,
-                    neonPurple: neonPurple,
-                    namespace: animation
-                ) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        selectedTab = tab
+        VStack(spacing: 0) {
+            // The floating dock pill
+            HStack(spacing: 0) {
+                ForEach(MainAppView.Tab.allCases, id: \.self) { tab in
+                    FloatingTabBarItem(
+                        tab: tab,
+                        isSelected: selectedTab == tab,
+                        namespace: animation
+                    ) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedTab = tab
+                        }
                     }
                 }
             }
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .background(
-            ZStack {
-                // Dark glass background
-                Rectangle()
-                    .fill(Color(red: 0.04, green: 0.04, blue: 0.05))
-                
-                // Top border
-                VStack {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 0.5)
-                    Spacer()
-                }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background {
+                // Floating glass pill
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        Capsule()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.25),
+                                        Color.white.opacity(0.08),
+                                        Color.ironPurple.opacity(0.15)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    }
+                    .shadow(color: Color.black.opacity(0.4), radius: 25, x: 0, y: 10)
+                    .shadow(color: Color.ironPurple.opacity(0.15), radius: 30, x: 0, y: 5)
             }
-            .ignoresSafeArea(.container, edges: .bottom)
-        )
+            .padding(.horizontal, 32)
+        }
+        .padding(.bottom, 8)
+        .background {
+            // Solid background to prevent content leaking through
+            Color.ironBackground
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
     }
 }
 
-struct TabBarItem: View {
+struct FloatingTabBarItem: View {
     let tab: MainAppView.Tab
     let isSelected: Bool
-    let neonPurple: Color
     var namespace: Namespace.ID
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 ZStack {
-                    // Glow for active tab
+                    // Neon underglow for active tab
                     if isSelected {
+                        // Glow orb behind icon
                         Circle()
-                            .fill(neonPurple.opacity(0.4))
-                            .frame(width: 40, height: 40)
-                            .blur(radius: 12)
+                            .fill(Color.ironPurple.opacity(0.5))
+                            .frame(width: 44, height: 44)
+                            .blur(radius: 14)
                             .matchedGeometryEffect(id: "glow", in: namespace)
+                        
+                        // Underglow bar
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.ironPurple)
+                            .frame(width: 36, height: 3)
+                            .blur(radius: 4)
+                            .offset(y: 16)
+                            .matchedGeometryEffect(id: "underglow", in: namespace)
                     }
                     
                     Image(systemName: isSelected ? tab.iconFilled : tab.icon)
-                        .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
-                        .foregroundColor(isSelected ? .white : Color.white.opacity(0.35))
-                        .shadow(color: isSelected ? neonPurple.opacity(0.8) : .clear, radius: 8)
+                        .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
+                        .foregroundColor(isSelected ? .white : Color.white.opacity(0.4))
+                        .shadow(color: isSelected ? Color.ironPurple.opacity(0.9) : .clear, radius: 10)
                 }
-                .frame(height: 28)
+                .frame(height: 30)
                 
                 Text(tab.label)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.35))
+                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.4))
             }
             .frame(maxWidth: .infinity)
         }
@@ -282,12 +306,11 @@ struct HomeView: View {
                     // Week Progress
                     WeekProgressCard()
                     
-                    Spacer(minLength: 100)
+                    Spacer(minLength: 140)
                 }
                 .padding(.horizontal, 20)
             }
             .scrollContentBackground(.hidden)
-            .contentMargins(.bottom, 80, for: .scrollContent)
             .overlay(alignment: .top) {
                 // Top safe area cover - solid background behind status bar
                 Color(red: 0.02, green: 0.02, blue: 0.02)
@@ -1073,7 +1096,48 @@ struct ProfileView: View {
                     LabeledContent("Sleep Target", value: String(format: "%.1f hrs", appState.userProfile.sleepHours))
                 }
                 
-                // Reset button
+                // Sync Status
+                Section("Data Sync") {
+                    HStack {
+                        Text("Sync Status")
+                        Spacer()
+                        if DataSyncService.shared.isSyncing {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Syncing...")
+                                .foregroundColor(.secondary)
+                        } else if let lastSync = DataSyncService.shared.lastSyncAt {
+                            Text(lastSync, style: .relative)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Not synced")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    if DataSyncService.shared.syncError != nil {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text("Sync error occurred")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                // Account Section
+                Section("Account") {
+                    Button(role: .destructive) {
+                        appState.signOut()
+                    } label: {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("Sign Out")
+                        }
+                    }
+                }
+                
+                // Reset button (for testing)
                 Section {
                     Button(role: .destructive) {
                         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
@@ -1081,6 +1145,8 @@ struct ProfileView: View {
                     } label: {
                         Text("Reset Onboarding")
                     }
+                } footer: {
+                    Text("This will restart the onboarding flow but keep your account.")
                 }
             }
             .navigationTitle("Profile")

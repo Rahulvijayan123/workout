@@ -445,6 +445,145 @@ final class SupabaseService: ObservableObject {
             throw SupabaseError.apiError(errorText)
         }
     }
+    
+    // MARK: - Data Retrieval Methods
+    
+    /// Fetch user profile for the current user
+    func fetchUserProfile() async throws -> DataSyncService.DBUserProfile? {
+        guard isAuthenticated, let userId = currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        do {
+            let profile: DataSyncService.DBUserProfile = try await fetch(
+                from: "user_profiles",
+                filter: ["id": userId],
+                single: true
+            )
+            return profile
+        } catch SupabaseError.httpError(406) {
+            // 406 means no rows found - user hasn't created a profile yet
+            return nil
+        } catch {
+            throw error
+        }
+    }
+    
+    /// Fetch workout templates for the current user
+    func fetchWorkoutTemplates() async throws -> [DataSyncService.DBWorkoutTemplate] {
+        guard isAuthenticated, let userId = currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let templates: [DataSyncService.DBWorkoutTemplate] = try await fetch(
+            from: "workout_templates",
+            filter: ["user_id": userId],
+            order: "created_at",
+            ascending: false
+        )
+        return templates
+    }
+    
+    /// Fetch template exercises for a specific template
+    func fetchTemplateExercises(templateId: String) async throws -> [DataSyncService.DBTemplateExercise] {
+        guard isAuthenticated else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let exercises: [DataSyncService.DBTemplateExercise] = try await fetch(
+            from: "workout_template_exercises",
+            filter: ["template_id": templateId],
+            order: "sort_order",
+            ascending: true
+        )
+        return exercises
+    }
+    
+    /// Fetch workout sessions for the current user
+    func fetchWorkoutSessions(limit: Int = 50) async throws -> [DataSyncService.DBWorkoutSession] {
+        guard isAuthenticated, let userId = currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let sessions: [DataSyncService.DBWorkoutSession] = try await fetch(
+            from: "workout_sessions",
+            filter: ["user_id": userId],
+            order: "started_at",
+            ascending: false,
+            limit: limit
+        )
+        return sessions
+    }
+    
+    /// Fetch session exercises for a specific session
+    func fetchSessionExercises(sessionId: String) async throws -> [DataSyncService.DBSessionExercise] {
+        guard isAuthenticated else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let exercises: [DataSyncService.DBSessionExercise] = try await fetch(
+            from: "session_exercises",
+            filter: ["session_id": sessionId],
+            order: "sort_order",
+            ascending: true
+        )
+        return exercises
+    }
+    
+    /// Fetch session sets for a specific session exercise
+    func fetchSessionSets(sessionExerciseId: String) async throws -> [DataSyncService.DBSessionSet] {
+        guard isAuthenticated else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let sets: [DataSyncService.DBSessionSet] = try await fetch(
+            from: "session_sets",
+            filter: ["session_exercise_id": sessionExerciseId],
+            order: "set_number",
+            ascending: true
+        )
+        return sets
+    }
+    
+    /// Fetch lift states for the current user
+    func fetchLiftStates() async throws -> [DataSyncService.DBLiftState] {
+        guard isAuthenticated, let userId = currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let states: [DataSyncService.DBLiftState] = try await fetch(
+            from: "lift_states",
+            filter: ["user_id": userId]
+        )
+        return states
+    }
+    
+    /// Fetch daily biometrics for a date range
+    func fetchDailyBiometrics(from startDate: Date, to endDate: Date) async throws -> [DataSyncService.DBDailyBiometrics] {
+        guard isAuthenticated, let userId = currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // For date range queries, we need custom query building
+        // Using simple filter for user_id and fetching all, then filtering in memory
+        // (PostgREST supports range queries but our simple fetch doesn't)
+        let allBiometrics: [DataSyncService.DBDailyBiometrics] = try await fetch(
+            from: "daily_biometrics",
+            filter: ["user_id": userId],
+            order: "date",
+            ascending: false
+        )
+        
+        let startDateStr = dateFormatter.string(from: startDate)
+        let endDateStr = dateFormatter.string(from: endDate)
+        
+        return allBiometrics.filter { biometric in
+            biometric.date >= startDateStr && biometric.date <= endDateStr
+        }
+    }
 }
 
 // MARK: - Errors

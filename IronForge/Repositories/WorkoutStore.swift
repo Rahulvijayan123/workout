@@ -1,5 +1,5 @@
 import Foundation
-import SwiftUI
+import Combine
 import TrainingEngine
 
 @MainActor
@@ -212,6 +212,7 @@ final class WorkoutStore: ObservableObject {
         }
         
         // Use TrainingEngine to update lift states
+        let priorStates = exerciseStates
         let updatedStates = TrainingEngineBridge.updateLiftStates(
             afterSession: session,
             previousLiftStates: exerciseStates
@@ -229,21 +230,25 @@ final class WorkoutStore: ObservableObject {
             
             // Build snapshot from updated state
             if let updatedState = exerciseStates[exerciseId] {
+                let prevWeight = priorStates[exerciseId]?.currentWorkingWeight ?? 0
+                let reason = determineProgressionReason(
+                    performance: performance,
+                    previousWeight: prevWeight,
+                    newWeight: updatedState.currentWorkingWeight
+                )
+                let targetReps = computeTargetReps(performance: performance, reason: reason)
+                
                 let snapshot = NextPrescriptionSnapshot(
                     exerciseId: exerciseId,
                     nextWorkingWeight: updatedState.currentWorkingWeight,
-                    targetReps: performance.repRangeMin,
+                    targetReps: targetReps,
                     setsTarget: performance.setsTarget,
                     repRangeMin: performance.repRangeMin,
                     repRangeMax: performance.repRangeMax,
                     increment: performance.increment,
                     deloadFactor: performance.deloadFactor,
                     failureThreshold: performance.failureThreshold,
-                    reason: determineProgressionReason(
-                        performance: performance,
-                        previousWeight: exerciseStates[exerciseId]?.currentWorkingWeight ?? 0,
-                        newWeight: updatedState.currentWorkingWeight
-                    )
+                    reason: reason
                 )
                 performance.nextPrescription = snapshot
                 session.exercises[idx] = performance
@@ -253,6 +258,16 @@ final class WorkoutStore: ObservableObject {
         sessions.insert(session, at: 0)
         activeSession = nil
         save()
+        
+        // Sync completed session to Supabase
+        let completedSession = session
+        let currentLiftStates = exerciseStates
+        Task {
+            if SupabaseService.shared.isAuthenticated {
+                try? await DataSyncService.shared.syncWorkoutSession(completedSession)
+                try? await DataSyncService.shared.syncLiftStates(currentLiftStates)
+            }
+        }
     }
     
     /// Determine progression reason based on weight change
@@ -274,6 +289,26 @@ final class WorkoutStore: ObservableObject {
             return .increaseReps
         } else {
             return .hold
+        }
+    }
+
+    /// Compute a simple next-session rep target for UI display.
+    ///
+    /// TrainingEngine currently owns load updates (via `updateLiftStates`), but IronForge UI still needs a
+    /// deterministic rep target for the next exposure. We derive it from the completed reps and the
+    /// inferred progression reason so we don't incorrectly default to `repRangeMin`.
+    private func computeTargetReps(performance: ExercisePerformance, reason: ProgressionReason) -> Int {
+        let lb = performance.repRangeMin
+        let ub = max(lb, performance.repRangeMax)
+
+        switch reason {
+        case .increaseReps:
+            let completed = performance.sets.filter { $0.isCompleted }
+            let sample = completed.isEmpty ? performance.sets : completed
+            let minReps = sample.map(\.reps).min() ?? lb
+            return max(lb, min(ub, minReps + 1))
+        case .increaseWeight, .deload, .hold:
+            return lb
         }
     }
     
@@ -329,23 +364,26 @@ final class WorkoutStore: ObservableObject {
             currentWorkingWeight: previousWeight,
             failuresCount: 0
         )
+
+        let reason = determineProgressionReason(
+            performance: performance,
+            previousWeight: previousWeight,
+            newWeight: updatedState.currentWorkingWeight
+        )
+        let targetReps = computeTargetReps(performance: performance, reason: reason)
         
         // Build snapshot for UI
         let snapshot = NextPrescriptionSnapshot(
             exerciseId: exerciseId,
             nextWorkingWeight: updatedState.currentWorkingWeight,
-            targetReps: performance.repRangeMin,
+            targetReps: targetReps,
             setsTarget: performance.setsTarget,
             repRangeMin: performance.repRangeMin,
             repRangeMax: performance.repRangeMax,
             increment: performance.increment,
             deloadFactor: performance.deloadFactor,
             failureThreshold: performance.failureThreshold,
-            reason: determineProgressionReason(
-                performance: performance,
-                previousWeight: previousWeight,
-                newWeight: updatedState.currentWorkingWeight
-            )
+            reason: reason
         )
         
         // Update performance with snapshot and mark complete
@@ -401,6 +439,20 @@ final class WorkoutStore: ObservableObject {
             }
         }
         return results
+    }
+    
+    // MARK: - Remote Data Merge
+    
+    /// Merge remote data from Supabase into local storage
+    func mergeRemoteData(
+        templates: [WorkoutTemplate],
+        sessions: [WorkoutSession],
+        liftStates: [String: ExerciseState]
+    ) {
+        self.templates = templates
+        self.sessions = sessions
+        self.exerciseStates = liftStates
+        save()
     }
     
     // MARK: - Persistence

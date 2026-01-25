@@ -3,16 +3,13 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1A8A3C58DCD14D1184D03693 /* ExerciseLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDF08A0B7BC4620991935C8 /* ExerciseLoader.swift */; };
-
-		4CE4D84D31D44A29B396423E /* FreeExerciseDBModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 538347BCF895478EB1E85681 /* FreeExerciseDBModels.swift */; };
-
-		98D4B38AB1B94CEB82F370B3 /* exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = AA20921D9E5C475483C6997A /* exercises.json */; };
-
+		1A8A3C58DCD14D1184D03693 /* Repositories/ExerciseLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDF08A0B7BC4620991935C8 /* Repositories/ExerciseLoader.swift */; };
+		4CE4D84D31D44A29B396423E /* Models/FreeExerciseDBModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 538347BCF895478EB1E85681 /* Models/FreeExerciseDBModels.swift */; };
+		98D4B38AB1B94CEB82F370B3 /* Resources/exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = AA20921D9E5C475483C6997A /* Resources/exercises.json */; };
 		AAA0000000000001 /* IronForgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000001 /* IronForgeApp.swift */; };
 		AAA0000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000002 /* ContentView.swift */; };
 		AAA0000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BBB0000000000003 /* Assets.xcassets */; };
@@ -53,12 +50,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		6DDF08A0B7BC4620991935C8 /* ExerciseLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repositories/ExerciseLoader.swift; sourceTree = SOURCE_ROOT; };
-
-		538347BCF895478EB1E85681 /* FreeExerciseDBModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/FreeExerciseDBModels.swift; sourceTree = SOURCE_ROOT; };
-
-		AA20921D9E5C475483C6997A /* exercises.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/exercises.json; sourceTree = SOURCE_ROOT; };
-
+		52313E102F259B7F007A24FB /* IronForge.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IronForge.entitlements; sourceTree = "<group>"; };
+		538347BCF895478EB1E85681 /* Models/FreeExerciseDBModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/FreeExerciseDBModels.swift; sourceTree = SOURCE_ROOT; };
+		6DDF08A0B7BC4620991935C8 /* Repositories/ExerciseLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repositories/ExerciseLoader.swift; sourceTree = SOURCE_ROOT; };
+		AA20921D9E5C475483C6997A /* Resources/exercises.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/exercises.json; sourceTree = SOURCE_ROOT; };
 		BBB0000000000001 /* IronForgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IronForgeApp.swift; sourceTree = SOURCE_ROOT; };
 		BBB0000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		BBB0000000000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = SOURCE_ROOT; };
@@ -113,6 +108,7 @@
 		EEE0000000000001 = {
 			isa = PBXGroup;
 			children = (
+				52313E102F259B7F007A24FB /* IronForge.entitlements */,
 				BBB0000000000001 /* IronForgeApp.swift */,
 				EEE0000000000002 /* Views */,
 				EEE0000000000003 /* Models */,
@@ -145,7 +141,7 @@
 				BBB0000000000024 /* DailyBiometrics.swift */,
 				BBB0000000000026 /* ReadinessPreview.swift */,
 				BBB0000000000027 /* Exercise.swift */,
-				538347BCF895478EB1E85681 /* FreeExerciseDBModels.swift */,
+				538347BCF895478EB1E85681 /* Models/FreeExerciseDBModels.swift */,
 				BBB0000000000028 /* WorkoutModels.swift */,
 				BBB0000000000029 /* ProgressionEngine.swift */,
 			);
@@ -158,14 +154,6 @@
 				BBB0000000000005 /* DesignSystem.swift */,
 			);
 			path = Design;
-			sourceTree = SOURCE_ROOT;
-		};
-		EEE0000000000009 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				AA20921D9E5C475483C6997A /* exercises.json */,
-			);
-			path = Resources;
 			sourceTree = SOURCE_ROOT;
 		};
 		EEE0000000000005 /* Products */ = {
@@ -212,10 +200,18 @@
 			children = (
 				BBB0000000000025 /* DailyBiometricsRepository.swift */,
 				BBB0000000000030 /* ExerciseRepository.swift */,
-				6DDF08A0B7BC4620991935C8 /* ExerciseLoader.swift */,
+				6DDF08A0B7BC4620991935C8 /* Repositories/ExerciseLoader.swift */,
 				BBB0000000000031 /* WorkoutStore.swift */,
 			);
 			path = Repositories;
+			sourceTree = SOURCE_ROOT;
+		};
+		EEE0000000000009 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				AA20921D9E5C475483C6997A /* Resources/exercises.json */,
+			);
+			path = Resources;
 			sourceTree = SOURCE_ROOT;
 		};
 		EEE0000000000010 /* Services */ = {
@@ -267,7 +263,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					FFF0000000000001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -284,7 +280,7 @@
 			);
 			mainGroup = EEE0000000000001;
 			packageReferences = (
-				QQQ0000000000001 /* XCLocalSwiftPackageReference "TrainingEngine" */,
+				QQQ0000000000001 /* XCLocalSwiftPackageReference "../ios/Atlas/TrainingEngine" */,
 			);
 			productRefGroup = EEE0000000000005 /* Products */;
 			projectDirPath = "";
@@ -300,7 +296,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				98D4B38AB1B94CEB82F370B3 /* exercises.json in Resources */,
+				98D4B38AB1B94CEB82F370B3 /* Resources/exercises.json in Resources */,
 				AAA0000000000003 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -312,8 +308,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1A8A3C58DCD14D1184D03693 /* ExerciseLoader.swift in Sources */,
-				4CE4D84D31D44A29B396423E /* FreeExerciseDBModels.swift in Sources */,
+				1A8A3C58DCD14D1184D03693 /* Repositories/ExerciseLoader.swift in Sources */,
+				4CE4D84D31D44A29B396423E /* Models/FreeExerciseDBModels.swift in Sources */,
 				AAA0000000000001 /* IronForgeApp.swift in Sources */,
 				AAA0000000000002 /* ContentView.swift in Sources */,
 				AAA0000000000004 /* UserProfile.swift in Sources */,
@@ -413,6 +409,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -469,6 +466,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -479,6 +477,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = IronForge.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -489,7 +488,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -508,6 +507,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = IronForge.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -518,7 +518,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -556,7 +556,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		QQQ0000000000001 /* XCLocalSwiftPackageReference "TrainingEngine" */ = {
+		QQQ0000000000001 /* XCLocalSwiftPackageReference "../ios/Atlas/TrainingEngine" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../ios/Atlas/TrainingEngine;
 		};

@@ -637,6 +637,15 @@ enum ProgressionReason: String, Codable, Hashable {
             return "You've hit the failure threshold. Reduce load and rebuild with clean reps."
         }
     }
+    
+    var icon: String {
+        switch self {
+        case .increaseWeight: return "arrow.up.circle.fill"
+        case .increaseReps: return "plus.circle.fill"
+        case .hold: return "equal.circle.fill"
+        case .deload: return "arrow.down.circle.fill"
+        }
+    }
 }
 
 // MARK: - Legacy Types (for backward compatibility)

@@ -1113,3 +1113,542 @@ struct LiquidStepper: View {
         .liquidGlass()
     }
 }
+
+// MARK: - Split Capsule Hero View
+struct SplitCapsuleHeroView: View {
+    let onQuickStart: () -> Void
+    let onBuild: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Left side - Quick Start with plasma effect (65%)
+            Button(action: onQuickStart) {
+                ZStack {
+                    // Plasma background
+                    LiquidPlasmaEffect()
+                    
+                    // Content
+                    HStack(spacing: 8) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("QUICK START")
+                            .font(IronFont.bodySemibold(13))
+                            .tracking(1)
+                    }
+                    .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .frame(maxWidth: .infinity)
+            .layoutPriority(2)
+            
+            // Laser divider
+            ZStack {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.9), .ironPurple, .white.opacity(0.9)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 2)
+                
+                // Glow effect
+                Rectangle()
+                    .fill(Color.ironPurple)
+                    .frame(width: 4)
+                    .blur(radius: 3)
+                    .opacity(0.7)
+            }
+            .frame(width: 2)
+            
+            // Right side - Build with frosted glass
+            Button(action: onBuild) {
+                ZStack {
+                    // Frosted glass background
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                    
+                    // Subtle overlay
+                    Rectangle()
+                        .fill(Color.white.opacity(0.04))
+                    
+                    // Content
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("BUILD")
+                            .font(IronFont.bodySemibold(13))
+                            .tracking(1)
+                    }
+                    .foregroundColor(.ironTextPrimary)
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .frame(width: 100)
+        }
+        .frame(height: 52)
+        .clipShape(Capsule())
+        .overlay {
+            Capsule()
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.3), .white.opacity(0.1), .ironPurple.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .shadow(color: Color.ironPurple.opacity(0.3), radius: 16, x: 0, y: 6)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Liquid Plasma Effect
+struct LiquidPlasmaEffect: View {
+    @State private var phase: CGFloat = 0
+    
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1/30)) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                
+                // Create plasma gradient layers
+                for i in 0..<3 {
+                    let offset = CGFloat(i) * 0.3
+                    let x = sin(time * 0.5 + offset) * size.width * 0.3 + size.width * 0.5
+                    let y = cos(time * 0.4 + offset) * size.height * 0.4 + size.height * 0.5
+                    
+                    let gradient = Gradient(colors: [
+                        Color.ironPurple.opacity(0.8 - CGFloat(i) * 0.2),
+                        Color.purpleGradientEnd.opacity(0.6 - CGFloat(i) * 0.15),
+                        Color.clear
+                    ])
+                    
+                    let shading = GraphicsContext.Shading.radialGradient(
+                        gradient,
+                        center: CGPoint(x: x, y: y),
+                        startRadius: 0,
+                        endRadius: size.width * 0.6
+                    )
+                    
+                    context.fill(
+                        Path(CGRect(origin: .zero, size: size)),
+                        with: shading
+                    )
+                }
+            }
+        }
+        .background(
+            LinearGradient(
+                colors: [.purpleGradientStart, .purpleGradientEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+    }
+}
+
+// MARK: - Liquid Chrome Orb (Mercury-style play button)
+struct LiquidChromeOrb: View {
+    let size: CGFloat
+    let onTap: () -> Void
+    
+    @State private var isPressed = false
+    @State private var rippleScale: CGFloat = 0
+    @State private var rippleOpacity: CGFloat = 0
+    
+    var body: some View {
+        Button(action: {
+            // Trigger ripple
+            withAnimation(.easeOut(duration: 0.4)) {
+                rippleScale = 2.0
+                rippleOpacity = 0
+            }
+            rippleScale = 0.8
+            rippleOpacity = 0.6
+            
+            onTap()
+        }) {
+            ZStack {
+                // Ripple effect
+                Circle()
+                    .fill(Color.ironPurple.opacity(0.3))
+                    .scaleEffect(rippleScale)
+                    .opacity(rippleOpacity)
+                
+                // Outer glow
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.white.opacity(0.3),
+                                Color.ironPurple.opacity(0.2),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: size * 0.3,
+                            endRadius: size * 0.6
+                        )
+                    )
+                    .frame(width: size * 1.4, height: size * 1.4)
+                    .blur(radius: 8)
+                
+                // Chrome orb base
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.white.opacity(0.95),
+                                Color(white: 0.85),
+                                Color(white: 0.6),
+                                Color(white: 0.4)
+                            ],
+                            center: UnitPoint(x: 0.35, y: 0.25),
+                            startRadius: 0,
+                            endRadius: size * 0.6
+                        )
+                    )
+                    .frame(width: size, height: size)
+                
+                // Chrome reflection highlight
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.9),
+                                Color.white.opacity(0.3),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .center
+                        )
+                    )
+                    .frame(width: size * 0.8, height: size * 0.8)
+                    .offset(x: -size * 0.08, y: -size * 0.08)
+                
+                // Play icon
+                Image(systemName: "play.fill")
+                    .font(.system(size: size * 0.35, weight: .bold))
+                    .foregroundColor(Color.ironPurple)
+                    .offset(x: size * 0.04, y: 0)
+                
+                // Bottom reflection
+                Ellipse()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.clear, Color.white.opacity(0.4)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: size * 0.6, height: size * 0.2)
+                    .offset(y: size * 0.25)
+            }
+            .scaleEffect(isPressed ? 0.92 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        isPressed = true
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        isPressed = false
+                    }
+                }
+        )
+    }
+}
+
+// MARK: - Data Stream Placeholder (Empty State)
+struct DataStreamPlaceholder: View {
+    @State private var wavePhase: CGFloat = 0
+    @State private var pulseOpacity: CGFloat = 0.15
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Animated sine wave graph - thin wireframe style
+            ZStack {
+                // Grid background (very subtle)
+                GridPattern()
+                    .stroke(Color.ironPurple.opacity(0.03), lineWidth: 0.5)
+                
+                // Thin wireframe wave - like a heart monitor trace
+                WaveformPath(phase: wavePhase)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.ironPurple.opacity(0.05),
+                                Color.ironPurple.opacity(pulseOpacity),
+                                Color.ironPurple.opacity(0.05)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+                    )
+                
+                // Subtle glow
+                WaveformPath(phase: wavePhase)
+                    .stroke(Color.ironPurple.opacity(pulseOpacity * 0.3), lineWidth: 3)
+                    .blur(radius: 3)
+            }
+            .frame(height: 50)
+            
+            // Text
+            VStack(spacing: 4) {
+                Text("NO BIOMETRIC DATA LOGGED")
+                    .font(IronFont.label(10))
+                    .tracking(2)
+                    .foregroundColor(.ironTextTertiary)
+                
+                Text("Initiate Sequence")
+                    .font(IronFont.body(12))
+                    .foregroundColor(.ironPurple.opacity(0.5))
+            }
+        }
+        .padding(16)
+        .liquidGlass()
+        .onAppear {
+            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                wavePhase = .pi * 2
+            }
+            withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                pulseOpacity = 0.3
+            }
+        }
+    }
+}
+
+// Helper: Grid pattern for data stream
+struct GridPattern: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let spacing: CGFloat = 20
+        
+        // Vertical lines
+        for x in stride(from: 0, through: rect.width, by: spacing) {
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: rect.height))
+        }
+        
+        // Horizontal lines
+        for y in stride(from: 0, through: rect.height, by: spacing) {
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: rect.width, y: y))
+        }
+        
+        return path
+    }
+}
+
+// Helper: Waveform path for data stream
+struct WaveformPath: Shape {
+    var phase: CGFloat
+    
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let midY = rect.height / 2
+        let amplitude = rect.height * 0.3
+        let frequency: CGFloat = 3
+        
+        path.move(to: CGPoint(x: 0, y: midY))
+        
+        for x in stride(from: 0, through: rect.width, by: 2) {
+            let relativeX = x / rect.width
+            let y = midY + sin((relativeX * frequency * .pi * 2) + phase) * amplitude
+            path.addLine(to: CGPoint(x: x, y: y))
+        }
+        
+        return path
+    }
+}
+
+// MARK: - Chromatic Text Effect
+struct ChromaticText: View {
+    let text: String
+    let font: Font
+    var offset: CGFloat = 1.0
+    
+    var body: some View {
+        ZStack {
+            // Red channel (offset left)
+            Text(text)
+                .font(font)
+                .foregroundColor(.red.opacity(0.3))
+                .offset(x: -offset, y: 0)
+            
+            // Blue channel (offset right)
+            Text(text)
+                .font(font)
+                .foregroundColor(.blue.opacity(0.3))
+                .offset(x: offset, y: 0)
+            
+            // Main text (green/white channel)
+            Text(text)
+                .font(font)
+                .foregroundColor(.ironTextPrimary)
+        }
+    }
+}
+
+// MARK: - Ambient Glow Background
+struct AmbientGlowBackground: View {
+    @State private var animateGlow = false
+    
+    var body: some View {
+        ZStack {
+            // Primary slow-moving purple orb
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.ironPurple.opacity(0.2),
+                            Color.ironPurple.opacity(0.08),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 300
+                    )
+                )
+                .frame(width: 600, height: 600)
+                .offset(
+                    x: animateGlow ? 50 : -50,
+                    y: animateGlow ? -100 : 100
+                )
+                .blur(radius: 80)
+            
+            // Secondary blue accent
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.ironCyan.opacity(0.08),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 200
+                    )
+                )
+                .frame(width: 400, height: 400)
+                .offset(
+                    x: animateGlow ? -80 : 80,
+                    y: animateGlow ? 200 : 50
+                )
+                .blur(radius: 60)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 12).repeatForever(autoreverses: true)) {
+                animateGlow = true
+            }
+        }
+    }
+}
+
+// MARK: - Floating Dock Tab Bar
+struct FloatingDockTabBar<Tab: Hashable & CaseIterable>: View where Tab: RawRepresentable, Tab.RawValue == String {
+    @Binding var selectedTab: Tab
+    let tabs: [(tab: Tab, icon: String, iconFilled: String, label: String)]
+    @Namespace private var animation
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(tabs, id: \.tab.rawValue) { item in
+                FloatingDockTabItem(
+                    icon: item.icon,
+                    iconFilled: item.iconFilled,
+                    label: item.label,
+                    isSelected: selectedTab == item.tab,
+                    namespace: animation
+                ) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedTab = item.tab
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background {
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.25),
+                                    Color.white.opacity(0.08),
+                                    Color.ironPurple.opacity(0.15)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+                .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
+        }
+        .padding(.horizontal, 40)
+        .padding(.bottom, 20)
+    }
+}
+
+struct FloatingDockTabItem: View {
+    let icon: String
+    let iconFilled: String
+    let label: String
+    let isSelected: Bool
+    var namespace: Namespace.ID
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                ZStack {
+                    // Neon underglow for active tab
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.ironPurple)
+                            .frame(width: 40, height: 4)
+                            .blur(radius: 6)
+                            .offset(y: 14)
+                            .matchedGeometryEffect(id: "underglow", in: namespace)
+                        
+                        // Additional glow
+                        Circle()
+                            .fill(Color.ironPurple.opacity(0.4))
+                            .frame(width: 50, height: 50)
+                            .blur(radius: 15)
+                            .matchedGeometryEffect(id: "glow", in: namespace)
+                    }
+                    
+                    Image(systemName: isSelected ? iconFilled : icon)
+                        .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
+                        .foregroundColor(isSelected ? .white : Color.white.opacity(0.4))
+                        .shadow(color: isSelected ? Color.ironPurple.opacity(0.8) : .clear, radius: 8)
+                }
+                .frame(height: 28)
+                
+                Text(label)
+                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.4))
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+    }
+}

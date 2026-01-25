@@ -722,6 +722,9 @@ for id in seededExerciseIds.sorted() {
     }
 }
 
+// Snapshot initial working weights for “spiral to zero” guards.
+let initialWorkingWeightsByExerciseId: [String: Double] = liftStates.mapValues { $0.currentWorkingWeight }
+
 var sessions: [WorkoutSession] = []
 sessions.reserveCapacity(720)
 
@@ -745,6 +748,28 @@ var unitMistakeCount: Int = 0
 var unsavedSessionsCount: Int = 0
 var unitMistakeExamples: [String] = []
 
+// MARK: - Production-grade gate tracking (hard pass/fail)
+
+let maxSingleStepPctChange: Double = 0.25
+let maxUnitMistakeStateDriftPct: Double = 0.15
+
+var gateFailures: [String] = []
+func gateFail(_ message: String) {
+    // Keep bounded so failures remain readable.
+    if gateFailures.count < 200 {
+        gateFailures.append(message)
+    }
+}
+
+var bigJumpViolationCount: Int = 0
+var bigJumpExamples: [String] = []
+
+var unitMistakeAnchorViolationCount: Int = 0
+var unitMistakeAnchorExamples: [String] = []
+
+var plateauDays: Set<Int> = []
+var deloadDays: Set<Int> = []
+
 struct UnitMistakeEvent {
     let day: Int
     let exerciseId: String
@@ -766,6 +791,7 @@ struct ExerciseMetrics {
     
     var lastPlannedLoad: Double?
     var lastTargetReps: Int?
+    var lastWasDeload: Bool = false
 }
 
 var metricsByExerciseId: [String: ExerciseMetrics] = [:]
@@ -801,11 +827,42 @@ var insightTopicCounts: [String: Int] = [:]
 var loadIncreaseStepHistogramByExerciseId: [String: [Double: Int]] = [:]
 var plateauExamples: [String] = []
 
-func recordPlanMetrics(exerciseId: String, plannedLoad: Double, targetReps: Int, phase: Phase) {
+func recordPlanMetrics(day: Int, exerciseId: String, plannedLoad: Double, targetReps: Int, phase: Phase, isDeload: Bool) {
     var m = metricsByExerciseId[exerciseId] ?? ExerciseMetrics()
     m.plannedOccurrences += 1
     phaseTotals[phase, default: PhaseTotals()].plannedExercises += 1
     if let last = m.lastPlannedLoad {
+        let prevWasDeload = m.lastWasDeload
+        // Gate: avoid large single-step load jumps on *non-deload* days.
+        //
+        // Notes:
+        // - Deload sessions intentionally reduce load and should be handled by their own sanity checks.
+        // - For lighter exercises, % change can be noisy (e.g., 15 -> 20 lb is +33% but only +5 lb).
+        //   We therefore require both a % jump and a minimum absolute delta before failing.
+        if !isDeload, last > 0, plannedLoad > 0 {
+            let ratio = plannedLoad / last
+            let pct = abs(ratio - 1.0)
+            let absDelta = abs(plannedLoad - last)
+            
+            let absGate: Double = {
+                let base = max(last, plannedLoad)
+                if base < 25 { return 10 }     // micro loads (bands, small DBs)
+                if base < 60 { return 20 }     // most DB/cable accessories
+                if base < 150 { return 40 }    // machine stacks / mid-tier lifts
+                return 50                      // heavy compounds
+            }()
+            
+            if pct > maxSingleStepPctChange + 1e-9, absDelta > absGate + 1e-9 {
+                bigJumpViolationCount += 1
+                if bigJumpExamples.count < 12 {
+                    let stateW = liftStates[exerciseId]?.currentWorkingWeight ?? -1
+                    bigJumpExamples.append(
+                        "d=\(day) ex=\(exerciseId) last=\(String(format: "%.1f", last)) planned=\(String(format: "%.1f", plannedLoad)) ratio=\(String(format: "%.3f", ratio)) stateW=\(String(format: "%.1f", stateW)) prevDeload=\(prevWasDeload ? "Y" : "N") deload=\(isDeload ? "Y" : "N") phase=\(phase.rawValue)"
+                    )
+                }
+            }
+        }
+        
         if plannedLoad > last + 1e-9 {
             m.loadIncreases += 1
             phaseTotals[phase, default: PhaseTotals()].loadUps += 1
@@ -827,6 +884,7 @@ func recordPlanMetrics(exerciseId: String, plannedLoad: Double, targetReps: Int,
     }
     m.lastPlannedLoad = plannedLoad
     m.lastTargetReps = targetReps
+    m.lastWasDeload = isDeload
     metricsByExerciseId[exerciseId] = m
 }
 
@@ -1181,20 +1239,44 @@ for workoutIndex in 0..<totalWorkouts {
         calendar: laCalendar
     )
 
+    // MARK: - Production-grade gates: plan safety + explainability
+    for ex in plan.exercises {
+        for s in ex.sets {
+            if !s.targetLoad.value.isFinite || s.targetLoad.value < 0 {
+                gateFail("Safety: non-finite/negative targetLoad d=\(workoutIndex) ex=\(ex.exercise.id) set=\(s.setIndex) load=\(s.targetLoad.value) unit=\(s.targetLoad.unit.rawValue)")
+            }
+            if s.targetReps < 1 {
+                gateFail("Safety: targetReps<1 d=\(workoutIndex) ex=\(ex.exercise.id) set=\(s.setIndex) reps=\(s.targetReps)")
+            }
+        }
+    }
+
     if plan.isDeload {
+        deloadDays.insert(workoutIndex)
+        if plan.deloadReason == nil {
+            gateFail("Explainability: deload without reason d=\(workoutIndex)")
+        }
         phaseTotals[phase, default: PhaseTotals()].deloadSessions += 1
         if let reason = plan.deloadReason?.rawValue {
             deloadReasonCounts[reason, default: 0] += 1
         } else {
             deloadReasonCounts["(none)", default: 0] += 1
         }
+    } else if plan.deloadReason != nil {
+        gateFail("Explainability: non-deload has deloadReason d=\(workoutIndex) reason=\(plan.deloadReason?.rawValue ?? "(nil)")")
     }
     
     // Track coaching insights (plateau/recovery/etc).
     if !plan.insights.isEmpty {
         for ins in plan.insights {
+            let title = ins.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let detail = ins.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            if title.isEmpty || detail.isEmpty {
+                gateFail("Explainability: empty insight fields d=\(workoutIndex) topic=\(ins.topic.rawValue) titleEmpty=\(title.isEmpty) detailEmpty=\(detail.isEmpty)")
+            }
             insightTopicCounts[ins.topic.rawValue, default: 0] += 1
             if ins.topic == .plateau {
+                plateauDays.insert(workoutIndex)
                 phaseTotals[phase, default: PhaseTotals()].plateauInsights += 1
                 if plateauExamples.count < 8 {
                     let exId = ins.relatedExerciseId ?? "(none)"
@@ -1239,7 +1321,7 @@ for workoutIndex in 0..<totalWorkouts {
         let plannedLoadLb = plannedEx.sets.first?.targetLoad.converted(to: .pounds).value ?? 0
         let targetReps = plannedEx.sets.first?.targetReps ?? performedPerf.repRangeMin
         
-        recordPlanMetrics(exerciseId: exerciseId, plannedLoad: plannedLoadLb, targetReps: targetReps, phase: phase)
+        recordPlanMetrics(day: workoutIndex, exerciseId: exerciseId, plannedLoad: plannedLoadLb, targetReps: targetReps, phase: phase, isDeload: plan.isDeload)
         
         // Ensure we have a "true" e1RM baseline for modeling.
         if trueE1RM[exerciseId] == nil {
@@ -1508,6 +1590,24 @@ for workoutIndex in 0..<totalWorkouts {
     } else {
         unsavedSessionsCount += 1
     }
+
+    // Gate: unit mistakes should NOT anchor baseline (state should remain close to prior).
+    if saveSession, !pendingUnitMistakes.isEmpty {
+        for ev in pendingUnitMistakes {
+            guard ev.priorW > 0 else { continue }
+            let updatedW = liftStates[ev.exerciseId]?.currentWorkingWeight ?? 0
+            let ratio = updatedW / ev.priorW
+            let pct = abs(ratio - 1.0)
+            if pct > maxUnitMistakeStateDriftPct + 1e-9 {
+                unitMistakeAnchorViolationCount += 1
+                if unitMistakeAnchorExamples.count < 10 {
+                    unitMistakeAnchorExamples.append(
+                        "d=\(ev.day) ex=\(ev.exerciseId) prior=\(String(format: "%.1f", ev.priorW)) planned=\(String(format: "%.1f", ev.planned)) performed=\(String(format: "%.1f", ev.performed)) updated=\(String(format: "%.1f", updatedW)) driftPct=\(String(format: "%.3f", pct))"
+                    )
+                }
+            }
+        }
+    }
     
     if !pendingUnitMistakes.isEmpty, unitMistakeExamples.count < 10 {
         for ev in pendingUnitMistakes {
@@ -1647,5 +1747,96 @@ if let id = deadlift?.id { printHistogram(for: id, label: "Deadlift") }
 print("  Trace (checkpoints + failure days):")
 for line in traceLines.prefix(60) { // keep bounded
     print("    \(line)")
+}
+
+// MARK: - Production-grade gate summary (hard pass/fail)
+
+// Safety: single-step load jumps.
+if bigJumpViolationCount > 0 {
+    gateFail("Safety: \(bigJumpViolationCount) single-step load changes > \(Int(maxSingleStepPctChange * 100))% detected (examples below)")
+    for ex in bigJumpExamples {
+        gateFail("  \(ex)")
+    }
+}
+
+// Robustness: unit mistakes should not anchor state.
+if unitMistakeAnchorViolationCount > 0 {
+    gateFail("Robustness: \(unitMistakeAnchorViolationCount) unit-mistake events drifted state by > \(Int(maxUnitMistakeStateDriftPct * 100))% (examples below)")
+    for ex in unitMistakeAnchorExamples {
+        gateFail("  \(ex)")
+    }
+}
+
+// Explainability: plateau spam guard (no long consecutive streaks).
+do {
+    let sortedDays = plateauDays.sorted()
+    var longest = 0
+    var current = 0
+    var prev: Int? = nil
+    for d in sortedDays {
+        if let prev, d == prev + 1 {
+            current += 1
+        } else {
+            current = 1
+        }
+        longest = max(longest, current)
+        prev = d
+    }
+    if longest > 7 {
+        gateFail("Explainability: plateau insights occurred on \(longest) consecutive days (threshold=7)")
+    }
+}
+
+// Deload sanity: not more than 1 deload per calendar week.
+do {
+    let deloadCount = deloadDays.count
+    let maxAllowed = (totalWorkouts / 7) + 1
+    if deloadCount > maxAllowed {
+        gateFail("Calibration: deload sessions too frequent (\(deloadCount) > \(maxAllowed) over \(totalWorkouts) days)")
+    }
+}
+
+// Spiral-to-zero guard (focus on exercises with enough exposure).
+do {
+    var spiralCount = 0
+    var examples: [String] = []
+    for (id, initialW) in initialWorkingWeightsByExerciseId {
+        guard initialW > 0 else { continue }
+        let planned = metricsByExerciseId[id]?.plannedOccurrences ?? 0
+        guard planned >= 5 else { continue }
+        let finalW = liftStates[id]?.currentWorkingWeight ?? 0
+        if finalW <= initialW * 0.20 {
+            spiralCount += 1
+            if examples.count < 10 {
+                examples.append("ex=\(id) initial=\(String(format: "%.1f", initialW)) final=\(String(format: "%.1f", finalW)) plannedOcc=\(planned)")
+            }
+        }
+    }
+    if spiralCount > 0 {
+        gateFail("Safety: \(spiralCount) exercise(s) appear to have spiraled toward zero (final <= 20% of initial).")
+        for ex in examples { gateFail("  \(ex)") }
+    }
+}
+
+// Equity of exposure: bench should not be materially under-exposed vs squat on multi-day splits.
+if let b = bench?.id, let s = squat?.id {
+    let benchOcc = metricsByExerciseId[b]?.plannedOccurrences ?? 0
+    let squatOcc = metricsByExerciseId[s]?.plannedOccurrences ?? 0
+    if benchOcc > 0, squatOcc > 0 {
+        let ratio = Double(benchOcc) / Double(squatOcc)
+        if ratio < 0.75 {
+            gateFail("Equity: bench under-exposed vs squat (benchOcc=\(benchOcc), squatOcc=\(squatOcc), ratio=\(String(format: "%.2f", ratio)))")
+        }
+    }
+}
+
+if gateFailures.isEmpty {
+    print("PASS: Production-grade gates (hard checks) — no violations.")
+} else {
+    print("FAILED: Production-grade gates — \(gateFailures.count) issue(s)")
+    for (idx, msg) in gateFailures.prefix(60).enumerated() { // keep bounded
+        print("\(idx + 1). \(msg)")
+    }
+    exit(1)
 }
 

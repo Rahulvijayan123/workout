@@ -41,6 +41,15 @@ struct ExerciseRef: Codable, Identifiable, Hashable {
         self.target = exercise.target
     }
     
+    /// Direct initializer for creating ExerciseRef from individual values (e.g., from database)
+    init(id: String, name: String, bodyPart: String, equipment: String, target: String) {
+        self.id = id
+        self.name = name
+        self.bodyPart = bodyPart
+        self.equipment = equipment
+        self.target = target
+    }
+    
     var displayName: String { name.capitalized }
 }
 

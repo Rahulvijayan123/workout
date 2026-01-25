@@ -57,33 +57,48 @@ private struct WorkoutsDashboardView: View {
     }
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                header
-                
-                quickActions
-                
-                backendStatus
-                
-                progressionStatus
-                
-                templatesSection
-                
-                historySection
-                
-                Spacer(minLength: 120)
+        ZStack(alignment: .topLeading) {
+            // 1. THE VOID - Solid dark backdrop (glassmorphism needs contrast)
+            Color.ironBackground
+                .ignoresSafeArea()
+            
+            // 2. Content
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
+                    
+                    quickActions
+                    
+                    templatesSection
+                    
+                    historySection
+                    
+                    Spacer(minLength: 120)
+                }
+                // Force the scroll content to adopt the device width.
+                // This prevents any background/glow views from making the layout wider than the screen.
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
         }
+        // 3. Ambient glow (pure background — cannot affect layout size)
+        .background(
+            AmbientGlowBackground()
+                .ignoresSafeArea()
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
     
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("WORKOUTS")
-                .font(IronFont.header(28))
-                .tracking(2)
-                .foregroundColor(.ironTextPrimary)
+            ChromaticText(
+                text: "WORKOUTS",
+                font: IronFont.header(28),
+                offset: 0.8
+            )
+            .tracking(2)
             
             Text("Build templates, start sessions, and log sets.")
                 .font(IronFont.body(15))
@@ -92,39 +107,14 @@ private struct WorkoutsDashboardView: View {
     }
     
     private var quickActions: some View {
-        HStack(spacing: 12) {
-            Button {
+        SplitCapsuleHeroView(
+            onQuickStart: {
                 workoutStore.startEmptySession()
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "bolt.fill")
-                    Text("QUICK START")
-                        .tracking(1)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(NeonGlowButtonStyle(isPrimary: true))
-            
-            Button {
+            },
+            onBuild: {
                 onCreateTemplate()
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "plus")
-                    Text("NEW TEMPLATE")
-                        .tracking(1)
-                }
-                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(NeonGlowButtonStyle(isPrimary: false))
-        }
-    }
-    
-    private var backendStatus: some View {
-        ExerciseBackendStatusCard()
-    }
-    
-    private var progressionStatus: some View {
-        ProgressionEngineSelfTestCard()
+        )
     }
     
     private var templatesSection: some View {
@@ -134,18 +124,28 @@ private struct WorkoutsDashboardView: View {
                 .tracking(2)
                 .foregroundColor(.ironTextTertiary)
             
-            VStack(spacing: 10) {
-                ForEach(workoutStore.templates) { template in
-                    TemplateRow(template: template) {
-                        let readiness = ReadinessScoreCalculator.todayScore(from: recentBiometrics) ?? 75
-                        workoutStore.startSession(
-                            from: template,
-                            userProfile: appState.userProfile,
-                            readiness: readiness,
-                            dailyBiometrics: recentBiometrics
-                        )
-                    } onEdit: {
-                        onEditTemplate(template)
+            if workoutStore.templates.isEmpty {
+                Text("No templates yet. Tap BUILD to create one.")
+                    .font(IronFont.body(14))
+                    .foregroundColor(.ironTextTertiary)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .liquidGlass()
+            } else {
+                // Vertical list of template cards (simpler, no overflow)
+                VStack(spacing: 12) {
+                    ForEach(workoutStore.templates) { template in
+                        TemplateListCard(template: template) {
+                            let readiness = ReadinessScoreCalculator.todayScore(from: recentBiometrics) ?? 75
+                            workoutStore.startSession(
+                                from: template,
+                                userProfile: appState.userProfile,
+                                readiness: readiness,
+                                dailyBiometrics: recentBiometrics
+                            )
+                        } onEdit: {
+                            onEditTemplate(template)
+                        }
                     }
                 }
             }
@@ -160,11 +160,7 @@ private struct WorkoutsDashboardView: View {
                 .foregroundColor(.ironTextTertiary)
             
             if workoutStore.sessions.isEmpty {
-                Text("No sessions yet. Start one and log your sets.")
-                    .font(IronFont.body(14))
-                    .foregroundColor(.ironTextTertiary)
-                    .padding(16)
-                    .liquidGlass()
+                DataStreamPlaceholder()
             } else {
                 VStack(spacing: 10) {
                     ForEach(workoutStore.sessions.prefix(5)) { session in
@@ -176,236 +172,64 @@ private struct WorkoutsDashboardView: View {
     }
 }
 
-private struct ExerciseBackendStatusCard: View {
-    @EnvironmentObject var workoutStore: WorkoutStore
-    @State private var count: Int?
-    @State private var lastRefreshed: Date?
-    @State private var isRefreshing = false
-    
-    private var backendName: String {
-        (workoutStore.exerciseRepository is ExerciseDBRepository) ? "ExerciseDB API" : "Local Seed Library"
-    }
-    
-    private var backendDetail: String {
-        if workoutStore.exerciseRepository is ExerciseDBRepository {
-            let base = UserDefaults.standard.string(forKey: "ironforge.exerciseDB.baseURL") ?? "(unset)"
-            return "Base URL: \(base)"
-        }
-        return "Built-in seed exercises (works offline)."
-    }
+// MARK: - Template List Card (horizontal layout, fits screen)
+private struct TemplateListCard: View {
+    let template: WorkoutTemplate
+    let onStart: () -> Void
+    let onEdit: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("EXERCISE BACKEND")
-                        .font(IronFont.label(11))
-                        .tracking(2)
-                        .foregroundColor(.ironTextTertiary)
-                    
-                    Text(backendName)
-                        .font(IronFont.bodySemibold(15))
-                        .foregroundColor(.ironTextPrimary)
-                }
-                
-                Spacer()
-                
-                Button {
-                    refresh()
-                } label: {
-                    HStack(spacing: 8) {
-                        if isRefreshing {
-                            ProgressView()
-                                .tint(.ironPurple)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        Text("TEST")
-                            .tracking(1)
-                    }
-                    .font(IronFont.bodySemibold(12))
-                }
-                .buttonStyle(NeonGlowButtonStyle(isPrimary: false))
-            }
+        HStack(spacing: 14) {
+            // Chrome orb play button on left
+            LiquidChromeOrb(size: 48, onTap: onStart)
             
-            Text(backendDetail)
-                .font(IronFont.body(13))
-                .foregroundColor(.ironTextTertiary)
-                .lineLimit(2)
-            
-            if let count {
-                Text("Fetched \(count) exercises \(lastRefreshed.map { "• \($0.formatted(date: .omitted, time: .shortened))" } ?? "")")
-                    .font(IronFont.body(12))
-                    .foregroundColor(count > 0 ? .ironTextSecondary : .red.opacity(0.8))
-            } else {
-                Text("Tap TEST to verify exercise search + metadata.")
-                    .font(IronFont.body(12))
+            // Template info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(template.name.uppercased())
+                    .font(IronFont.bodySemibold(15))
+                    .tracking(1)
+                    .foregroundColor(.ironTextPrimary)
+                    .lineLimit(1)
+                
+                Text("\(template.exercises.count) exercise\(template.exercises.count == 1 ? "" : "s")")
+                    .font(IronFont.body(13))
                     .foregroundColor(.ironTextTertiary)
             }
+            
+            Spacer()
+            
+            // Edit button
+            Button(action: onEdit) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.ironTextSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.white.opacity(0.08)))
+                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
         }
         .padding(14)
-        .liquidGlass()
-        .onAppear {
-            if count == nil {
-                refresh()
-            }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
         }
-    }
-    
-    private func refresh() {
-        isRefreshing = true
-        Task {
-            let results = await workoutStore.exerciseRepository.search(query: "")
-            await MainActor.run {
-                count = results.count
-                lastRefreshed = Date()
-                isRefreshing = false
-            }
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.2),
+                            Color.white.opacity(0.08),
+                            Color.clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         }
-    }
-}
-
-private struct ProgressionEngineSelfTestCard: View {
-    /// Tests TrainingEngine's double progression policy
-    private var allPass: Bool {
-        // Test 1: All sets at top of range → should increase load
-        let test1Pass: Bool = {
-            let prescription = TrainingEngine.SetPrescription(
-                setCount: 3,
-                targetRepsRange: 6...10,
-                targetRIR: 2,
-                tempo: .standard,
-                restSeconds: 120,
-                loadStrategy: .absolute,
-                targetPercentage: nil,
-                increment: TrainingEngine.Load.pounds(5)
-            )
-            
-            let sets = [
-                TrainingEngine.SetResult(reps: 10, load: .pounds(100), completed: true, isWarmup: false),
-                TrainingEngine.SetResult(reps: 10, load: .pounds(100), completed: true, isWarmup: false),
-                TrainingEngine.SetResult(reps: 10, load: .pounds(100), completed: true, isWarmup: false)
-            ]
-            
-            let result = TrainingEngine.ExerciseSessionResult(
-                exerciseId: "test",
-                prescription: prescription,
-                sets: sets,
-                order: 0
-            )
-            
-            let decision = TrainingEngine.DoubleProgressionPolicy.evaluateProgression(
-                config: .default,
-                prescription: prescription,
-                lastResult: result
-            )
-            
-            if case .increaseLoad = decision { return true }
-            return false
-        }()
-        
-        // Test 2: All sets within range → should increase reps
-        let test2Pass: Bool = {
-            let prescription = TrainingEngine.SetPrescription(
-                setCount: 3,
-                targetRepsRange: 6...10,
-                targetRIR: 2,
-                tempo: .standard,
-                restSeconds: 120,
-                loadStrategy: .absolute,
-                targetPercentage: nil,
-                increment: TrainingEngine.Load.pounds(5)
-            )
-            
-            let sets = [
-                TrainingEngine.SetResult(reps: 8, load: .pounds(100), completed: true, isWarmup: false),
-                TrainingEngine.SetResult(reps: 8, load: .pounds(100), completed: true, isWarmup: false),
-                TrainingEngine.SetResult(reps: 7, load: .pounds(100), completed: true, isWarmup: false)
-            ]
-            
-            let result = TrainingEngine.ExerciseSessionResult(
-                exerciseId: "test",
-                prescription: prescription,
-                sets: sets,
-                order: 0
-            )
-            
-            let decision = TrainingEngine.DoubleProgressionPolicy.evaluateProgression(
-                config: .default,
-                prescription: prescription,
-                lastResult: result
-            )
-            
-            if case .increaseReps = decision { return true }
-            return false
-        }()
-        
-        // Test 3: Below min reps → failure
-        let test3Pass: Bool = {
-            let prescription = TrainingEngine.SetPrescription(
-                setCount: 3,
-                targetRepsRange: 6...10,
-                targetRIR: 2,
-                tempo: .standard,
-                restSeconds: 120,
-                loadStrategy: .absolute,
-                targetPercentage: nil,
-                increment: TrainingEngine.Load.pounds(5)
-            )
-            
-            let sets = [
-                TrainingEngine.SetResult(reps: 5, load: .pounds(100), completed: true, isWarmup: false),
-                TrainingEngine.SetResult(reps: 5, load: .pounds(100), completed: true, isWarmup: false),
-                TrainingEngine.SetResult(reps: 5, load: .pounds(100), completed: true, isWarmup: false)
-            ]
-            
-            let result = TrainingEngine.ExerciseSessionResult(
-                exerciseId: "test",
-                prescription: prescription,
-                sets: sets,
-                order: 0
-            )
-            
-            let decision = TrainingEngine.DoubleProgressionPolicy.evaluateProgression(
-                config: .default,
-                prescription: prescription,
-                lastResult: result
-            )
-            
-            if case .failure = decision { return true }
-            return false
-        }()
-        
-        return test1Pass && test2Pass && test3Pass
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("TRAINING ENGINE")
-                        .font(IronFont.label(11))
-                        .tracking(2)
-                        .foregroundColor(.ironTextTertiary)
-                    
-                    Text(allPass ? "Self-test PASS" : "Self-test FAIL")
-                        .font(IronFont.bodySemibold(15))
-                        .foregroundColor(allPass ? .ironTextPrimary : .red.opacity(0.85))
-                }
-                
-                Spacer()
-                
-                Image(systemName: allPass ? "checkmark.seal.fill" : "xmark.octagon.fill")
-                    .foregroundColor(allPass ? .ironPurple : .red.opacity(0.85))
-                    .shadow(color: allPass ? Color.ironPurpleGlow.opacity(0.4) : .clear, radius: 10, x: 0, y: 4)
-            }
-            
-            Text("TrainingEngine: double progression (add reps → add load → deload on misses).")
-                .font(IronFont.body(13))
-                .foregroundColor(.ironTextTertiary)
-        }
-        .padding(14)
-        .liquidGlass()
     }
 }
 
@@ -660,7 +484,7 @@ private struct TemplateExerciseRow: View {
                         .foregroundColor(.ironTextTertiary)
                     
                     // Settings summary
-                    Text("\(templateExercise.setsTarget) sets • \(templateExercise.repRangeMin)-\(templateExercise.repRangeMax) reps • +\(Int(templateExercise.increment)) lb")
+                    Text("\(templateExercise.setsTarget) sets • \(templateExercise.repRangeMin)-\(templateExercise.repRangeMax) reps")
                         .font(IronFont.body(11))
                         .foregroundColor(.ironTextSecondary)
                 }
@@ -691,10 +515,23 @@ private struct ExerciseSettingsView: View {
     let onSave: (WorkoutTemplateExercise) -> Void
     let onCancel: () -> Void
     
+    @State private var repGoal: RepGoal
+    
     init(templateExercise: WorkoutTemplateExercise, onSave: @escaping (WorkoutTemplateExercise) -> Void, onCancel: @escaping () -> Void) {
         _templateExercise = State(initialValue: templateExercise)
         self.onSave = onSave
         self.onCancel = onCancel
+        
+        // Pick a sensible default based on the existing rep range.
+        let lb = templateExercise.repRangeMin
+        let ub = max(lb, templateExercise.repRangeMax)
+        if lb <= 4 || ub <= 6 {
+            _repGoal = State(initialValue: .strength)
+        } else if lb >= 10 {
+            _repGoal = State(initialValue: .endurance)
+        } else {
+            _repGoal = State(initialValue: .hypertrophy)
+        }
     }
     
     var body: some View {
@@ -713,7 +550,7 @@ private struct ExerciseSettingsView: View {
                             .foregroundColor(.ironTextTertiary)
                     }
                     
-                    // Sets & Reps
+                    // Volume (minimal required input)
                     VStack(alignment: .leading, spacing: 12) {
                         Text("VOLUME")
                             .font(IronFont.label(11))
@@ -722,32 +559,31 @@ private struct ExerciseSettingsView: View {
                         
                         VStack(spacing: 10) {
                             StepperField(title: "Sets", value: $templateExercise.setsTarget, range: 1...10)
-                            
-                            HStack(spacing: 12) {
-                                StepperField(title: "Reps (min)", value: $templateExercise.repRangeMin, range: 1...50)
-                                StepperField(title: "Reps (max)", value: $templateExercise.repRangeMax, range: 1...50)
-                            }
                         }
                         .padding(14)
                         .liquidGlass()
                     }
                     
-                    // Progression Settings
+                    // Rep goal presets (keeps UI simple; sets min/max for the engine)
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("PROGRESSION")
+                        Text("REP GOAL")
                             .font(IronFont.label(11))
                             .tracking(2)
                             .foregroundColor(.ironTextTertiary)
                         
-                        VStack(spacing: 10) {
-                            StepperField(title: "Increment (lb)", value: Binding(
-                                get: { Int(templateExercise.increment) },
-                                set: { templateExercise.increment = Double($0) }
-                            ), range: 1...25)
+                        VStack(alignment: .leading, spacing: 10) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 10) {
+                                    goalChip(.strength)
+                                    goalChip(.hypertrophy)
+                                    goalChip(.endurance)
+                                }
+                                .padding(.vertical, 2)
+                            }
                             
-                            StepperField(title: "Failure Threshold", value: $templateExercise.failureThreshold, range: 1...5)
-                            
-                            DeloadFactorField(value: $templateExercise.deloadFactor)
+                            Text("\(templateExercise.repRangeMin)–\(max(templateExercise.repRangeMin, templateExercise.repRangeMax)) reps")
+                                .font(IronFont.body(13))
+                                .foregroundColor(.ironTextSecondary)
                         }
                         .padding(14)
                         .liquidGlass()
@@ -763,7 +599,7 @@ private struct ExerciseSettingsView: View {
                                 .foregroundColor(.ironTextPrimary)
                         }
                         
-                        Text("When all sets hit max reps, weight increases by the increment. If you miss the min reps \(templateExercise.failureThreshold) time\(templateExercise.failureThreshold == 1 ? "" : "s"), weight drops to \(Int(templateExercise.deloadFactor * 100))% (deload).")
+                        Text("Templates only define structure (sets + rep goal). During the workout you’ll log weight + reps, then rate how hard the set felt.")
                             .font(IronFont.body(13))
                             .foregroundColor(.ironTextTertiary)
                             .lineSpacing(3)
@@ -776,7 +612,7 @@ private struct ExerciseSettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 18)
             }
-            .navigationTitle("Exercise Settings")
+            .navigationTitle("Template Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -794,6 +630,48 @@ private struct ExerciseSettingsView: View {
                     }
                 }
             }
+        }
+    }
+    
+    private enum RepGoal: String, CaseIterable {
+        case strength
+        case hypertrophy
+        case endurance
+        
+        var title: String {
+            switch self {
+            case .strength: return "Strength"
+            case .hypertrophy: return "Hypertrophy"
+            case .endurance: return "Endurance"
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .strength: return "bolt.fill"
+            case .hypertrophy: return "circle.grid.2x2.fill"
+            case .endurance: return "waveform.path.ecg"
+            }
+        }
+        
+        var range: ClosedRange<Int> {
+            switch self {
+            case .strength: return 3...6
+            case .hypertrophy: return 6...10
+            case .endurance: return 10...15
+            }
+        }
+    }
+    
+    private func goalChip(_ goal: RepGoal) -> some View {
+        SelectionChip(
+            title: goal.title,
+            icon: goal.icon,
+            isSelected: repGoal == goal
+        ) {
+            repGoal = goal
+            templateExercise.repRangeMin = goal.range.lowerBound
+            templateExercise.repRangeMax = goal.range.upperBound
         }
     }
 }
@@ -893,41 +771,38 @@ private struct ExercisePickerView: View {
                         .foregroundColor(.ironTextTertiary)
                         .padding(.top, 24)
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 10) {
-                            ForEach(results) { ex in
-                                Button {
-                                    onPick(ex)
-                                    dismiss()
-                                } label: {
-                                    HStack(spacing: 14) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(ex.displayName.uppercased())
-                                                .font(IronFont.bodySemibold(14))
-                                                .tracking(1)
-                                                .foregroundColor(.ironTextPrimary)
-                                            
-                                            Text("\(ex.displayTarget) • \(ex.displayEquipment)")
-                                                .font(IronFont.body(12))
-                                                .foregroundColor(.ironTextTertiary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Image(systemName: "plus.circle.fill")
-                                            .font(.system(size: 20, weight: .semibold))
-                                            .foregroundColor(.ironPurple)
-                                    }
-                                    .padding(14)
-                                    .liquidGlass()
+                    List {
+                        ForEach(results) { ex in
+                            HStack(spacing: 14) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(ex.displayName.uppercased())
+                                        .font(IronFont.bodySemibold(14))
+                                        .tracking(1)
+                                        .foregroundColor(.ironTextPrimary)
+                                    
+                                    Text("\(ex.displayTarget) • \(ex.displayEquipment)")
+                                        .font(IronFont.body(12))
+                                        .foregroundColor(.ironTextTertiary)
                                 }
-                                .buttonStyle(.plain)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.ironPurple)
                             }
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onPick(ex)
+                                dismiss()
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
-                        .padding(.bottom, 24)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Exercises")
@@ -1154,165 +1029,654 @@ private struct ExerciseLoggingView: View {
     
     @State private var showingCompletionAlert = false
     @State private var completionSnapshot: NextPrescriptionSnapshot?
+    @State private var animatePulse = false
     
     private var exercise: ExercisePerformance {
         session.exercises[exerciseIndex]
     }
     
+    /// How many prior workouts (completed sessions) we have for this exercise with at least one
+    /// completed *working* set (non-warmup, weight > 0). Used to gate recommendations on cold start.
+    private var priorLoggedWorkoutsCount: Int {
+        let history = workoutStore.performanceHistory(for: exercise.exercise.id, limit: 10)
+        return history.filter { perf in
+            perf.sets.contains(where: { $0.isCompleted && !$0.isWarmup && $0.weight > 0 })
+        }.count
+    }
+    
+    private var hasEnoughHistoryForSuggestions: Bool {
+        priorLoggedWorkoutsCount >= 2
+    }
+    
+    private let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
+    private let goldLight = Color(red: 1.0, green: 0.9, blue: 0.5)
+    private let goldMid = Color(red: 0.95, green: 0.75, blue: 0.25)
+    
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
-                    
-                    // Last time summary
-                    if let lastPerformance = workoutStore.lastPerformance(for: exercise.exercise.id) {
-                        LastTimeSummaryCard(performance: lastPerformance)
-                    }
-                    
-                    // Current session suggestion
-                    suggestionCard
-                    
-                    // Sets
-                    VStack(spacing: 10) {
-                        ForEach(Array(session.exercises[exerciseIndex].sets.enumerated()), id: \.element.id) { setIndex, _ in
-                            SetRow(set: $session.exercises[exerciseIndex].sets[setIndex])
-                        }
-                    }
-                    
-                    // Add/Remove set buttons
-                    HStack(spacing: 12) {
-                        Button {
-                            let newSet = WorkoutSet(
-                                reps: exercise.repRangeMin,
-                                weight: suggestedWeight,
-                                isCompleted: false
+            ZStack {
+                // Deep charcoal background matching home page
+                Color(red: 0.02, green: 0.02, blue: 0.02)
+                    .ignoresSafeArea()
+                
+                // Ambient glow blobs
+                GeometryReader { geo in
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [neonPurple.opacity(0.25), Color.clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 200
                             )
-                            session.exercises[exerciseIndex].sets.append(newSet)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "plus")
-                                Text("ADD SET")
-                                    .tracking(1)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(NeonGlowButtonStyle(isPrimary: false))
-                        
-                        Button {
-                            if session.exercises[exerciseIndex].sets.count > 1 {
-                                session.exercises[exerciseIndex].sets.removeLast()
-                            }
-                        } label: {
-                            Image(systemName: "minus")
-                                .frame(width: 44, height: 44)
-                        }
-                        .buttonStyle(NeonGlowButtonStyle(isPrimary: false))
-                        .disabled(session.exercises[exerciseIndex].sets.count <= 1)
-                        .opacity(session.exercises[exerciseIndex].sets.count <= 1 ? 0.5 : 1)
-                    }
+                        )
+                        .frame(width: 400, height: 400)
+                        .offset(x: geo.size.width * 0.5, y: -100)
+                        .blur(radius: 60)
                     
-                    // Complete Exercise button
-                    if !exercise.isCompleted {
-                        Button {
-                            completeExercise()
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "checkmark.circle.fill")
-                                Text("COMPLETE EXERCISE")
-                                    .tracking(1)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(NeonGlowButtonStyle(isPrimary: true))
-                        .disabled(!canComplete)
-                        .opacity(canComplete ? 1 : 0.5)
-                    }
-                    
-                    // Show prescription after completion
-                    if let snapshot = exercise.nextPrescription {
-                        NextPrescriptionCard(snapshot: snapshot)
-                    }
-                    
-                    Spacer(minLength: 120)
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(red: 0.1, green: 0.3, blue: 0.7).opacity(0.15), Color.clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 150
+                            )
+                        )
+                        .frame(width: 300, height: 300)
+                        .offset(x: -50, y: geo.size.height * 0.6)
+                        .blur(radius: 40)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
+                .ignoresSafeArea()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Premium Header
+                        exerciseHeader
+                        
+                        // Comparison Cards - Last Session vs This Week
+                        comparisonSection
+                        
+                        // Log Your Sets Section
+                        setsSection
+                        
+                        // Action Buttons
+                        actionButtons
+                        
+                        // Post-completion prescription
+                        if let snapshot = exercise.nextPrescription {
+                            calibrationResultCard(snapshot: snapshot)
+                        }
+                        
+                        Spacer(minLength: 120)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
+                }
             }
-            .navigationTitle("Log Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
                     }
+                    .font(IronFont.bodySemibold(16))
+                    .foregroundColor(neonPurple)
                 }
             }
             .alert("Exercise Completed", isPresented: $showingCompletionAlert) {
                 Button("OK") { }
             } message: {
                 if let snapshot = completionSnapshot {
-                    Text("Next time: \(formatWeight(snapshot.nextWorkingWeight)) lb x \(snapshot.targetReps) reps\n\(snapshot.reason.displayText)")
+                    if hasEnoughHistoryForSuggestions {
+                        Text("Next time: \(formatWeight(snapshot.nextWorkingWeight)) lb × \(snapshot.targetReps) reps\n\(snapshot.reason.displayText)")
+                    } else {
+                        Text("Baseline saved. Keep logging for 1–2 workouts to unlock recommendations.")
+                    }
+                }
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                animatePulse = true
+            }
+        }
+    }
+    
+    // MARK: - Premium Header
+    private var exerciseHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(exercise.exercise.displayName.uppercased())
+                .font(IronFont.header(24))
+                .tracking(2)
+                .foregroundColor(.white)
+            
+            HStack(spacing: 12) {
+                Label(exercise.exercise.target.capitalized, systemImage: "figure.strengthtraining.traditional")
+                    .font(IronFont.body(12))
+                    .foregroundColor(.white.opacity(0.5))
+                
+                Text("•")
+                    .foregroundColor(.white.opacity(0.3))
+                
+                Label(exercise.exercise.equipment.capitalized, systemImage: "dumbbell.fill")
+                    .font(IronFont.body(12))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+        }
+    }
+    
+    // MARK: - Comparison Section (Last Session vs This Week)
+    private var comparisonSection: some View {
+        // On first-time logging, don't show a "comparison" that implies a recommendation.
+        // We show a calibration card instead.
+        if workoutStore.lastPerformance(for: exercise.exercise.id) == nil {
+            return AnyView(thisWeekCard)
+        }
+        
+        return AnyView(
+            VStack(spacing: 14) {
+                // Last Session Card
+                lastSessionCard
+                
+                // Arrow indicator
+                Image(systemName: "arrow.down")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(neonPurple.opacity(0.6))
+                
+                // This Week Try Card (highlighted)
+                thisWeekCard
+            }
+        )
+    }
+    
+    private var lastSessionCard: some View {
+        let lastPerformance = workoutStore.lastPerformance(for: exercise.exercise.id)
+        let lastCompleted = lastPerformance?.sets.filter(\.isCompleted) ?? []
+        
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(goldMid.opacity(0.8))
+                
+                Text("LAST SESSION")
+                    .font(IronFont.label(11))
+                    .tracking(2)
+                    .foregroundColor(.white.opacity(0.5))
+                
+                Spacer()
+            }
+            
+            if !lastCompleted.isEmpty {
+                let avgWeight = lastCompleted.map(\.weight).reduce(0, +) / Double(lastCompleted.count)
+                let avgReps = lastCompleted.map(\.reps).reduce(0, +) / lastCompleted.count
+                
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(formatWeight(avgWeight))")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.85))
+                    
+                    Text("lb")
+                        .font(IronFont.body(14))
+                        .foregroundColor(.white.opacity(0.4))
+                    
+                    Text("×")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.white.opacity(0.3))
+                        .padding(.horizontal, 4)
+                    
+                    Text("\(avgReps)")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.85))
+                    
+                    Text("reps")
+                        .font(IronFont.body(14))
+                        .foregroundColor(.white.opacity(0.4))
+                }
+                
+                Text("\(lastCompleted.count) sets completed")
+                    .font(IronFont.body(12))
+                    .foregroundColor(.white.opacity(0.35))
+            } else {
+                Text("No previous session")
+                    .font(IronFont.body(15))
+                    .foregroundColor(.white.opacity(0.4))
+                
+                Text("This is your first time logging this exercise")
+                    .font(IronFont.body(12))
+                    .foregroundColor(.white.opacity(0.25))
+            }
+        }
+        .padding(18)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.5)
+                
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(red: 0.08, green: 0.08, blue: 0.1).opacity(0.8))
+                
+                // Top glossy highlight
+                VStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.08), Color.clear],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                        .frame(height: 50)
+                    Spacer()
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.15), Color.white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+    }
+    
+    private var thisWeekCard: some View {
+        let state = workoutStore.getExerciseState(for: exercise.exercise.id)
+        let targetWeight = state?.currentWorkingWeight ?? 0
+        let calibratingStep = min(2, priorLoggedWorkoutsCount + 1)
+        let isReady = hasEnoughHistoryForSuggestions && targetWeight > 0
+        
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                // Pulsing indicator
+                ZStack {
+                    Circle()
+                        .fill(neonPurple.opacity(0.3))
+                        .frame(width: 10, height: 10)
+                        .scaleEffect(animatePulse ? 1.8 : 1.0)
+                        .opacity(animatePulse ? 0 : 0.8)
+                    
+                    Circle()
+                        .fill(neonPurple)
+                        .frame(width: 8, height: 8)
+                }
+                
+                Text(isReady ? "THIS WEEK TRY" : "CALIBRATING")
+                    .font(IronFont.label(11))
+                    .tracking(2)
+                    .foregroundColor(neonPurple)
+                
+                Spacer()
+                
+                if isReady {
+                    // Ready badge
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(red: 0.3, green: 1, blue: 0.5))
+                            .frame(width: 5, height: 5)
+                        Text("READY")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1)
+                            .foregroundColor(Color(red: 0.3, green: 1, blue: 0.5))
+                    }
+                } else {
+                    // Calibration badge
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(goldMid.opacity(0.8))
+                            .frame(width: 5, height: 5)
+                        Text("LEARNING \(calibratingStep)/2")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1)
+                            .foregroundColor(goldMid.opacity(0.9))
+                    }
+                }
+            }
+            
+            if isReady {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(formatWeight(targetWeight))")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white, .white.opacity(0.85)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: neonPurple.opacity(0.5), radius: 10)
+                    
+                    Text("lb")
+                        .font(IronFont.bodySemibold(16))
+                        .foregroundColor(.white.opacity(0.5))
+                    
+                    Text("×")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(.white.opacity(0.3))
+                        .padding(.horizontal, 6)
+                    
+                    Text("\(exercise.repRangeMin)-\(exercise.repRangeMax)")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white, .white.opacity(0.85)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: neonPurple.opacity(0.5), radius: 10)
+                    
+                    Text("reps")
+                        .font(IronFont.bodySemibold(16))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+                
+                // Progression hint
+                HStack(spacing: 6) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(goldMid.opacity(0.7))
+                    
+                    Text("Hit \(exercise.repRangeMax) reps on all sets → weight increases next time")
+                        .font(IronFont.body(12))
+                        .foregroundColor(.white.opacity(0.45))
+                }
+                .padding(.top, 4)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(exercise.repRangeMin)-\(exercise.repRangeMax)")
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.white, .white.opacity(0.85)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .shadow(color: neonPurple.opacity(0.35), radius: 8)
+                        
+                        Text("reps")
+                            .font(IronFont.bodySemibold(16))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    
+                    Text("Log weight + reps below. Mark warmups. Rate hardness after each working set.")
+                        .font(IronFont.body(13))
+                        .foregroundColor(.white.opacity(0.55))
+                        .lineSpacing(3)
+                    
+                    Text("Recommendations unlock after 2 workouts.")
+                        .font(IronFont.body(12))
+                        .foregroundColor(.white.opacity(0.35))
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.6)
+                
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color(red: 0.06, green: 0.05, blue: 0.12).opacity(0.85))
+                
+                // Radial glow from inside
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(
+                        RadialGradient(
+                            colors: [neonPurple.opacity(0.15), neonPurple.opacity(0.05), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 200
+                        )
+                    )
+                
+                // Top glossy highlight
+                VStack {
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.12), Color.clear],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                        .frame(height: 60)
+                    Spacer()
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 22))
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(
+                    LinearGradient(
+                        colors: [neonPurple.opacity(0.7), neonPurple.opacity(0.3), Color.white.opacity(0.1)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+        )
+        .shadow(color: neonPurple.opacity(0.2), radius: 20, y: 8)
+    }
+    
+    // MARK: - Sets Section
+    private var setsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("LOG YOUR SETS")
+                    .font(IronFont.label(11))
+                    .tracking(2)
+                    .foregroundColor(.white.opacity(0.45))
+                
+                Spacer()
+                
+                Text("\(session.exercises[exerciseIndex].sets.filter(\.isCompleted).count)/\(session.exercises[exerciseIndex].sets.count)")
+                    .font(IronFont.bodySemibold(13))
+                    .foregroundColor(neonPurple)
+            }
+            
+            VStack(spacing: 10) {
+                ForEach(Array(session.exercises[exerciseIndex].sets.enumerated()), id: \.element.id) { setIndex, _ in
+                    PremiumSetRow(
+                        setNumber: setIndex + 1,
+                        set: $session.exercises[exerciseIndex].sets[setIndex],
+                        targetReps: exercise.repRangeMin...exercise.repRangeMax,
+                        targetRIR: exercise.targetRIR,
+                        neonPurple: neonPurple
+                    )
                 }
             }
         }
     }
     
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(exercise.exercise.displayName.uppercased())
-                .font(IronFont.header(20))
-                .tracking(2)
-                .foregroundColor(.ironTextPrimary)
+    // MARK: - Action Buttons
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+            // Add/Remove set row
+            HStack(spacing: 12) {
+                Button {
+                    let newSet = WorkoutSet(
+                        reps: exercise.repRangeMin,
+                        weight: suggestedWeight,
+                        isCompleted: false
+                    )
+                    session.exercises[exerciseIndex].sets.append(newSet)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                        Text("ADD SET")
+                            .tracking(1)
+                    }
+                    .font(IronFont.bodySemibold(13))
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(NeonGlowButtonStyle(isPrimary: false))
+                
+                Button {
+                    if session.exercises[exerciseIndex].sets.count > 1 {
+                        session.exercises[exerciseIndex].sets.removeLast()
+                    }
+                } label: {
+                    Image(systemName: "minus")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(NeonGlowButtonStyle(isPrimary: false))
+                .disabled(session.exercises[exerciseIndex].sets.count <= 1)
+                .opacity(session.exercises[exerciseIndex].sets.count <= 1 ? 0.5 : 1)
+            }
             
-            Text("\(exercise.exercise.target.capitalized) • \(exercise.exercise.equipment.capitalized) • \(exercise.setsTarget)x\(exercise.repRangeMin)-\(exercise.repRangeMax)")
-                .font(IronFont.body(14))
-                .foregroundColor(.ironTextTertiary)
+            // Complete Exercise button
+            if !exercise.isCompleted {
+                Button {
+                    completeExercise()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("COMPLETE EXERCISE")
+                            .tracking(1.5)
+                    }
+                    .font(IronFont.bodySemibold(15))
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(NeonGlowButtonStyle(isPrimary: true))
+                .disabled(!canComplete)
+                .opacity(canComplete ? 1 : 0.5)
+            }
         }
     }
     
-    private var suggestionCard: some View {
-        let state = workoutStore.getExerciseState(for: exercise.exercise.id)
-        
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .foregroundColor(.ironPurple)
-                Text("Target")
-                    .font(IronFont.bodySemibold(14))
-                    .foregroundColor(.ironTextPrimary)
+    // MARK: - Calibration Result Card
+    private func calibrationResultCard(snapshot: NextPrescriptionSnapshot) -> some View {
+        let isReady = hasEnoughHistoryForSuggestions
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(neonPurple)
+                
+                Text(isReady ? "SYSTEM CALIBRATED" : "BASELINE RECORDED")
+                    .font(IronFont.label(11))
+                    .tracking(2)
+                    .foregroundColor(neonPurple)
+                
+                Spacer()
+                
+                Image(systemName: isReady ? "checkmark.seal.fill" : "waveform.path.ecg")
+                    .foregroundColor(isReady ? Color(red: 0.3, green: 1, blue: 0.5) : goldMid.opacity(0.9))
             }
             
-            if let state = state {
-                Text("\(formatWeight(state.currentWorkingWeight)) lb x \(exercise.repRangeMin)-\(exercise.repRangeMax) reps for \(exercise.setsTarget) sets")
-                    .font(IronFont.body(13))
-                    .foregroundColor(.ironTextSecondary)
+            Divider()
+                .background(Color.white.opacity(0.1))
+            
+            if isReady {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Next Session Target")
+                        .font(IronFont.body(12))
+                        .foregroundColor(.white.opacity(0.5))
+                    
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(formatWeight(snapshot.nextWorkingWeight))")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        
+                        Text("lb")
+                            .font(IronFont.body(14))
+                            .foregroundColor(.white.opacity(0.4))
+                        
+                        Text("×")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.white.opacity(0.3))
+                            .padding(.horizontal, 4)
+                        
+                        Text("\(snapshot.targetReps)")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        
+                        Text("reps")
+                            .font(IronFont.body(14))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                }
             } else {
-                Text("Enter your working weight on the first set to initialize tracking.")
+                Text("Keep logging for 1–2 workouts. Once we have enough signal, you’ll start seeing suggested targets here.")
                     .font(IronFont.body(13))
-                    .foregroundColor(.ironTextSecondary)
+                    .foregroundColor(.white.opacity(0.55))
+                    .lineSpacing(3)
+            }
+            
+            // Reason explanation
+            if isReady {
+                HStack(spacing: 8) {
+                    Image(systemName: snapshot.reason.icon)
+                        .font(.system(size: 12))
+                        .foregroundColor(goldMid.opacity(0.8))
+                    
+                    Text(snapshot.reason.detailText)
+                        .font(IronFont.body(13))
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineSpacing(3)
+                }
+                .padding(.top, 4)
             }
         }
-        .padding(14)
-        .liquidGlass()
+        .padding(18)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.5)
+                
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(red: 0.05, green: 0.08, blue: 0.05).opacity(0.8))
+                
+                // Success glow
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(red: 0.3, green: 1, blue: 0.5).opacity(0.1), Color.clear],
+                            center: .topTrailing,
+                            startRadius: 0,
+                            endRadius: 200
+                        )
+                    )
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color(red: 0.3, green: 1, blue: 0.5).opacity(0.5), Color.white.opacity(0.1)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
     }
     
+    // MARK: - Helpers
     private var suggestedWeight: Double {
-        // If user has started logging, use current first-set weight
         if let w = session.exercises[exerciseIndex].sets.first?.weight, w > 0 { return w }
-        
-        // Otherwise, use state weight or 0
         return workoutStore.getExerciseState(for: exercise.exercise.id)?.currentWorkingWeight ?? 0
     }
     
     private var canComplete: Bool {
-        // Must have at least one completed set with weight > 0
         let completed = session.exercises[exerciseIndex].sets.filter { $0.isCompleted }
         return !completed.isEmpty && completed.contains(where: { $0.weight > 0 })
     }
     
     private func completeExercise() {
-        // Initialize state if needed
         let exerciseId = exercise.exercise.id
         if workoutStore.getExerciseState(for: exerciseId) == nil {
             if let firstWeight = session.exercises[exerciseIndex].sets.first(where: { $0.isCompleted && $0.weight > 0 })?.weight {
@@ -1320,9 +1684,7 @@ private struct ExerciseLoggingView: View {
             }
         }
         
-        // Complete and get prescription
         if let snapshot = workoutStore.completeExercise(performanceId: exercise.id) {
-            // Update local session state
             if let updatedSession = workoutStore.activeSession {
                 session = updatedSession
             }
@@ -1337,150 +1699,226 @@ private struct ExerciseLoggingView: View {
     }
 }
 
-// MARK: - Last Time Summary Card
-private struct LastTimeSummaryCard: View {
-    let performance: ExercisePerformance
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundColor(.ironTextTertiary)
-                Text("Last Time")
-                    .font(IronFont.bodySemibold(14))
-                    .foregroundColor(.ironTextPrimary)
-            }
-            
-            let completed = performance.sets.filter(\.isCompleted)
-            if !completed.isEmpty {
-                let avgWeight = completed.map(\.weight).reduce(0, +) / Double(completed.count)
-                let avgReps = completed.map(\.reps).reduce(0, +) / completed.count
-                
-                Text("\(completed.count) sets • \(formatWeight(avgWeight)) lb • ~\(avgReps) reps avg")
-                    .font(IronFont.body(13))
-                    .foregroundColor(.ironTextSecondary)
-                
-                if let prescription = performance.nextPrescription {
-                    Text("Suggested: \(prescription.reason.displayText)")
-                        .font(IronFont.body(12))
-                        .foregroundColor(.ironTextTertiary)
-                }
-            } else {
-                Text("No completed sets")
-                    .font(IronFont.body(13))
-                    .foregroundColor(.ironTextTertiary)
-            }
-        }
-        .padding(14)
-        .liquidGlass()
-    }
-    
-    private func formatWeight(_ w: Double) -> String {
-        if w == floor(w) { return "\(Int(w))" }
-        return String(format: "%.1f", w)
-    }
-}
-
-// MARK: - Next Prescription Card
-private struct NextPrescriptionCard: View {
-    let snapshot: NextPrescriptionSnapshot
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "arrow.up.forward.circle.fill")
-                    .foregroundColor(.ironPurple)
-                Text("Next Time")
-                    .font(IronFont.bodySemibold(14))
-                    .foregroundColor(.ironTextPrimary)
-            }
-            
-            Text("\(formatWeight(snapshot.nextWorkingWeight)) lb x \(snapshot.targetReps) reps for \(snapshot.setsTarget) sets")
-                .font(IronFont.body(15))
-                .foregroundColor(.ironTextPrimary)
-            
-            Text(snapshot.reason.detailText)
-                .font(IronFont.body(13))
-                .foregroundColor(.ironTextTertiary)
-                .lineSpacing(3)
-        }
-        .padding(14)
-        .background {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.ironPurple.opacity(0.1))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.ironPurple.opacity(0.3), lineWidth: 1)
-        }
-    }
-    
-    private func formatWeight(_ w: Double) -> String {
-        if w == floor(w) { return "\(Int(w))" }
-        return String(format: "%.1f", w)
-    }
-}
-
-// MARK: - Set Row
-private struct SetRow: View {
+// MARK: - Premium Set Row
+private struct PremiumSetRow: View {
+    let setNumber: Int
     @Binding var set: WorkoutSet
+    let targetReps: ClosedRange<Int>
+    let targetRIR: Int
+    let neonPurple: Color
     
     @State private var weightText: String = ""
     
     var body: some View {
-        HStack(spacing: 12) {
-            Button {
-                set.isCompleted.toggle()
-            } label: {
-                Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(set.isCompleted ? .ironPurple : .ironTextTertiary)
-            }
-            .buttonStyle(.plain)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("REPS")
-                    .font(IronFont.label(9))
-                    .tracking(1.2)
-                    .foregroundColor(.ironTextTertiary)
-                Stepper(value: $set.reps, in: 0...100) {
-                    Text("\(set.reps)")
-                        .font(IronFont.bodySemibold(14))
-                        .foregroundColor(.ironTextPrimary)
-                }
-                .tint(.ironPurple)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("WEIGHT")
-                    .font(IronFont.label(9))
-                    .tracking(1.2)
-                    .foregroundColor(.ironTextTertiary)
-                
-                TextField("0", text: Binding(
-                    get: { weightText.isEmpty ? formatWeight(set.weight) : weightText },
-                    set: { newValue in
-                        weightText = newValue
-                        if let v = Double(newValue) {
-                            set.weight = v
+        VStack(spacing: 12) {
+            HStack(spacing: 14) {
+                // Completion toggle with set number
+                Button {
+                    set.isCompleted.toggle()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(set.isCompleted ? neonPurple.opacity(0.2) : Color.white.opacity(0.03))
+                            .frame(width: 44, height: 44)
+                        
+                        Circle()
+                            .stroke(set.isCompleted ? neonPurple : Color.white.opacity(0.15), lineWidth: 2)
+                            .frame(width: 44, height: 44)
+                        
+                        if set.isCompleted {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(neonPurple)
+                        } else {
+                            Text("\(setNumber)")
+                                .font(IronFont.bodySemibold(16))
+                                .foregroundColor(.white.opacity(0.4))
                         }
                     }
-                ))
-                .keyboardType(.decimalPad)
-                .font(IronFont.bodySemibold(14))
-                .foregroundColor(.ironTextPrimary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Color.ironSurface))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.glassBorder, lineWidth: 1))
-                .tint(.ironPurple)
+                    .shadow(color: set.isCompleted ? neonPurple.opacity(0.4) : .clear, radius: 8)
+                }
+                .buttonStyle(.plain)
+                
+                // Weight input
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("WEIGHT")
+                        .font(IronFont.label(9))
+                        .tracking(1.2)
+                        .foregroundColor(.white.opacity(0.35))
+                    
+                    HStack(spacing: 6) {
+                        TextField("0", text: Binding(
+                            get: { weightText.isEmpty ? formatWeight(set.weight) : weightText },
+                            set: { newValue in
+                                weightText = newValue
+                                if let v = Double(newValue) {
+                                    set.weight = v
+                                }
+                            }
+                        ))
+                        .keyboardType(.decimalPad)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(width: 70)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white.opacity(0.04))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                        .tint(neonPurple)
+                        
+                        Text("lb")
+                            .font(IronFont.body(12))
+                            .foregroundColor(.white.opacity(0.35))
+                    }
+                }
+                
+                Spacer()
+                
+                // Reps input
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("REPS")
+                        .font(IronFont.label(9))
+                        .tracking(1.2)
+                        .foregroundColor(.white.opacity(0.35))
+                    
+                    HStack(spacing: 8) {
+                        Button {
+                            if set.reps > 0 { set.reps -= 1 }
+                        } label: {
+                            Image(systemName: "minus")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white.opacity(0.5))
+                                .frame(width: 32, height: 32)
+                                .background(Circle().fill(Color.white.opacity(0.05)))
+                                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Text("\(set.reps)")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(repColor)
+                            .frame(minWidth: 30)
+                        
+                        Button {
+                            if set.reps < 100 { set.reps += 1 }
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white.opacity(0.5))
+                                .frame(width: 32, height: 32)
+                                .background(Circle().fill(Color.white.opacity(0.05)))
+                                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
-            .frame(width: 120)
+            
+            // Warmup toggle + per-set effort (hardness) slider
+            HStack(spacing: 12) {
+                Button {
+                    set.isWarmup.toggle()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: set.isWarmup ? "flame.fill" : "flame")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("WARMUP")
+                            .font(IronFont.bodySemibold(11))
+                            .tracking(1.2)
+                    }
+                    .foregroundColor(set.isWarmup ? neonPurple : .white.opacity(0.55))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(set.isWarmup ? neonPurple.opacity(0.15) : Color.white.opacity(0.03))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(set.isWarmup ? neonPurple.opacity(0.45) : Color.white.opacity(0.10), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("HARDNESS")
+                            .font(IronFont.label(9))
+                            .tracking(1.2)
+                            .foregroundColor(.white.opacity(0.35))
+                        Spacer()
+                        Text(set.isCompleted ? "\(Int(currentHardness))/10" : "--/10")
+                            .font(IronFont.bodySemibold(12))
+                            .foregroundColor(set.isCompleted ? neonPurple : .white.opacity(0.35))
+                    }
+                    
+                    Slider(
+                        value: Binding(
+                            get: { currentHardness },
+                            set: { set.rpeObserved = $0 }
+                        ),
+                        in: 0...10,
+                        step: 1
+                    )
+                    .tint(neonPurple)
+                    .disabled(!set.isCompleted)
+                    .opacity(set.isCompleted ? 1.0 : 0.35)
+                }
+            }
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color.glassWhite))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.glassBorder, lineWidth: 1))
+        .padding(14)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.4)
+                
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(red: 0.08, green: 0.08, blue: 0.1).opacity(0.8))
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    set.isCompleted
+                        ? LinearGradient(colors: [neonPurple.opacity(0.5), neonPurple.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        : LinearGradient(colors: [Color.white.opacity(0.1), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 1
+                )
+        )
+        .onChange(of: set.isCompleted) { _, isCompleted in
+            // When the user completes a set, default the hardness so they're immediately prompted.
+            if isCompleted, set.rpeObserved == nil {
+                set.rpeObserved = defaultHardness
+            }
+        }
+    }
+    
+    private var repColor: Color {
+        if set.isWarmup { return .white.opacity(0.65) }
+        if set.reps >= targetReps.upperBound {
+            return Color(red: 0.3, green: 1, blue: 0.5) // Green - at top
+        } else if set.reps >= targetReps.lowerBound {
+            return .white // White - in range
+        } else {
+            return Color(red: 1, green: 0.5, blue: 0.3) // Orange - below
+        }
+    }
+    
+    private var defaultHardness: Double {
+        let clamped = max(0, min(5, targetRIR))
+        return Double(max(0, min(10, 10 - clamped)))
+    }
+    
+    private var currentHardness: Double {
+        return set.rpeObserved ?? defaultHardness
     }
     
     private func formatWeight(_ w: Double) -> String {
@@ -1488,6 +1926,7 @@ private struct SetRow: View {
         return String(format: "%.1f", w)
     }
 }
+
 
 // MARK: - Backward Compatibility Alias
 private typealias TemplateEditorView = WorkoutBuilderView
