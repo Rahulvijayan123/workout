@@ -1559,7 +1559,7 @@ private struct ExerciseLoggingView: View {
     // MARK: - Calibration Result Card
     private func calibrationResultCard(snapshot: NextPrescriptionSnapshot) -> some View {
         let isReady = hasEnoughHistoryForSuggestions
-        VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 18, weight: .semibold))
