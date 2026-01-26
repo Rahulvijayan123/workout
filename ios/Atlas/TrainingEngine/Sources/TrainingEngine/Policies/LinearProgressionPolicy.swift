@@ -103,6 +103,15 @@ public enum LinearProgressionPolicy {
         let currentLoad = Load(value: avgLoad, unit: liftState.lastWorkingWeight.unit)
         
         if allSuccessful {
+            // If the set was completed but was materially harder than intended (low RIR / high RPE),
+            // do not increase the load next session. This matches real coaching behavior:
+            // "hit the reps, but it was a grinder → hold weight."
+            let targetRIR = prescription.targetRIR
+            let observed = workingSets.compactMap(\.rirObserved)
+            if targetRIR > 0, !observed.isEmpty, (observed.min() ?? targetRIR) < targetRIR {
+                return currentLoad
+            }
+            
             // Success - increase load
             return currentLoad + config.successIncrement
         }

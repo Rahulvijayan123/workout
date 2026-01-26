@@ -1,0 +1,450 @@
+session_id,user_id,date,week,template_id,exercise_key,exercise_name,plan_tag,planned_weight_lb,planned_sets,planned_target_reps,rep_range_low,rep_range_high,performed_reps_min,performed_reps_max,performed_rpe_max,success,missed_reps,body_weight_lb,readiness_0to100,cycle_day
+U001_2025-10-06,U001,2025-10-06,1,A,squat,Back Squat,baseline,95.0,3,5,,,5,5,7.3,True,False,150.1,58,
+U001_2025-10-06,U001,2025-10-06,1,A,bench,Barbell Bench Press,baseline,75.0,3,5,,,5,5,7.4,True,False,150.1,58,
+U001_2025-10-06,U001,2025-10-06,1,A,row,Barbell Row,baseline,65.0,3,8,,,8,8,7.1,True,False,150.1,58,
+U001_2025-10-06,U001,2025-10-06,1,A,plank,Plank,baseline,0.0,3,45,,,47,49,6.6,True,False,150.1,58,
+U001_2025-10-08,U001,2025-10-08,1,B,squat,Back Squat,linear_add_load,105.0,3,5,,,5,5,7.2,True,False,150.3,67,
+U001_2025-10-08,U001,2025-10-08,1,B,ohp,Overhead Press,baseline,55.0,3,5,,,5,5,7.0,True,False,150.3,67,
+U001_2025-10-08,U001,2025-10-08,1,B,deadlift,Deadlift,baseline,135.0,1,5,,,5,5,6.8,True,False,150.3,67,
+U001_2025-10-08,U001,2025-10-08,1,B,pulldown,Lat Pulldown,baseline,70.0,3,10,8.0,12.0,11,11,7.1,True,False,150.3,67,
+U001_2025-10-10,U001,2025-10-10,1,A,squat,Back Squat,linear_add_load,115.0,3,5,,,5,5,6.9,True,False,149.8,68,
+U001_2025-10-10,U001,2025-10-10,1,A,bench,Barbell Bench Press,linear_add_load,80.0,3,5,,,5,5,7.0,True,False,149.8,68,
+U001_2025-10-10,U001,2025-10-10,1,A,row,Barbell Row,linear_add_load,70.0,3,8,,,8,8,7.1,True,False,149.8,68,
+U001_2025-10-10,U001,2025-10-10,1,A,plank,Plank,linear_add_load,0.0,3,45,,,37,48,6.3,False,False,149.8,68,
+U001_2025-10-13,U001,2025-10-13,2,B,squat,Back Squat,linear_add_load,120.0,3,5,,,5,5,7.4,True,False,150.4,55,
+U001_2025-10-13,U001,2025-10-13,2,B,ohp,Overhead Press,linear_add_load,60.0,3,5,,,5,5,7.5,True,False,150.4,55,
+U001_2025-10-13,U001,2025-10-13,2,B,deadlift,Deadlift,linear_add_load,145.0,1,5,,,5,5,7.3,True,False,150.4,55,
+U001_2025-10-13,U001,2025-10-13,2,B,pulldown,Lat Pulldown,double_progression_add_reps,70.0,3,10,8.0,12.0,11,12,7.2,True,False,150.4,55,
+U001_2025-10-15,U001,2025-10-15,2,A,squat,Back Squat,linear_add_load,125.0,3,5,,,5,5,7.4,True,False,150.6,64,
+U001_2025-10-15,U001,2025-10-15,2,A,bench,Barbell Bench Press,linear_add_load,85.0,3,5,,,5,5,7.2,True,False,150.6,64,
+U001_2025-10-15,U001,2025-10-15,2,A,row,Barbell Row,linear_add_load,75.0,3,8,,,8,8,7.1,True,False,150.6,64,
+U001_2025-10-15,U001,2025-10-15,2,A,plank,Plank,repeat_after_failure,0.0,3,45,,,39,55,6.3,False,False,150.6,64,
+U001_2025-10-17,U001,2025-10-17,2,B,squat,Back Squat,linear_add_load,130.0,3,5,,,5,5,7.3,True,False,150.2,63,
+U001_2025-10-17,U001,2025-10-17,2,B,ohp,Overhead Press,linear_add_load,65.0,3,5,,,5,5,6.9,True,False,150.2,63,
+U001_2025-10-17,U001,2025-10-17,2,B,deadlift,Deadlift,linear_add_load,155.0,1,5,,,5,5,7.2,True,False,150.2,63,
+U001_2025-10-17,U001,2025-10-17,2,B,pulldown,Lat Pulldown,double_progression_add_reps,70.0,3,10,8.0,12.0,11,12,7.3,True,False,150.2,63,
+U001_2025-10-20,U001,2025-10-20,3,A,squat,Back Squat,linear_add_load,135.0,3,5,,,5,5,7.2,True,False,150.4,57,
+U001_2025-10-20,U001,2025-10-20,3,A,bench,Barbell Bench Press,linear_add_load,90.0,3,5,,,5,5,7.1,True,False,150.4,57,
+U001_2025-10-20,U001,2025-10-20,3,A,row,Barbell Row,linear_add_load,80.0,3,8,,,8,8,7.3,True,False,150.4,57,
+U001_2025-10-20,U001,2025-10-20,3,A,plank,Plank,repeat_after_failure,0.0,3,45,,,37,46,6.7,False,False,150.4,57,
+U001_2025-10-22,U001,2025-10-22,3,B,squat,Back Squat,linear_add_load,140.0,3,5,,,5,5,7.0,True,False,150.7,71,
+U001_2025-10-22,U001,2025-10-22,3,B,ohp,Overhead Press,linear_add_load,70.0,3,5,,,5,5,6.9,True,False,150.7,71,
+U001_2025-10-22,U001,2025-10-22,3,B,deadlift,Deadlift,linear_add_load,165.0,1,5,,,5,5,7.0,True,False,150.7,71,
+U001_2025-10-22,U001,2025-10-22,3,B,pulldown,Lat Pulldown,double_progression_add_reps,70.0,3,10,8.0,12.0,12,12,7.1,True,False,150.7,71,
+U001_2025-10-24,U001,2025-10-24,3,A,squat,Back Squat,linear_add_load,145.0,3,5,,,5,5,7.1,True,False,150.6,65,
+U001_2025-10-24,U001,2025-10-24,3,A,bench,Barbell Bench Press,linear_add_load,95.0,3,5,,,5,5,7.0,True,False,150.6,65,
+U001_2025-10-24,U001,2025-10-24,3,A,row,Barbell Row,linear_add_load,85.0,3,8,,,8,8,7.1,True,False,150.6,65,
+U001_2025-10-24,U001,2025-10-24,3,A,plank,Plank,repeat_after_failure,0.0,3,45,,,37,54,6.3,False,False,150.6,65,
+U001_2025-10-27,U001,2025-10-27,4,B,squat,Back Squat,linear_add_load,150.0,3,5,,,5,5,6.9,True,False,151.1,69,
+U001_2025-10-27,U001,2025-10-27,4,B,ohp,Overhead Press,linear_add_load,72.5,3,5,,,5,5,6.9,True,False,151.1,69,
+U001_2025-10-27,U001,2025-10-27,4,B,deadlift,Deadlift,linear_add_load,170.0,1,5,,,5,5,6.9,True,False,151.1,69,
+U001_2025-10-27,U001,2025-10-27,4,B,pulldown,Lat Pulldown,double_progression_add_load,75.0,3,10,8.0,12.0,12,12,6.9,True,False,151.1,69,
+U001_2025-10-29,U001,2025-10-29,4,A,squat,Back Squat,linear_add_load,155.0,3,5,,,5,5,7.0,True,False,151.4,65,
+U001_2025-10-29,U001,2025-10-29,4,A,bench,Barbell Bench Press,linear_add_load,100.0,3,5,,,5,5,7.2,True,False,151.4,65,
+U001_2025-10-29,U001,2025-10-29,4,A,row,Barbell Row,linear_add_load,90.0,3,8,,,8,8,7.0,True,False,151.4,65,
+U001_2025-10-29,U001,2025-10-29,4,A,plank,Plank,repeat_after_failure,0.0,3,45,,,42,51,6.3,False,False,151.4,65,
+U001_2025-10-31,U001,2025-10-31,4,B,squat,Back Squat,linear_add_load,160.0,3,5,,,5,5,7.7,True,False,151.4,61,
+U001_2025-10-31,U001,2025-10-31,4,B,ohp,Overhead Press,linear_add_load,75.0,3,5,,,5,5,7.2,True,False,151.4,61,
+U001_2025-10-31,U001,2025-10-31,4,B,deadlift,Deadlift,linear_add_load,175.0,1,5,,,5,5,7.2,True,False,151.4,61,
+U001_2025-10-31,U001,2025-10-31,4,B,pulldown,Lat Pulldown,double_progression_add_load,80.0,3,10,8.0,12.0,12,12,7.1,True,False,151.4,61,
+U001_2025-11-03,U001,2025-11-03,5,A,squat,Back Squat,linear_add_load,165.0,3,5,,,5,5,7.2,True,False,151.1,66,
+U001_2025-11-03,U001,2025-11-03,5,A,bench,Barbell Bench Press,linear_add_load,105.0,3,5,,,5,5,7.0,True,False,151.1,66,
+U001_2025-11-03,U001,2025-11-03,5,A,row,Barbell Row,linear_add_load,95.0,3,8,,,8,8,7.1,True,False,151.1,66,
+U001_2025-11-03,U001,2025-11-03,5,A,plank,Plank,repeat_after_failure,0.0,3,45,,,42,50,6.4,False,False,151.1,66,
+U001_2025-11-05,U001,2025-11-05,5,B,squat,Back Squat,linear_add_load,170.0,3,5,,,5,5,7.2,True,False,151.1,60,
+U001_2025-11-05,U001,2025-11-05,5,B,ohp,Overhead Press,linear_add_load,77.5,3,5,,,5,5,7.1,True,False,151.1,60,
+U001_2025-11-05,U001,2025-11-05,5,B,deadlift,Deadlift,linear_add_load,180.0,1,5,,,5,5,7.1,True,False,151.1,60,
+U001_2025-11-05,U001,2025-11-05,5,B,pulldown,Lat Pulldown,double_progression_add_load,85.0,3,10,8.0,12.0,12,12,7.4,True,False,151.1,60,
+U001_2025-11-07,U001,2025-11-07,5,A,squat,Back Squat,linear_add_load,172.5,3,5,,,5,5,7.1,True,False,151.0,66,
+U001_2025-11-07,U001,2025-11-07,5,A,bench,Barbell Bench Press,linear_add_load,110.0,3,5,,,5,5,7.0,True,False,151.0,66,
+U001_2025-11-07,U001,2025-11-07,5,A,row,Barbell Row,linear_add_load,100.0,3,8,,,8,8,7.0,True,False,151.0,66,
+U001_2025-11-07,U001,2025-11-07,5,A,plank,Plank,repeat_after_failure,0.0,3,45,,,51,54,6.4,True,False,151.0,66,
+U001_2025-11-10,U001,2025-11-10,6,B,squat,Back Squat,linear_add_load,175.0,3,5,,,5,5,7.7,True,False,150.9,49,
+U001_2025-11-10,U001,2025-11-10,6,B,ohp,Overhead Press,linear_add_load,80.0,3,5,,,5,5,7.6,True,False,150.9,49,
+U001_2025-11-10,U001,2025-11-10,6,B,deadlift,Deadlift,linear_add_load,185.0,1,5,,,5,5,7.6,True,False,150.9,49,
+U001_2025-11-10,U001,2025-11-10,6,B,pulldown,Lat Pulldown,double_progression_add_load,90.0,3,10,8.0,12.0,12,12,7.7,True,False,150.9,49,
+U001_2025-11-14,U001,2025-11-14,6,A,squat,Back Squat,linear_add_load,177.5,3,5,,,5,5,6.9,True,False,151.6,69,
+U001_2025-11-14,U001,2025-11-14,6,A,bench,Barbell Bench Press,linear_add_load,112.5,3,5,,,5,5,6.9,True,False,151.6,69,
+U001_2025-11-14,U001,2025-11-14,6,A,row,Barbell Row,linear_add_load,105.0,3,8,,,8,8,6.8,True,False,151.6,69,
+U001_2025-11-14,U001,2025-11-14,6,A,plank,Plank,linear_add_load,0.0,3,45,,,42,48,6.3,False,False,151.6,69,
+U001_2025-11-17,U001,2025-11-17,7,B,squat,Back Squat,linear_add_load,180.0,3,5,,,5,5,7.2,True,False,151.3,63,
+U001_2025-11-17,U001,2025-11-17,7,B,ohp,Overhead Press,linear_add_load,82.5,3,5,,,5,5,7.3,True,False,151.3,63,
+U001_2025-11-17,U001,2025-11-17,7,B,deadlift,Deadlift,linear_add_load,190.0,1,5,,,5,5,7.3,True,False,151.3,63,
+U001_2025-11-17,U001,2025-11-17,7,B,pulldown,Lat Pulldown,double_progression_add_load,95.0,3,10,8.0,12.0,12,12,7.2,True,False,151.3,63,
+U001_2025-11-19,U001,2025-11-19,7,A,squat,Back Squat,linear_add_load,182.5,3,5,,,5,5,6.9,True,False,151.8,66,
+U001_2025-11-19,U001,2025-11-19,7,A,bench,Barbell Bench Press,linear_add_load,115.0,3,5,,,4,5,9.5,False,True,151.8,66,
+U001_2025-11-19,U001,2025-11-19,7,A,row,Barbell Row,linear_add_load,110.0,3,8,,,8,8,7.3,True,False,151.8,66,
+U001_2025-11-19,U001,2025-11-19,7,A,plank,Plank,repeat_after_failure,0.0,3,45,,,38,55,6.3,False,False,151.8,66,
+U001_2025-11-21,U001,2025-11-21,7,B,squat,Back Squat,linear_add_load,185.0,3,5,,,5,5,7.1,True,False,151.4,64,
+U001_2025-11-21,U001,2025-11-21,7,B,ohp,Overhead Press,linear_add_load,85.0,3,5,,,5,5,7.0,True,False,151.4,64,
+U001_2025-11-21,U001,2025-11-21,7,B,deadlift,Deadlift,linear_add_load,195.0,1,5,,,5,5,6.8,True,False,151.4,64,
+U001_2025-11-21,U001,2025-11-21,7,B,pulldown,Lat Pulldown,double_progression_add_load,100.0,3,10,8.0,12.0,12,12,7.0,True,False,151.4,64,
+U001_2025-11-24,U001,2025-11-24,8,A,squat,Back Squat,linear_add_load,187.5,3,5,,,5,5,6.9,True,False,151.4,66,
+U001_2025-11-24,U001,2025-11-24,8,A,bench,Barbell Bench Press,repeat_after_failure,115.0,3,5,,,4,5,9.5,False,True,151.4,66,
+U001_2025-11-24,U001,2025-11-24,8,A,row,Barbell Row,linear_add_load,112.5,3,8,,,8,8,7.0,True,False,151.4,66,
+U001_2025-11-24,U001,2025-11-24,8,A,plank,Plank,repeat_after_failure,0.0,3,45,,,40,52,6.4,False,False,151.4,66,
+U001_2025-11-26,U001,2025-11-26,8,B,squat,Back Squat,linear_add_load,190.0,3,5,,,5,5,6.9,True,False,151.7,71,
+U001_2025-11-26,U001,2025-11-26,8,B,ohp,Overhead Press,linear_add_load,87.5,3,5,,,5,5,6.7,True,False,151.7,71,
+U001_2025-11-26,U001,2025-11-26,8,B,deadlift,Deadlift,linear_add_load,200.0,1,5,,,5,5,6.7,True,False,151.7,71,
+U001_2025-11-26,U001,2025-11-26,8,B,pulldown,Lat Pulldown,double_progression_add_load,105.0,3,10,8.0,12.0,12,12,6.8,True,False,151.7,71,
+U001_2025-11-28,U001,2025-11-28,8,A,squat,Back Squat,linear_add_load,192.5,3,5,,,5,5,6.9,True,False,151.7,69,
+U001_2025-11-28,U001,2025-11-28,8,A,bench,Barbell Bench Press,repeat_after_failure,102.5,3,5,,,5,5,6.7,True,False,151.7,69,
+U001_2025-11-28,U001,2025-11-28,8,A,row,Barbell Row,linear_add_load,115.0,3,8,,,8,8,6.8,True,False,151.7,69,
+U001_2025-11-28,U001,2025-11-28,8,A,plank,Plank,repeat_after_failure,0.0,3,45,,,40,50,6.2,False,False,151.7,69,
+U001_2025-12-01,U001,2025-12-01,9,B,squat,Back Squat,linear_add_load,195.0,3,5,,,5,5,7.2,True,False,152.3,65,
+U001_2025-12-01,U001,2025-12-01,9,B,ohp,Overhead Press,linear_add_load,90.0,3,5,,,5,5,6.9,True,False,152.3,65,
+U001_2025-12-01,U001,2025-12-01,9,B,deadlift,Deadlift,linear_add_load,205.0,1,5,,,5,5,7.0,True,False,152.3,65,
+U001_2025-12-01,U001,2025-12-01,9,B,pulldown,Lat Pulldown,double_progression_add_load,110.0,3,10,8.0,12.0,12,12,7.2,True,False,152.3,65,
+U001_2025-12-03,U001,2025-12-03,9,A,squat,Back Squat,linear_add_load,197.5,3,5,,,5,5,7.1,True,False,152.1,62,
+U001_2025-12-03,U001,2025-12-03,9,A,bench,Barbell Bench Press,linear_add_load,105.0,3,5,,,5,5,7.2,True,False,152.1,62,
+U001_2025-12-03,U001,2025-12-03,9,A,row,Barbell Row,linear_add_load,117.5,3,8,,,8,8,7.2,True,False,152.1,62,
+U001_2025-12-03,U001,2025-12-03,9,A,plank,Plank,repeat_after_failure,0.0,3,45,,,37,52,6.5,False,False,152.1,62,
+U001_2025-12-05,U001,2025-12-05,9,B,squat,Back Squat,linear_add_load,200.0,3,5,,,5,5,7.2,True,False,151.0,63,
+U001_2025-12-05,U001,2025-12-05,9,B,ohp,Overhead Press,linear_add_load,92.5,3,5,,,5,5,7.1,True,False,151.0,63,
+U001_2025-12-05,U001,2025-12-05,9,B,deadlift,Deadlift,linear_add_load,207.5,1,5,,,5,5,6.8,True,False,151.0,63,
+U001_2025-12-05,U001,2025-12-05,9,B,pulldown,Lat Pulldown,double_progression_add_load,115.0,3,10,8.0,12.0,12,12,7.3,True,False,151.0,63,
+U002_2025-10-06,U002,2025-10-06,1,Upper1,bench,Barbell Bench Press,baseline,45.0,3,8,6.0,10.0,8,9,7.4,True,False,125.0,57,22.0
+U002_2025-10-06,U002,2025-10-06,1,Upper1,row_cable,Seated Cable Row,baseline,60.0,3,10,8.0,12.0,9,11,7.4,True,False,125.0,57,22.0
+U002_2025-10-06,U002,2025-10-06,1,Upper1,ohp_db,DB Shoulder Press,baseline,25.0,3,10,8.0,12.0,11,11,7.3,True,False,125.0,57,22.0
+U002_2025-10-06,U002,2025-10-06,1,Upper1,lat_pulldown,Lat Pulldown,baseline,70.0,3,10,8.0,12.0,10,10,7.3,True,False,125.0,57,22.0
+U002_2025-10-06,U002,2025-10-06,1,Upper1,curl,DB Curl,baseline,15.0,2,12,10.0,15.0,12,13,7.1,True,False,125.0,57,22.0
+U002_2025-10-07,U002,2025-10-07,1,Lower1,squat,Back Squat,baseline,65.0,3,8,6.0,10.0,8,9,7.2,True,False,125.2,60,23.0
+U002_2025-10-07,U002,2025-10-07,1,Lower1,rdl,Romanian Deadlift,baseline,85.0,3,8,6.0,10.0,8,9,7.3,True,False,125.2,60,23.0
+U002_2025-10-07,U002,2025-10-07,1,Lower1,split_squat,DB Bulgarian Split Squat,baseline,20.0,3,10,8.0,12.0,10,11,7.3,True,False,125.2,60,23.0
+U002_2025-10-07,U002,2025-10-07,1,Lower1,calf,Standing Calf Raise,baseline,70.0,3,12,10.0,15.0,12,13,7.2,True,False,125.2,60,23.0
+U002_2025-10-09,U002,2025-10-09,1,Upper2,incline_db,Incline DB Press,baseline,25.0,3,10,8.0,12.0,8,8,8.2,True,False,125.2,38,25.0
+U002_2025-10-09,U002,2025-10-09,1,Upper2,pullup_assist,Assisted Pull-up,baseline,-50.0,3,8,6.0,10.0,6,6,8.0,True,False,125.2,38,25.0
+U002_2025-10-09,U002,2025-10-09,1,Upper2,lateral_raise,DB Lateral Raise,baseline,10.0,3,12,10.0,15.0,10,11,7.9,True,False,125.2,38,25.0
+U002_2025-10-09,U002,2025-10-09,1,Upper2,triceps,Cable Triceps Pressdown,baseline,30.0,2,12,10.0,15.0,10,10,8.2,True,False,125.2,38,25.0
+U002_2025-10-10,U002,2025-10-10,1,Lower2,deadlift,Deadlift,baseline,95.0,2,5,4.0,6.0,5,6,7.5,True,False,125.0,54,26.0
+U002_2025-10-10,U002,2025-10-10,1,Lower2,leg_press,Leg Press,baseline,140.0,3,12,10.0,15.0,11,12,7.5,True,False,125.0,54,26.0
+U002_2025-10-10,U002,2025-10-10,1,Lower2,ham_curl,Leg Curl,baseline,55.0,3,12,10.0,15.0,11,13,7.4,True,False,125.0,54,26.0
+U002_2025-10-10,U002,2025-10-10,1,Lower2,core,Dead Bug,baseline,0.0,3,10,,,6,16,6.6,False,False,125.0,54,26.0
+U002_2025-10-13,U002,2025-10-13,2,Upper1,bench,Barbell Bench Press,double_progression_add_reps,45.0,3,8,6.0,10.0,7,9,7.8,True,False,125.7,47,1.0
+U002_2025-10-13,U002,2025-10-13,2,Upper1,row_cable,Seated Cable Row,double_progression_add_reps,60.0,3,10,8.0,12.0,9,10,7.7,True,False,125.7,47,1.0
+U002_2025-10-13,U002,2025-10-13,2,Upper1,ohp_db,DB Shoulder Press,double_progression_add_reps,25.0,3,10,8.0,12.0,10,11,7.8,True,False,125.7,47,1.0
+U002_2025-10-13,U002,2025-10-13,2,Upper1,lat_pulldown,Lat Pulldown,double_progression_add_reps,70.0,3,10,8.0,12.0,9,10,7.9,True,False,125.7,47,1.0
+U002_2025-10-13,U002,2025-10-13,2,Upper1,curl,DB Curl,double_progression_add_reps,15.0,2,12,10.0,15.0,11,11,7.7,True,False,125.7,47,1.0
+U002_2025-10-14,U002,2025-10-14,2,Lower1,squat,Back Squat,double_progression_add_reps,65.0,3,8,6.0,10.0,7,8,7.7,True,False,125.4,44,2.0
+U002_2025-10-14,U002,2025-10-14,2,Lower1,rdl,Romanian Deadlift,double_progression_add_reps,85.0,3,8,6.0,10.0,6,8,7.8,True,False,125.4,44,2.0
+U002_2025-10-14,U002,2025-10-14,2,Lower1,split_squat,DB Bulgarian Split Squat,double_progression_add_reps,20.0,3,10,8.0,12.0,8,10,8.0,True,False,125.4,44,2.0
+U002_2025-10-14,U002,2025-10-14,2,Lower1,calf,Standing Calf Raise,double_progression_add_reps,70.0,3,12,10.0,15.0,11,12,7.8,True,False,125.4,44,2.0
+U002_2025-10-16,U002,2025-10-16,2,Upper2,incline_db,Incline DB Press,double_progression_add_reps,25.0,3,10,8.0,12.0,10,12,7.1,True,False,125.2,61,4.0
+U002_2025-10-16,U002,2025-10-16,2,Upper2,pullup_assist,Assisted Pull-up,double_progression_add_reps,-50.0,3,8,6.0,10.0,8,10,7.3,True,False,125.2,61,4.0
+U002_2025-10-16,U002,2025-10-16,2,Upper2,lateral_raise,DB Lateral Raise,double_progression_add_reps,10.0,3,12,10.0,15.0,13,14,7.2,True,False,125.2,61,4.0
+U002_2025-10-16,U002,2025-10-16,2,Upper2,triceps,Cable Triceps Pressdown,double_progression_add_reps,30.0,2,12,10.0,15.0,13,14,7.2,True,False,125.2,61,4.0
+U002_2025-10-17,U002,2025-10-17,2,Lower2,deadlift,Deadlift,double_progression_add_reps,95.0,2,5,4.0,6.0,6,6,7.4,True,False,124.8,57,5.0
+U002_2025-10-17,U002,2025-10-17,2,Lower2,leg_press,Leg Press,double_progression_add_reps,140.0,3,12,10.0,15.0,12,13,7.3,True,False,124.8,57,5.0
+U002_2025-10-17,U002,2025-10-17,2,Lower2,ham_curl,Leg Curl,double_progression_add_reps,55.0,3,12,10.0,15.0,12,13,7.2,True,False,124.8,57,5.0
+U002_2025-10-17,U002,2025-10-17,2,Lower2,core,Dead Bug,repeat_after_failure,0.0,3,10,,,4,8,6.6,False,False,124.8,57,5.0
+U002_2025-10-20,U002,2025-10-20,3,Upper1,bench,Barbell Bench Press,double_progression_add_reps,45.0,3,8,6.0,10.0,9,9,7.5,True,False,125.3,56,8.0
+U002_2025-10-20,U002,2025-10-20,3,Upper1,row_cable,Seated Cable Row,double_progression_add_reps,60.0,3,10,8.0,12.0,10,11,7.5,True,False,125.3,56,8.0
+U002_2025-10-20,U002,2025-10-20,3,Upper1,ohp_db,DB Shoulder Press,double_progression_add_reps,25.0,3,10,8.0,12.0,11,11,7.4,True,False,125.3,56,8.0
+U002_2025-10-20,U002,2025-10-20,3,Upper1,lat_pulldown,Lat Pulldown,double_progression_add_reps,70.0,3,10,8.0,12.0,10,11,7.3,True,False,125.3,56,8.0
+U002_2025-10-20,U002,2025-10-20,3,Upper1,curl,DB Curl,double_progression_add_reps,15.0,2,12,10.0,15.0,13,14,7.5,True,False,125.3,56,8.0
+U002_2025-10-21,U002,2025-10-21,3,Lower1,squat,Back Squat,double_progression_add_reps,65.0,3,8,6.0,10.0,8,9,7.4,True,False,125.6,52,9.0
+U002_2025-10-21,U002,2025-10-21,3,Lower1,rdl,Romanian Deadlift,double_progression_add_reps,85.0,3,8,6.0,10.0,7,8,7.5,True,False,125.6,52,9.0
+U002_2025-10-21,U002,2025-10-21,3,Lower1,split_squat,DB Bulgarian Split Squat,double_progression_add_reps,20.0,3,10,8.0,12.0,10,11,7.4,True,False,125.6,52,9.0
+U002_2025-10-21,U002,2025-10-21,3,Lower1,calf,Standing Calf Raise,double_progression_add_reps,70.0,3,12,10.0,15.0,13,13,7.6,True,False,125.6,52,9.0
+U002_2025-10-23,U002,2025-10-23,3,Upper2,incline_db,Incline DB Press,double_progression_add_reps,25.0,3,10,8.0,12.0,11,11,7.3,True,False,125.0,60,11.0
+U002_2025-10-23,U002,2025-10-23,3,Upper2,pullup_assist,Assisted Pull-up,double_progression_add_reps,-50.0,3,8,6.0,10.0,10,10,7.3,True,False,125.0,60,11.0
+U002_2025-10-23,U002,2025-10-23,3,Upper2,lateral_raise,DB Lateral Raise,double_progression_add_reps,10.0,3,12,10.0,15.0,12,14,7.3,True,False,125.0,60,11.0
+U002_2025-10-23,U002,2025-10-23,3,Upper2,triceps,Cable Triceps Pressdown,double_progression_add_reps,30.0,2,12,10.0,15.0,14,14,7.3,True,False,125.0,60,11.0
+U002_2025-10-24,U002,2025-10-24,3,Lower2,deadlift,Deadlift,double_progression_add_load,100.0,2,5,4.0,6.0,6,6,7.2,True,False,125.4,61,12.0
+U002_2025-10-24,U002,2025-10-24,3,Lower2,leg_press,Leg Press,double_progression_add_reps,140.0,3,12,10.0,15.0,13,14,7.3,True,False,125.4,61,12.0
+U002_2025-10-24,U002,2025-10-24,3,Lower2,ham_curl,Leg Curl,double_progression_add_reps,55.0,3,12,10.0,15.0,13,13,7.3,True,False,125.4,61,12.0
+U002_2025-10-24,U002,2025-10-24,3,Lower2,core,Dead Bug,repeat_after_failure,0.0,3,10,,,8,12,6.5,False,False,125.4,61,12.0
+U002_2025-10-27,U002,2025-10-27,4,Upper1,bench,Barbell Bench Press,double_progression_add_reps,45.0,3,8,6.0,10.0,9,10,7.2,True,False,125.5,57,15.0
+U002_2025-10-27,U002,2025-10-27,4,Upper1,row_cable,Seated Cable Row,double_progression_add_reps,60.0,3,10,8.0,12.0,11,12,7.5,True,False,125.5,57,15.0
+U002_2025-10-27,U002,2025-10-27,4,Upper1,ohp_db,DB Shoulder Press,double_progression_add_reps,25.0,3,10,8.0,12.0,11,12,7.6,True,False,125.5,57,15.0
+U002_2025-10-27,U002,2025-10-27,4,Upper1,lat_pulldown,Lat Pulldown,double_progression_add_reps,70.0,3,10,8.0,12.0,12,12,7.5,True,False,125.5,57,15.0
+U002_2025-10-27,U002,2025-10-27,4,Upper1,curl,DB Curl,double_progression_add_reps,15.0,2,12,10.0,15.0,13,14,7.4,True,False,125.5,57,15.0
+U002_2025-10-28,U002,2025-10-28,4,Lower1,squat,Back Squat,double_progression_add_reps,65.0,3,8,6.0,10.0,9,10,7.2,True,False,125.6,57,16.0
+U002_2025-10-28,U002,2025-10-28,4,Lower1,rdl,Romanian Deadlift,double_progression_add_reps,85.0,3,8,6.0,10.0,10,10,7.2,True,False,125.6,57,16.0
+U002_2025-10-28,U002,2025-10-28,4,Lower1,split_squat,DB Bulgarian Split Squat,double_progression_add_reps,20.0,3,10,8.0,12.0,11,12,7.4,True,False,125.6,57,16.0
+U002_2025-10-28,U002,2025-10-28,4,Lower1,calf,Standing Calf Raise,double_progression_add_reps,70.0,3,12,10.0,15.0,13,13,7.5,True,False,125.6,57,16.0
+U002_2025-10-30,U002,2025-10-30,4,Upper2,incline_db,Incline DB Press,double_progression_add_reps,25.0,3,10,8.0,12.0,10,11,7.5,True,False,126.1,53,18.0
+U002_2025-10-30,U002,2025-10-30,4,Upper2,pullup_assist,Assisted Pull-up,double_progression_reduce_assistance,-45.0,3,8,6.0,10.0,9,10,7.6,True,False,126.1,53,18.0
+U002_2025-10-30,U002,2025-10-30,4,Upper2,lateral_raise,DB Lateral Raise,double_progression_add_reps,10.0,3,12,10.0,15.0,13,13,7.4,True,False,126.1,53,18.0
+U002_2025-10-30,U002,2025-10-30,4,Upper2,triceps,Cable Triceps Pressdown,double_progression_add_reps,30.0,2,12,10.0,15.0,13,14,7.4,True,False,126.1,53,18.0
+U002_2025-10-31,U002,2025-10-31,4,Lower2,deadlift,Deadlift,double_progression_add_load,105.0,2,5,4.0,6.0,6,6,7.4,True,False,125.1,55,19.0
+U002_2025-10-31,U002,2025-10-31,4,Lower2,leg_press,Leg Press,double_progression_add_reps,140.0,3,12,10.0,15.0,12,14,7.5,True,False,125.1,55,19.0
+U002_2025-10-31,U002,2025-10-31,4,Lower2,ham_curl,Leg Curl,double_progression_add_reps,55.0,3,12,10.0,15.0,13,14,7.4,True,False,125.1,55,19.0
+U002_2025-10-31,U002,2025-10-31,4,Lower2,core,Dead Bug,repeat_after_failure,0.0,3,10,,,6,14,6.6,False,False,125.1,55,19.0
+U002_2025-11-03,U002,2025-11-03,5,Upper1,bench,Barbell Bench Press,double_progression_add_reps,45.0,3,8,6.0,10.0,10,10,7.0,True,False,125.6,63,22.0
+U002_2025-11-03,U002,2025-11-03,5,Upper1,row_cable,Seated Cable Row,double_progression_add_reps,60.0,3,10,8.0,12.0,12,12,7.2,True,False,125.6,63,22.0
+U002_2025-11-03,U002,2025-11-03,5,Upper1,ohp_db,DB Shoulder Press,double_progression_add_reps,25.0,3,10,8.0,12.0,12,12,7.1,True,False,125.6,63,22.0
+U002_2025-11-03,U002,2025-11-03,5,Upper1,lat_pulldown,Lat Pulldown,double_progression_add_load,75.0,3,10,8.0,12.0,12,12,7.1,True,False,125.6,63,22.0
+U002_2025-11-03,U002,2025-11-03,5,Upper1,curl,DB Curl,double_progression_add_reps,15.0,2,12,10.0,15.0,15,15,7.2,True,False,125.6,63,22.0
+U002_2025-11-04,U002,2025-11-04,5,Lower1,squat,Back Squat,double_progression_add_reps,65.0,3,8,6.0,10.0,10,10,7.6,True,False,125.6,53,23.0
+U002_2025-11-04,U002,2025-11-04,5,Lower1,rdl,Romanian Deadlift,double_progression_add_load,90.0,3,8,6.0,10.0,9,10,7.6,True,False,125.6,53,23.0
+U002_2025-11-04,U002,2025-11-04,5,Lower1,split_squat,DB Bulgarian Split Squat,double_progression_add_reps,20.0,3,10,8.0,12.0,10,12,7.3,True,False,125.6,53,23.0
+U002_2025-11-04,U002,2025-11-04,5,Lower1,calf,Standing Calf Raise,double_progression_add_reps,70.0,3,12,10.0,15.0,13,14,7.5,True,False,125.6,53,23.0
+U002_2025-11-06,U002,2025-11-06,5,Upper2,incline_db,Incline DB Press,double_progression_add_reps,25.0,3,10,8.0,12.0,11,12,7.7,True,False,125.2,50,25.0
+U002_2025-11-06,U002,2025-11-06,5,Upper2,pullup_assist,Assisted Pull-up,double_progression_add_reps,-45.0,3,8,6.0,10.0,9,9,7.6,True,False,125.2,50,25.0
+U002_2025-11-06,U002,2025-11-06,5,Upper2,lateral_raise,DB Lateral Raise,double_progression_add_reps,10.0,3,12,10.0,15.0,13,14,7.7,True,False,125.2,50,25.0
+U002_2025-11-06,U002,2025-11-06,5,Upper2,triceps,Cable Triceps Pressdown,double_progression_add_reps,30.0,2,12,10.0,15.0,12,14,7.7,True,False,125.2,50,25.0
+U002_2025-11-07,U002,2025-11-07,5,Lower2,deadlift,Deadlift,double_progression_add_load,110.0,2,5,4.0,6.0,6,6,7.8,True,False,125.4,49,26.0
+U002_2025-11-07,U002,2025-11-07,5,Lower2,leg_press,Leg Press,double_progression_add_reps,140.0,3,12,10.0,15.0,12,13,7.8,True,False,125.4,49,26.0
+U002_2025-11-07,U002,2025-11-07,5,Lower2,ham_curl,Leg Curl,double_progression_add_reps,55.0,3,12,10.0,15.0,13,14,7.7,True,False,125.4,49,26.0
+U002_2025-11-07,U002,2025-11-07,5,Lower2,core,Dead Bug,repeat_after_failure,0.0,3,10,,,2,15,6.9,False,False,125.4,49,26.0
+U002_2025-11-10,U002,2025-11-10,6,Upper1,bench,Barbell Bench Press,deload,40.0,2,8,6.0,10.0,8,9,7.8,True,False,125.6,45,1.0
+U002_2025-11-10,U002,2025-11-10,6,Upper1,row_cable,Seated Cable Row,deload,55.0,2,10,8.0,12.0,11,11,7.9,True,False,125.6,45,1.0
+U002_2025-11-10,U002,2025-11-10,6,Upper1,ohp_db,DB Shoulder Press,deload,22.5,2,10,8.0,12.0,9,10,7.7,True,False,125.6,45,1.0
+U002_2025-11-10,U002,2025-11-10,6,Upper1,lat_pulldown,Lat Pulldown,deload,67.5,2,10,8.0,12.0,10,11,7.6,True,False,125.6,45,1.0
+U002_2025-11-10,U002,2025-11-10,6,Upper1,curl,DB Curl,deload,12.5,1,12,10.0,15.0,12,12,7.7,True,False,125.6,45,1.0
+U002_2025-11-11,U002,2025-11-11,6,Lower1,squat,Back Squat,deload,57.5,2,8,6.0,10.0,9,9,7.4,True,False,125.6,53,2.0
+U002_2025-11-11,U002,2025-11-11,6,Lower1,rdl,Romanian Deadlift,deload,80.0,2,8,6.0,10.0,9,9,7.4,True,False,125.6,53,2.0
+U002_2025-11-11,U002,2025-11-11,6,Lower1,split_squat,DB Bulgarian Split Squat,deload,17.5,2,10,8.0,12.0,12,12,7.5,True,False,125.6,53,2.0
+U002_2025-11-11,U002,2025-11-11,6,Lower1,calf,Standing Calf Raise,deload,62.5,2,12,10.0,15.0,13,13,7.5,True,False,125.6,53,2.0
+U002_2025-11-13,U002,2025-11-13,6,Upper2,incline_db,Incline DB Press,deload,22.5,2,10,8.0,12.0,12,12,7.3,True,False,125.8,56,4.0
+U002_2025-11-13,U002,2025-11-13,6,Upper2,pullup_assist,Assisted Pull-up,deload,-40.0,2,8,6.0,10.0,9,10,7.5,True,False,125.8,56,4.0
+U002_2025-11-13,U002,2025-11-13,6,Upper2,lateral_raise,DB Lateral Raise,deload,10.0,2,12,10.0,15.0,13,14,7.2,True,False,125.8,56,4.0
+U002_2025-11-13,U002,2025-11-13,6,Upper2,triceps,Cable Triceps Pressdown,deload,27.5,1,12,10.0,15.0,13,13,7.3,True,False,125.8,56,4.0
+U002_2025-11-14,U002,2025-11-14,6,Lower2,deadlift,Deadlift,deload,100.0,2,5,4.0,6.0,6,6,7.6,True,False,125.4,52,5.0
+U002_2025-11-14,U002,2025-11-14,6,Lower2,leg_press,Leg Press,deload,125.0,2,12,10.0,15.0,13,13,7.4,True,False,125.4,52,5.0
+U002_2025-11-14,U002,2025-11-14,6,Lower2,ham_curl,Leg Curl,deload,50.0,2,12,10.0,15.0,12,14,7.4,True,False,125.4,52,5.0
+U002_2025-11-14,U002,2025-11-14,6,Lower2,core,Dead Bug,deload,0.0,2,10,,,13,21,6.7,True,False,125.4,52,5.0
+U002_2025-11-17,U002,2025-11-17,7,Upper1,bench,Barbell Bench Press,double_progression_add_reps,40.0,3,8,6.0,10.0,10,10,7.7,True,False,125.4,52,8.0
+U002_2025-11-17,U002,2025-11-17,7,Upper1,row_cable,Seated Cable Row,double_progression_add_reps,55.0,3,10,8.0,12.0,12,12,7.7,True,False,125.4,52,8.0
+U002_2025-11-17,U002,2025-11-17,7,Upper1,ohp_db,DB Shoulder Press,double_progression_add_reps,22.5,3,10,8.0,12.0,12,12,7.6,True,False,125.4,52,8.0
+U002_2025-11-17,U002,2025-11-17,7,Upper1,lat_pulldown,Lat Pulldown,double_progression_add_reps,67.5,3,10,8.0,12.0,12,12,7.8,True,False,125.4,52,8.0
+U002_2025-11-17,U002,2025-11-17,7,Upper1,curl,DB Curl,double_progression_add_reps,12.5,2,12,10.0,15.0,15,15,7.5,True,False,125.4,52,8.0
+U002_2025-11-18,U002,2025-11-18,7,Lower1,squat,Back Squat,double_progression_add_reps,57.5,3,8,6.0,10.0,10,10,7.5,True,False,125.3,60,9.0
+U002_2025-11-18,U002,2025-11-18,7,Lower1,rdl,Romanian Deadlift,double_progression_add_reps,80.0,3,8,6.0,10.0,10,10,7.2,True,False,125.3,60,9.0
+U002_2025-11-18,U002,2025-11-18,7,Lower1,split_squat,DB Bulgarian Split Squat,double_progression_add_load,20.0,3,10,8.0,12.0,12,12,7.3,True,False,125.3,60,9.0
+U002_2025-11-18,U002,2025-11-18,7,Lower1,calf,Standing Calf Raise,double_progression_add_reps,62.5,3,12,10.0,15.0,15,15,7.1,True,False,125.3,60,9.0
+U002_2025-11-20,U002,2025-11-20,7,Upper2,incline_db,Incline DB Press,double_progression_add_load,25.0,3,10,8.0,12.0,12,12,7.2,True,False,125.6,55,11.0
+U002_2025-11-20,U002,2025-11-20,7,Upper2,pullup_assist,Assisted Pull-up,double_progression_add_reps,-40.0,3,8,6.0,10.0,10,10,7.5,True,False,125.6,55,11.0
+U002_2025-11-20,U002,2025-11-20,7,Upper2,lateral_raise,DB Lateral Raise,double_progression_add_reps,10.0,3,12,10.0,15.0,15,15,7.4,True,False,125.6,55,11.0
+U002_2025-11-20,U002,2025-11-20,7,Upper2,triceps,Cable Triceps Pressdown,double_progression_add_reps,27.5,2,12,10.0,15.0,15,15,7.8,True,False,125.6,55,11.0
+U002_2025-11-21,U002,2025-11-21,7,Lower2,deadlift,Deadlift,double_progression_add_load,105.0,2,5,4.0,6.0,6,6,7.4,True,False,125.8,57,12.0
+U002_2025-11-21,U002,2025-11-21,7,Lower2,leg_press,Leg Press,double_progression_add_reps,125.0,3,12,10.0,15.0,14,15,7.3,True,False,125.8,57,12.0
+U002_2025-11-21,U002,2025-11-21,7,Lower2,ham_curl,Leg Curl,double_progression_add_reps,50.0,3,12,10.0,15.0,14,15,7.4,True,False,125.8,57,12.0
+U002_2025-11-21,U002,2025-11-21,7,Lower2,core,Dead Bug,linear_add_load,0.0,3,10,,,3,22,6.7,False,False,125.8,57,12.0
+U002_2025-11-24,U002,2025-11-24,8,Upper1,bench,Barbell Bench Press,double_progression_add_load,42.5,3,8,6.0,10.0,10,10,7.2,True,False,125.1,56,15.0
+U002_2025-11-24,U002,2025-11-24,8,Upper1,row_cable,Seated Cable Row,double_progression_add_load,60.0,3,10,8.0,12.0,12,12,7.5,True,False,125.1,56,15.0
+U002_2025-11-24,U002,2025-11-24,8,Upper1,ohp_db,DB Shoulder Press,double_progression_add_load,25.0,3,10,8.0,12.0,12,12,7.3,True,False,125.1,56,15.0
+U002_2025-11-24,U002,2025-11-24,8,Upper1,lat_pulldown,Lat Pulldown,double_progression_add_load,72.5,3,10,8.0,12.0,12,12,7.4,True,False,125.1,56,15.0
+U002_2025-11-24,U002,2025-11-24,8,Upper1,curl,DB Curl,double_progression_add_load,15.0,2,12,10.0,15.0,15,15,7.4,True,False,125.1,56,15.0
+U002_2025-11-25,U002,2025-11-25,8,Lower1,squat,Back Squat,double_progression_add_load,62.5,3,8,6.0,10.0,10,10,7.7,True,False,125.9,53,16.0
+U002_2025-11-25,U002,2025-11-25,8,Lower1,rdl,Romanian Deadlift,double_progression_add_load,85.0,3,8,6.0,10.0,10,10,7.6,True,False,125.9,53,16.0
+U002_2025-11-25,U002,2025-11-25,8,Lower1,split_squat,DB Bulgarian Split Squat,double_progression_add_load,22.5,3,10,8.0,12.0,12,12,7.6,True,False,125.9,53,16.0
+U002_2025-11-25,U002,2025-11-25,8,Lower1,calf,Standing Calf Raise,double_progression_add_load,67.5,3,12,10.0,15.0,15,15,7.6,True,False,125.9,53,16.0
+U002_2025-11-27,U002,2025-11-27,8,Upper2,incline_db,Incline DB Press,double_progression_add_load,27.5,3,10,8.0,12.0,12,12,7.5,True,False,126.0,56,18.0
+U002_2025-11-27,U002,2025-11-27,8,Upper2,pullup_assist,Assisted Pull-up,double_progression_reduce_assistance,-35.0,3,8,6.0,10.0,10,10,7.3,True,False,126.0,56,18.0
+U002_2025-11-27,U002,2025-11-27,8,Upper2,lateral_raise,DB Lateral Raise,double_progression_add_load,12.5,3,12,10.0,15.0,15,15,7.4,True,False,126.0,56,18.0
+U002_2025-11-27,U002,2025-11-27,8,Upper2,triceps,Cable Triceps Pressdown,double_progression_add_load,32.5,2,12,10.0,15.0,15,15,7.4,True,False,126.0,56,18.0
+U002_2025-11-28,U002,2025-11-28,8,Lower2,deadlift,Deadlift,double_progression_add_load,110.0,2,5,4.0,6.0,6,6,7.3,True,False,125.7,62,19.0
+U002_2025-11-28,U002,2025-11-28,8,Lower2,leg_press,Leg Press,double_progression_add_reps,125.0,3,12,10.0,15.0,15,15,7.4,True,False,125.7,62,19.0
+U002_2025-11-28,U002,2025-11-28,8,Lower2,ham_curl,Leg Curl,double_progression_add_reps,50.0,3,12,10.0,15.0,15,15,7.2,True,False,125.7,62,19.0
+U002_2025-11-28,U002,2025-11-28,8,Lower2,core,Dead Bug,repeat_after_failure,0.0,3,10,,,3,11,6.4,False,False,125.7,62,19.0
+U002_2025-12-01,U002,2025-12-01,9,Upper1,bench,Barbell Bench Press,double_progression_add_load,45.0,3,8,6.0,10.0,10,10,7.7,True,False,125.8,52,22.0
+U002_2025-12-01,U002,2025-12-01,9,Upper1,row_cable,Seated Cable Row,double_progression_add_load,65.0,3,10,8.0,12.0,12,12,7.6,True,False,125.8,52,22.0
+U002_2025-12-01,U002,2025-12-01,9,Upper1,ohp_db,DB Shoulder Press,double_progression_add_load,27.5,3,10,8.0,12.0,12,12,7.8,True,False,125.8,52,22.0
+U002_2025-12-01,U002,2025-12-01,9,Upper1,lat_pulldown,Lat Pulldown,double_progression_add_load,77.5,3,10,8.0,12.0,12,12,7.6,True,False,125.8,52,22.0
+U002_2025-12-01,U002,2025-12-01,9,Upper1,curl,DB Curl,double_progression_add_load,17.5,2,12,10.0,15.0,15,15,7.6,True,False,125.8,52,22.0
+U002_2025-12-02,U002,2025-12-02,9,Lower1,squat,Back Squat,double_progression_add_load,67.5,3,8,6.0,10.0,10,10,7.4,True,False,126.3,57,23.0
+U002_2025-12-02,U002,2025-12-02,9,Lower1,rdl,Romanian Deadlift,double_progression_add_load,90.0,3,8,6.0,10.0,10,10,7.7,True,False,126.3,57,23.0
+U002_2025-12-02,U002,2025-12-02,9,Lower1,split_squat,DB Bulgarian Split Squat,double_progression_add_load,25.0,3,10,8.0,12.0,12,12,7.5,True,False,126.3,57,23.0
+U002_2025-12-02,U002,2025-12-02,9,Lower1,calf,Standing Calf Raise,double_progression_add_load,72.5,3,12,10.0,15.0,15,15,7.3,True,False,126.3,57,23.0
+U002_2025-12-04,U002,2025-12-04,9,Upper2,incline_db,Incline DB Press,double_progression_add_load,30.0,3,10,8.0,12.0,12,12,7.6,True,False,125.4,50,25.0
+U002_2025-12-04,U002,2025-12-04,9,Upper2,pullup_assist,Assisted Pull-up,double_progression_reduce_assistance,-30.0,3,8,6.0,10.0,10,10,7.6,True,False,125.4,50,25.0
+U002_2025-12-04,U002,2025-12-04,9,Upper2,lateral_raise,DB Lateral Raise,double_progression_add_load,15.0,3,12,10.0,15.0,14,15,7.5,True,False,125.4,50,25.0
+U002_2025-12-04,U002,2025-12-04,9,Upper2,triceps,Cable Triceps Pressdown,double_progression_add_load,37.5,2,12,10.0,15.0,15,15,7.5,True,False,125.4,50,25.0
+U002_2025-12-05,U002,2025-12-05,9,Lower2,deadlift,Deadlift,double_progression_add_load,115.0,2,5,4.0,6.0,6,6,7.7,True,False,125.7,49,26.0
+U002_2025-12-05,U002,2025-12-05,9,Lower2,leg_press,Leg Press,double_progression_add_load,135.0,3,12,10.0,15.0,15,15,7.6,True,False,125.7,49,26.0
+U002_2025-12-05,U002,2025-12-05,9,Lower2,ham_curl,Leg Curl,double_progression_add_load,55.0,3,12,10.0,15.0,14,15,7.7,True,False,125.7,49,26.0
+U002_2025-12-05,U002,2025-12-05,9,Lower2,core,Dead Bug,repeat_after_failure,0.0,3,10,,,2,12,6.7,False,False,125.7,49,26.0
+U003_2025-10-06,U003,2025-10-06,1,A,squat,Front Squat (knee-friendly),baseline,185.0,3,5,,,5,5,7.7,True,False,234.9,47,
+U003_2025-10-06,U003,2025-10-06,1,A,bench,Barbell Bench Press,baseline,185.0,3,5,,,5,5,7.8,True,False,234.9,47,
+U003_2025-10-06,U003,2025-10-06,1,A,row,Barbell Row,baseline,155.0,3,8,,,8,8,7.8,True,False,234.9,47,
+U003_2025-10-06,U003,2025-10-06,1,A,carry,Farmer Carry,baseline,70.0,3,30,,,30,37,7.4,True,False,234.9,47,
+U003_2025-10-08,U003,2025-10-08,1,B,squat,Front Squat (knee-friendly),repeat_conservative,185.0,3,5,,,5,5,8.1,True,False,234.4,40,
+U003_2025-10-08,U003,2025-10-08,1,B,ohp,Overhead Press,baseline,115.0,3,5,,,5,5,8.0,True,False,234.4,40,
+U003_2025-10-08,U003,2025-10-08,1,B,deadlift,Deadlift,baseline,225.0,1,5,,,5,5,7.7,True,False,234.4,40,
+U003_2025-10-08,U003,2025-10-08,1,B,pulldown,Lat Pulldown,baseline,120.0,3,10,8.0,12.0,8,8,8.0,True,False,234.4,40,
+U003_2025-10-10,U003,2025-10-10,1,A,squat,Front Squat (knee-friendly),linear_add_load,190.0,3,5,,,5,5,7.6,True,False,234.5,50,
+U003_2025-10-10,U003,2025-10-10,1,A,bench,Barbell Bench Press,linear_add_load,190.0,3,5,,,5,5,7.6,True,False,234.5,50,
+U003_2025-10-10,U003,2025-10-10,1,A,row,Barbell Row,linear_add_load,160.0,3,8,,,8,8,7.5,True,False,234.5,50,
+U003_2025-10-10,U003,2025-10-10,1,A,carry,Farmer Carry,linear_add_load,75.0,3,30,,,21,26,7.2,False,False,234.5,50,
+U003_2025-10-13,U003,2025-10-13,2,B,squat,Front Squat (knee-friendly),linear_add_load,195.0,3,5,,,5,5,7.8,True,False,234.1,47,
+U003_2025-10-13,U003,2025-10-13,2,B,ohp,Overhead Press,linear_add_load,120.0,3,5,,,5,5,7.7,True,False,234.1,47,
+U003_2025-10-13,U003,2025-10-13,2,B,deadlift,Deadlift,linear_add_load,235.0,1,5,,,5,5,7.4,True,False,234.1,47,
+U003_2025-10-13,U003,2025-10-13,2,B,pulldown,Lat Pulldown,double_progression_add_reps,120.0,3,10,8.0,12.0,10,10,7.9,True,False,234.1,47,
+U003_2025-10-15,U003,2025-10-15,2,A,squat,Front Squat (knee-friendly),linear_add_load,200.0,3,5,,,5,5,7.7,True,False,233.6,48,
+U003_2025-10-15,U003,2025-10-15,2,A,bench,Barbell Bench Press,linear_add_load,195.0,3,5,,,5,5,7.6,True,False,233.6,48,
+U003_2025-10-15,U003,2025-10-15,2,A,row,Barbell Row,linear_add_load,165.0,3,8,,,8,8,7.7,True,False,233.6,48,
+U003_2025-10-15,U003,2025-10-15,2,A,carry,Farmer Carry,repeat_after_failure,75.0,3,30,,,23,35,7.3,False,False,233.6,48,
+U003_2025-10-17,U003,2025-10-17,2,B,squat,Front Squat (knee-friendly),linear_add_load,205.0,3,5,,,5,5,7.8,True,False,234.2,48,
+U003_2025-10-17,U003,2025-10-17,2,B,ohp,Overhead Press,linear_add_load,125.0,3,5,,,5,5,7.6,True,False,234.2,48,
+U003_2025-10-17,U003,2025-10-17,2,B,deadlift,Deadlift,linear_add_load,240.0,1,5,,,5,5,7.5,True,False,234.2,48,
+U003_2025-10-17,U003,2025-10-17,2,B,pulldown,Lat Pulldown,double_progression_add_reps,120.0,3,10,8.0,12.0,10,11,7.8,True,False,234.2,48,
+U003_2025-10-20,U003,2025-10-20,3,A,squat,Front Squat (knee-friendly),linear_add_load,210.0,3,5,,,5,5,7.6,True,False,233.4,51,
+U003_2025-10-20,U003,2025-10-20,3,A,bench,Barbell Bench Press,linear_add_load,200.0,3,5,,,5,5,7.7,True,False,233.4,51,
+U003_2025-10-20,U003,2025-10-20,3,A,row,Barbell Row,linear_add_load,170.0,3,8,,,8,8,7.8,True,False,233.4,51,
+U003_2025-10-20,U003,2025-10-20,3,A,carry,Farmer Carry,repeat_after_failure,70.0,3,30,,,24,39,7.2,False,False,233.4,51,
+U003_2025-10-22,U003,2025-10-22,3,B,squat,Front Squat (knee-friendly),repeat_conservative,210.0,3,5,,,5,5,7.9,True,False,233.7,40,
+U003_2025-10-22,U003,2025-10-22,3,B,ohp,Overhead Press,repeat_conservative,125.0,3,5,,,5,5,8.0,True,False,233.7,40,
+U003_2025-10-22,U003,2025-10-22,3,B,deadlift,Deadlift,repeat_conservative,240.0,1,5,,,5,5,7.7,True,False,233.7,40,
+U003_2025-10-22,U003,2025-10-22,3,B,pulldown,Lat Pulldown,repeat_conservative,120.0,3,10,8.0,12.0,9,10,8.0,True,False,233.7,40,
+U003_2025-10-24,U003,2025-10-24,3,A,squat,Front Squat (knee-friendly),linear_add_load,210.0,3,5,,,5,5,7.7,True,False,233.3,43,
+U003_2025-10-24,U003,2025-10-24,3,A,bench,Barbell Bench Press,linear_add_load,205.0,3,5,,,5,5,8.0,True,False,233.3,43,
+U003_2025-10-24,U003,2025-10-24,3,A,row,Barbell Row,linear_add_load,175.0,3,8,,,8,8,8.0,True,False,233.3,43,
+U003_2025-10-24,U003,2025-10-24,3,A,carry,Farmer Carry,repeat_after_failure,70.0,3,30,,,23,31,7.6,False,False,233.3,43,
+U003_2025-10-27,U003,2025-10-27,4,B,squat,Front Squat (knee-friendly),deload,190.0,2,5,,,5,5,7.8,True,False,233.2,44,
+U003_2025-10-27,U003,2025-10-27,4,B,ohp,Overhead Press,deload,110.0,2,5,,,5,5,7.8,True,False,233.2,44,
+U003_2025-10-27,U003,2025-10-27,4,B,deadlift,Deadlift,deload,215.0,1,5,,,5,5,7.5,True,False,233.2,44,
+U003_2025-10-27,U003,2025-10-27,4,B,pulldown,Lat Pulldown,deload,110.0,2,10,8.0,12.0,9,9,7.8,True,False,233.2,44,
+U003_2025-10-29,U003,2025-10-29,4,A,squat,Front Squat (knee-friendly),deload,170.0,2,5,,,5,5,7.8,True,False,233.3,42,
+U003_2025-10-29,U003,2025-10-29,4,A,bench,Barbell Bench Press,deload,185.0,2,5,,,5,5,7.8,True,False,233.3,42,
+U003_2025-10-29,U003,2025-10-29,4,A,row,Barbell Row,deload,160.0,2,8,,,8,8,7.8,True,False,233.3,42,
+U003_2025-10-29,U003,2025-10-29,4,A,carry,Farmer Carry,deload,55.0,2,30,,,27,27,7.5,False,False,233.3,42,
+U003_2025-10-31,U003,2025-10-31,4,B,squat,Front Squat (knee-friendly),deload,155.0,2,5,,,5,5,8.0,True,False,233.1,46,
+U003_2025-10-31,U003,2025-10-31,4,B,ohp,Overhead Press,deload,100.0,2,5,,,5,5,7.7,True,False,233.1,46,
+U003_2025-10-31,U003,2025-10-31,4,B,deadlift,Deadlift,deload,195.0,1,5,,,5,5,7.7,True,False,233.1,46,
+U003_2025-10-31,U003,2025-10-31,4,B,pulldown,Lat Pulldown,deload,100.0,2,10,8.0,12.0,10,10,7.9,True,False,233.1,46,
+U003_2025-11-03,U003,2025-11-03,5,A,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.6,True,False,232.2,54,
+U003_2025-11-03,U003,2025-11-03,5,A,bench,Barbell Bench Press,linear_add_load,190.0,3,5,,,5,5,7.4,True,False,232.2,54,
+U003_2025-11-03,U003,2025-11-03,5,A,row,Barbell Row,linear_add_load,165.0,3,8,,,8,8,7.3,True,False,232.2,54,
+U003_2025-11-03,U003,2025-11-03,5,A,carry,Farmer Carry,repeat_after_failure,55.0,3,30,,,23,30,7.1,False,False,232.2,54,
+U003_2025-11-05,U003,2025-11-05,5,B,squat,Front Squat (knee-friendly),repeat_conservative,160.0,3,5,,,5,5,8.1,True,False,232.2,38,
+U003_2025-11-05,U003,2025-11-05,5,B,ohp,Overhead Press,repeat_conservative,100.0,3,5,,,5,5,7.9,True,False,232.2,38,
+U003_2025-11-05,U003,2025-11-05,5,B,deadlift,Deadlift,repeat_conservative,195.0,1,5,,,4,4,9.7,False,True,232.2,38,
+U003_2025-11-05,U003,2025-11-05,5,B,pulldown,Lat Pulldown,repeat_conservative,100.0,3,10,8.0,12.0,10,11,8.2,True,False,232.2,38,
+U003_2025-11-07,U003,2025-11-07,5,A,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.9,True,False,232.7,46,
+U003_2025-11-07,U003,2025-11-07,5,A,bench,Barbell Bench Press,linear_add_load,190.0,3,5,,,5,5,7.8,True,False,232.7,46,
+U003_2025-11-07,U003,2025-11-07,5,A,row,Barbell Row,linear_add_load,170.0,3,8,,,8,8,7.9,True,False,232.7,46,
+U003_2025-11-07,U003,2025-11-07,5,A,carry,Farmer Carry,repeat_after_failure,50.0,3,30,,,23,33,7.4,False,False,232.7,46,
+U003_2025-11-10,U003,2025-11-10,6,B,squat,Front Squat (knee-friendly),repeat_conservative,160.0,3,5,,,5,5,8.6,True,False,231.9,27,
+U003_2025-11-10,U003,2025-11-10,6,B,ohp,Overhead Press,repeat_conservative,100.0,3,5,,,5,5,8.5,True,False,231.9,27,
+U003_2025-11-10,U003,2025-11-10,6,B,deadlift,Deadlift,repeat_conservative,195.0,1,5,,,5,5,8.2,True,False,231.9,27,
+U003_2025-11-10,U003,2025-11-10,6,B,pulldown,Lat Pulldown,repeat_conservative,100.0,3,10,8.0,12.0,9,11,8.4,True,False,231.9,27,
+U003_2025-11-12,U003,2025-11-12,6,A,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,8.0,True,False,231.9,42,
+U003_2025-11-12,U003,2025-11-12,6,A,bench,Barbell Bench Press,linear_add_load,190.0,3,5,,,5,5,8.0,True,False,231.9,42,
+U003_2025-11-12,U003,2025-11-12,6,A,row,Barbell Row,linear_add_load,175.0,3,8,,,8,8,7.9,True,False,231.9,42,
+U003_2025-11-12,U003,2025-11-12,6,A,carry,Farmer Carry,repeat_after_failure,50.0,3,30,,,25,30,7.6,False,False,231.9,42,
+U003_2025-11-14,U003,2025-11-14,6,B,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.7,True,False,231.7,48,
+U003_2025-11-14,U003,2025-11-14,6,B,ohp,Overhead Press,linear_add_load,105.0,3,5,,,5,5,7.9,True,False,231.7,48,
+U003_2025-11-14,U003,2025-11-14,6,B,deadlift,Deadlift,linear_add_load,200.0,1,5,,,5,5,7.8,True,False,231.7,48,
+U003_2025-11-14,U003,2025-11-14,6,B,pulldown,Lat Pulldown,double_progression_add_reps,100.0,3,10,8.0,12.0,12,12,7.8,True,False,231.7,48,
+U003_2025-11-17,U003,2025-11-17,7,A,squat,Front Squat (knee-friendly),repeat_conservative,160.0,3,5,,,5,5,8.1,True,False,232.1,40,
+U003_2025-11-17,U003,2025-11-17,7,A,bench,Barbell Bench Press,repeat_conservative,190.0,3,5,,,5,5,8.1,True,False,232.1,40,
+U003_2025-11-17,U003,2025-11-17,7,A,row,Barbell Row,repeat_conservative,175.0,3,8,,,8,8,8.0,True,False,232.1,40,
+U003_2025-11-17,U003,2025-11-17,7,A,carry,Farmer Carry,repeat_conservative,45.0,3,30,,,25,37,7.7,False,False,232.1,40,
+U003_2025-11-19,U003,2025-11-19,7,B,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.7,True,False,231.9,51,
+U003_2025-11-19,U003,2025-11-19,7,B,ohp,Overhead Press,linear_add_load,110.0,3,5,,,5,5,7.7,True,False,231.9,51,
+U003_2025-11-19,U003,2025-11-19,7,B,deadlift,Deadlift,linear_add_load,205.0,1,5,,,5,5,7.5,True,False,231.9,51,
+U003_2025-11-19,U003,2025-11-19,7,B,pulldown,Lat Pulldown,double_progression_add_load,110.0,3,10,8.0,12.0,12,12,7.6,True,False,231.9,51,
+U003_2025-11-21,U003,2025-11-21,7,A,squat,Front Squat (knee-friendly),repeat_conservative,160.0,3,5,,,5,5,8.0,True,False,231.6,40,
+U003_2025-11-21,U003,2025-11-21,7,A,bench,Barbell Bench Press,repeat_conservative,190.0,3,5,,,5,5,8.0,True,False,231.6,40,
+U003_2025-11-21,U003,2025-11-21,7,A,row,Barbell Row,repeat_conservative,175.0,3,8,,,8,8,8.1,True,False,231.6,40,
+U003_2025-11-21,U003,2025-11-21,7,A,carry,Farmer Carry,repeat_conservative,45.0,3,30,,,24,36,7.5,False,False,231.6,40,
+U003_2025-11-24,U003,2025-11-24,8,B,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.7,True,False,230.8,43,
+U003_2025-11-24,U003,2025-11-24,8,B,ohp,Overhead Press,linear_add_load,115.0,3,5,,,5,5,8.0,True,False,230.8,43,
+U003_2025-11-24,U003,2025-11-24,8,B,deadlift,Deadlift,linear_add_load,210.0,1,5,,,5,5,7.7,True,False,230.8,43,
+U003_2025-11-24,U003,2025-11-24,8,B,pulldown,Lat Pulldown,double_progression_add_load,120.0,3,10,8.0,12.0,12,12,7.9,True,False,230.8,43,
+U003_2025-11-26,U003,2025-11-26,8,A,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.8,True,False,230.9,46,
+U003_2025-11-26,U003,2025-11-26,8,A,bench,Barbell Bench Press,linear_add_load,190.0,3,5,,,5,5,7.7,True,False,230.9,46,
+U003_2025-11-26,U003,2025-11-26,8,A,row,Barbell Row,linear_add_load,180.0,3,8,,,8,8,7.7,True,False,230.9,46,
+U003_2025-11-26,U003,2025-11-26,8,A,carry,Farmer Carry,repeat_after_failure,40.0,3,30,,,27,40,7.5,False,False,230.9,46,
+U003_2025-11-28,U003,2025-11-28,8,B,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.3,True,False,231.4,53,
+U003_2025-11-28,U003,2025-11-28,8,B,ohp,Overhead Press,linear_add_load,120.0,3,5,,,5,5,7.5,True,False,231.4,53,
+U003_2025-11-28,U003,2025-11-28,8,B,deadlift,Deadlift,linear_add_load,215.0,1,5,,,5,5,7.5,True,False,231.4,53,
+U003_2025-11-28,U003,2025-11-28,8,B,pulldown,Lat Pulldown,double_progression_add_load,130.0,3,10,8.0,12.0,12,12,7.5,True,False,231.4,53,
+U003_2025-12-01,U003,2025-12-01,9,A,squat,Front Squat (knee-friendly),repeat_conservative,160.0,3,5,,,5,5,8.1,True,False,230.6,39,
+U003_2025-12-01,U003,2025-12-01,9,A,bench,Barbell Bench Press,repeat_conservative,190.0,3,5,,,5,5,8.1,True,False,230.6,39,
+U003_2025-12-01,U003,2025-12-01,9,A,row,Barbell Row,repeat_conservative,180.0,3,8,,,8,8,8.1,True,False,230.6,39,
+U003_2025-12-01,U003,2025-12-01,9,A,carry,Farmer Carry,repeat_conservative,40.0,3,30,,,20,33,7.8,False,False,230.6,39,
+U003_2025-12-03,U003,2025-12-03,9,B,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.6,True,False,230.6,54,
+U003_2025-12-03,U003,2025-12-03,9,B,ohp,Overhead Press,linear_add_load,125.0,3,5,,,5,5,7.5,True,False,230.6,54,
+U003_2025-12-03,U003,2025-12-03,9,B,deadlift,Deadlift,linear_add_load,220.0,1,5,,,5,5,7.4,True,False,230.6,54,
+U003_2025-12-03,U003,2025-12-03,9,B,pulldown,Lat Pulldown,double_progression_add_load,140.0,3,10,8.0,12.0,12,12,7.3,True,False,230.6,54,
+U003_2025-12-05,U003,2025-12-05,9,A,squat,Front Squat (knee-friendly),linear_add_load,160.0,3,5,,,5,5,7.4,True,False,230.6,53,
+U003_2025-12-05,U003,2025-12-05,9,A,bench,Barbell Bench Press,linear_add_load,190.0,3,5,,,5,5,7.6,True,False,230.6,53,
+U003_2025-12-05,U003,2025-12-05,9,A,row,Barbell Row,linear_add_load,185.0,3,8,,,8,8,7.6,True,False,230.6,53,
+U003_2025-12-05,U003,2025-12-05,9,A,carry,Farmer Carry,repeat_after_failure,35.0,3,30,,,24,28,7.4,False,False,230.6,53,
+U004_2025-10-06,U004,2025-10-06,1,A,squat,Back Squat,baseline,105.0,3,5,,,5,5,7.4,True,False,169.9,58,
+U004_2025-10-06,U004,2025-10-06,1,A,db_bench,DB Bench Press,baseline,35.0,3,10,8.0,12.0,10,12,7.4,True,False,169.9,58,
+U004_2025-10-06,U004,2025-10-06,1,A,row_cable,Seated Cable Row,baseline,70.0,3,12,10.0,15.0,11,13,7.5,True,False,169.9,58,
+U004_2025-10-06,U004,2025-10-06,1,A,facepull,Face Pull,baseline,25.0,2,15,12.0,20.0,14,14,7.3,True,False,169.9,58,
+U004_2025-10-08,U004,2025-10-08,1,B,trap_dl,Trap Bar Deadlift,baseline,145.0,2,5,4.0,6.0,5,6,7.7,True,False,170.2,51,
+U004_2025-10-08,U004,2025-10-08,1,B,landmine_press,Landmine Press,baseline,45.0,3,10,8.0,12.0,9,10,7.6,True,False,170.2,51,
+U004_2025-10-08,U004,2025-10-08,1,B,lat_pulldown,Lat Pulldown,baseline,90.0,3,10,8.0,12.0,9,9,7.5,True,False,170.2,51,
+U004_2025-10-08,U004,2025-10-08,1,B,split_squat,Goblet Split Squat,baseline,30.0,3,10,8.0,12.0,10,10,7.6,True,False,170.2,51,
+U004_2025-10-10,U004,2025-10-10,1,A,squat,Back Squat,deload,95.0,2,5,,,5,5,7.5,True,False,169.7,50,
+U004_2025-10-10,U004,2025-10-10,1,A,db_bench,DB Bench Press,deload,32.5,2,10,8.0,12.0,9,10,7.4,True,False,169.7,50,
+U004_2025-10-10,U004,2025-10-10,1,A,row_cable,Seated Cable Row,deload,62.5,2,12,10.0,15.0,11,12,7.7,True,False,169.7,50,
+U004_2025-10-10,U004,2025-10-10,1,A,facepull,Face Pull,deload,22.5,1,15,12.0,20.0,13,13,7.5,True,False,169.7,50,
+U004_2025-10-13,U004,2025-10-13,2,B,trap_dl,Trap Bar Deadlift,deload,130.0,2,5,4.0,6.0,6,6,7.4,True,False,170.2,57,
+U004_2025-10-13,U004,2025-10-13,2,B,landmine_press,Landmine Press,deload,40.0,2,10,8.0,12.0,10,11,7.4,True,False,170.2,57,
+U004_2025-10-13,U004,2025-10-13,2,B,lat_pulldown,Lat Pulldown,deload,80.0,2,10,8.0,12.0,10,10,7.2,True,False,170.2,57,
+U004_2025-10-13,U004,2025-10-13,2,B,split_squat,Goblet Split Squat,deload,27.5,2,10,8.0,12.0,10,11,7.1,True,False,170.2,57,
+U004_2025-10-15,U004,2025-10-15,2,A,squat,Back Squat,deload,85.0,2,5,,,5,5,7.3,True,False,170.1,60,
+U004_2025-10-15,U004,2025-10-15,2,A,db_bench,DB Bench Press,deload,30.0,2,10,8.0,12.0,10,10,7.2,True,False,170.1,60,
+U004_2025-10-15,U004,2025-10-15,2,A,row_cable,Seated Cable Row,deload,55.0,2,12,10.0,15.0,11,12,7.1,True,False,170.1,60,
+U004_2025-10-15,U004,2025-10-15,2,A,facepull,Face Pull,deload,20.0,1,15,12.0,20.0,13,13,7.4,True,False,170.1,60,
+U004_2025-10-17,U004,2025-10-17,2,B,trap_dl,Trap Bar Deadlift,deload,117.5,2,5,4.0,6.0,5,5,7.5,True,False,170.8,50,
+U004_2025-10-17,U004,2025-10-17,2,B,landmine_press,Landmine Press,deload,35.0,2,10,8.0,12.0,8,9,7.5,True,False,170.8,50,
+U004_2025-10-17,U004,2025-10-17,2,B,lat_pulldown,Lat Pulldown,deload,72.5,2,10,8.0,12.0,9,10,7.6,True,False,170.8,50,
+U004_2025-10-17,U004,2025-10-17,2,B,split_squat,Goblet Split Squat,deload,25.0,2,10,8.0,12.0,9,9,7.9,True,False,170.8,50,
+U004_2025-10-20,U004,2025-10-20,3,A,squat,Back Squat,deload,77.5,2,5,,,5,5,7.1,True,False,169.9,55,
+U004_2025-10-20,U004,2025-10-20,3,A,db_bench,DB Bench Press,deload,27.5,2,10,8.0,12.0,9,10,7.4,True,False,169.9,55,
+U004_2025-10-20,U004,2025-10-20,3,A,row_cable,Seated Cable Row,deload,50.0,2,12,10.0,15.0,12,12,7.2,True,False,169.9,55,
+U004_2025-10-20,U004,2025-10-20,3,A,facepull,Face Pull,deload,17.5,1,15,12.0,20.0,13,13,7.5,True,False,169.9,55,
+U004_2025-10-22,U004,2025-10-22,3,B,trap_dl,Trap Bar Deadlift,deload,105.0,2,5,4.0,6.0,6,6,7.3,True,False,170.2,64,
+U004_2025-10-22,U004,2025-10-22,3,B,landmine_press,Landmine Press,deload,32.5,2,10,8.0,12.0,11,12,7.2,True,False,170.2,64,
+U004_2025-10-22,U004,2025-10-22,3,B,lat_pulldown,Lat Pulldown,deload,65.0,2,10,8.0,12.0,12,12,7.1,True,False,170.2,64,
+U004_2025-10-22,U004,2025-10-22,3,B,split_squat,Goblet Split Squat,deload,22.5,2,10,8.0,12.0,11,11,7.2,True,False,170.2,64,
+U004_2025-10-24,U004,2025-10-24,3,A,squat,Back Squat,deload,70.0,2,5,,,5,5,8.0,True,False,169.6,43,
+U004_2025-10-24,U004,2025-10-24,3,A,db_bench,DB Bench Press,deload,25.0,2,10,8.0,12.0,9,10,7.6,True,False,169.6,43,
+U004_2025-10-24,U004,2025-10-24,3,A,row_cable,Seated Cable Row,deload,45.0,2,12,10.0,15.0,11,11,7.8,True,False,169.6,43,
+U004_2025-10-24,U004,2025-10-24,3,A,facepull,Face Pull,deload,15.0,1,15,12.0,20.0,13,13,7.9,True,False,169.6,43,
+U004_2025-11-10,U004,2025-11-10,6,B,trap_dl,Trap Bar Deadlift,deload,95.0,2,5,4.0,6.0,6,6,7.3,True,False,169.4,58,
+U004_2025-11-10,U004,2025-11-10,6,B,landmine_press,Landmine Press,deload,30.0,2,10,8.0,12.0,11,12,7.4,True,False,169.4,58,
+U004_2025-11-10,U004,2025-11-10,6,B,lat_pulldown,Lat Pulldown,deload,57.5,2,10,8.0,12.0,11,11,7.3,True,False,169.4,58,
+U004_2025-11-10,U004,2025-11-10,6,B,split_squat,Goblet Split Squat,deload,20.0,2,10,8.0,12.0,11,12,7.4,True,False,169.4,58,
+U004_2025-11-12,U004,2025-11-12,6,A,squat,Back Squat,deload,62.5,2,5,,,5,5,7.3,True,False,169.5,57,
+U004_2025-11-12,U004,2025-11-12,6,A,db_bench,DB Bench Press,deload,22.5,2,10,8.0,12.0,12,12,7.4,True,False,169.5,57,
+U004_2025-11-12,U004,2025-11-12,6,A,row_cable,Seated Cable Row,deload,40.0,2,12,10.0,15.0,13,14,7.2,True,False,169.5,57,
+U004_2025-11-12,U004,2025-11-12,6,A,facepull,Face Pull,deload,12.5,1,15,12.0,20.0,15,15,7.4,True,False,169.5,57,
+U004_2025-11-14,U004,2025-11-14,6,B,trap_dl,Trap Bar Deadlift,deload,85.0,2,5,4.0,6.0,6,6,7.3,True,False,169.6,51,
+U004_2025-11-14,U004,2025-11-14,6,B,landmine_press,Landmine Press,deload,27.5,2,10,8.0,12.0,10,11,7.5,True,False,169.6,51,
+U004_2025-11-14,U004,2025-11-14,6,B,lat_pulldown,Lat Pulldown,deload,52.5,2,10,8.0,12.0,10,11,7.5,True,False,169.6,51,
+U004_2025-11-14,U004,2025-11-14,6,B,split_squat,Goblet Split Squat,deload,17.5,2,10,8.0,12.0,11,11,7.7,True,False,169.6,51,
+U004_2025-11-17,U004,2025-11-17,7,A,squat,Back Squat,linear_add_load,67.5,3,5,,,5,5,7.4,True,False,170.1,57,
+U004_2025-11-17,U004,2025-11-17,7,A,db_bench,DB Bench Press,double_progression_add_load,25.0,3,10,8.0,12.0,12,12,7.5,True,False,170.1,57,
+U004_2025-11-17,U004,2025-11-17,7,A,row_cable,Seated Cable Row,double_progression_add_reps,40.0,3,12,10.0,15.0,15,15,7.4,True,False,170.1,57,
+U004_2025-11-17,U004,2025-11-17,7,A,facepull,Face Pull,double_progression_add_reps,12.5,2,15,12.0,20.0,17,17,7.2,True,False,170.1,57,
+U004_2025-11-19,U004,2025-11-19,7,B,trap_dl,Trap Bar Deadlift,double_progression_add_load,90.0,2,5,4.0,6.0,6,6,7.4,True,False,170.3,53,
+U004_2025-11-19,U004,2025-11-19,7,B,landmine_press,Landmine Press,forced_deload_event,25.0,1,10,8.0,12.0,11,11,7.3,True,False,170.3,53,
+U004_2025-11-19,U004,2025-11-19,7,B,lat_pulldown,Lat Pulldown,double_progression_add_reps,52.5,3,10,8.0,12.0,12,12,7.3,True,False,170.3,53,
+U004_2025-11-19,U004,2025-11-19,7,B,split_squat,Goblet Split Squat,double_progression_add_reps,17.5,3,10,8.0,12.0,12,12,7.7,True,False,170.3,53,
+U004_2025-11-21,U004,2025-11-21,7,A,squat,Back Squat,linear_add_load,72.5,3,5,,,5,5,7.6,True,False,169.8,56,
+U004_2025-11-21,U004,2025-11-21,7,A,db_bench,DB Bench Press,double_progression_add_load,27.5,3,10,8.0,12.0,12,12,7.4,True,False,169.8,56,
+U004_2025-11-21,U004,2025-11-21,7,A,row_cable,Seated Cable Row,double_progression_add_load,45.0,3,12,10.0,15.0,15,15,7.5,True,False,169.8,56,
+U004_2025-11-21,U004,2025-11-21,7,A,facepull,Face Pull,double_progression_add_reps,12.5,2,15,12.0,20.0,17,17,7.3,True,False,169.8,56,
+U004_2025-11-24,U004,2025-11-24,8,B,trap_dl,Trap Bar Deadlift,double_progression_add_load,95.0,2,5,4.0,6.0,6,6,7.6,True,False,170.0,56,
+U004_2025-11-24,U004,2025-11-24,8,B,landmine_press,Landmine Press,double_progression_add_reps,25.0,3,10,8.0,12.0,12,12,7.5,True,False,170.0,56,
+U004_2025-11-24,U004,2025-11-24,8,B,lat_pulldown,Lat Pulldown,double_progression_add_load,57.5,3,10,8.0,12.0,12,12,7.5,True,False,170.0,56,
+U004_2025-11-24,U004,2025-11-24,8,B,split_squat,Goblet Split Squat,double_progression_add_load,20.0,3,10,8.0,12.0,12,12,7.4,True,False,170.0,56,
+U004_2025-11-26,U004,2025-11-26,8,A,squat,Back Squat,linear_add_load,75.0,3,5,,,5,5,7.4,True,False,169.8,57,
+U004_2025-11-26,U004,2025-11-26,8,A,db_bench,DB Bench Press,double_progression_add_load,30.0,3,10,8.0,12.0,12,12,7.2,True,False,169.8,57,
+U004_2025-11-26,U004,2025-11-26,8,A,row_cable,Seated Cable Row,double_progression_add_load,50.0,3,12,10.0,15.0,15,15,7.1,True,False,169.8,57,
+U004_2025-11-26,U004,2025-11-26,8,A,facepull,Face Pull,double_progression_add_reps,12.5,2,15,12.0,20.0,17,18,7.4,True,False,169.8,57,
+U004_2025-11-28,U004,2025-11-28,8,B,trap_dl,Trap Bar Deadlift,double_progression_add_load,97.5,2,5,4.0,6.0,6,6,7.0,True,False,169.3,66,
+U004_2025-11-28,U004,2025-11-28,8,B,landmine_press,Landmine Press,double_progression_add_load,27.5,3,10,8.0,12.0,12,12,6.9,True,False,169.3,66,
+U004_2025-11-28,U004,2025-11-28,8,B,lat_pulldown,Lat Pulldown,double_progression_add_load,62.5,3,10,8.0,12.0,12,12,7.3,True,False,169.3,66,
+U004_2025-11-28,U004,2025-11-28,8,B,split_squat,Goblet Split Squat,double_progression_add_load,22.5,3,10,8.0,12.0,12,12,7.0,True,False,169.3,66,
+U004_2025-12-01,U004,2025-12-01,9,A,squat,Back Squat,linear_add_load,77.5,3,5,,,5,5,7.3,True,False,170.0,60,
+U004_2025-12-01,U004,2025-12-01,9,A,db_bench,DB Bench Press,double_progression_add_load,32.5,3,10,8.0,12.0,12,12,7.2,True,False,170.0,60,
+U004_2025-12-01,U004,2025-12-01,9,A,row_cable,Seated Cable Row,double_progression_add_load,55.0,3,12,10.0,15.0,15,15,7.2,True,False,170.0,60,
+U004_2025-12-01,U004,2025-12-01,9,A,facepull,Face Pull,double_progression_add_reps,12.5,2,15,12.0,20.0,20,20,7.4,True,False,170.0,60,
+U004_2025-12-03,U004,2025-12-03,9,B,trap_dl,Trap Bar Deadlift,double_progression_add_load,100.0,2,5,4.0,6.0,6,6,7.6,True,False,170.2,52,
+U004_2025-12-03,U004,2025-12-03,9,B,landmine_press,Landmine Press,double_progression_add_load,30.0,3,10,8.0,12.0,12,12,7.5,True,False,170.2,52,
+U004_2025-12-03,U004,2025-12-03,9,B,lat_pulldown,Lat Pulldown,double_progression_add_load,67.5,3,10,8.0,12.0,12,12,7.5,True,False,170.2,52,
+U004_2025-12-03,U004,2025-12-03,9,B,split_squat,Goblet Split Squat,double_progression_add_load,25.0,3,10,8.0,12.0,12,12,7.6,True,False,170.2,52,
+U004_2025-12-05,U004,2025-12-05,9,A,squat,Back Squat,linear_add_load,80.0,3,5,,,5,5,7.3,True,False,170.1,60,
+U004_2025-12-05,U004,2025-12-05,9,A,db_bench,DB Bench Press,double_progression_add_load,35.0,3,10,8.0,12.0,12,12,7.2,True,False,170.1,60,
+U004_2025-12-05,U004,2025-12-05,9,A,row_cable,Seated Cable Row,double_progression_add_load,60.0,3,12,10.0,15.0,15,15,7.2,True,False,170.1,60,
+U004_2025-12-05,U004,2025-12-05,9,A,facepull,Face Pull,double_progression_add_load,17.5,2,15,12.0,20.0,19,19,7.2,True,False,170.1,60,

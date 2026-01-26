@@ -1,0 +1,144 @@
+{
+  "dataset_version": "v6",
+  "user_id": "U601",
+  "date": "2025-09-01",
+  "session_type": "FB_A",
+  "input": {
+    "user_profile": {
+      "sex": "male",
+      "age": 24,
+      "height_cm": 180,
+      "body_weight_lb": 170.0,
+      "experience_level": "beginner",
+      "program": "full_body_3x",
+      "goal": "strength_hypertrophy"
+    },
+    "equipment": {
+      "units": "lb",
+      "bar_weight_lb": 45,
+      "load_step_lb": 2.5
+    },
+    "today_metrics": {
+      "sleep_hours": 6.4,
+      "hrv_ms": 69,
+      "resting_hr_bpm": 72,
+      "soreness_1_to_10": 4,
+      "stress_1_to_10": 5,
+      "steps": 11207,
+      "calories_est": 2841
+    },
+    "today_session_template": [
+      {
+        "lift": "squat",
+        "sets": 3,
+        "reps": 5
+      },
+      {
+        "lift": "bench",
+        "sets": 3,
+        "reps": 5
+      },
+      {
+        "lift": "row",
+        "sets": 3,
+        "reps": 8
+      }
+    ],
+    "recent_lift_history": {
+      "squat": [],
+      "bench": [],
+      "deadlift": [],
+      "ohp": []
+    },
+    "days_since_last_session": null,
+    "days_since_lift_exposure": {
+      "squat": null,
+      "bench": null,
+      "deadlift": null,
+      "ohp": null
+    },
+    "event_flags": {
+      "missed_session": false,
+      "variation_overrides": {},
+      "substitutions": {},
+      "injury_flags": {}
+    },
+    "planned_deload_week": false
+  },
+  "expected": {
+    "session_prescription_for_today": [
+      {
+        "lift": "squat",
+        "sets": 3,
+        "target_reps": 5,
+        "target_rpe": 7.5,
+        "prescribed_weight_lb": 135.0,
+        "acceptable_range_lb": [
+          132.5,
+          137.5
+        ],
+        "decision": "hold",
+        "reason_code": "cold_start_estimate",
+        "adjustment_kind": "cold_start",
+        "lift_variation": null,
+        "substituted_to": null
+      },
+      {
+        "lift": "bench",
+        "sets": 3,
+        "target_reps": 5,
+        "target_rpe": 7.5,
+        "prescribed_weight_lb": 92.5,
+        "acceptable_range_lb": [
+          90.0,
+          95.0
+        ],
+        "decision": "hold",
+        "reason_code": "cold_start_estimate",
+        "adjustment_kind": "cold_start",
+        "lift_variation": null,
+        "substituted_to": null
+      },
+      {
+        "lift": "row",
+        "sets": 3,
+        "target_reps": 8,
+        "target_rpe": 7.5,
+        "prescribed_weight_lb": null,
+        "acceptable_range_lb": null,
+        "decision": "hold",
+        "reason_code": "accessory_not_scored",
+        "adjustment_kind": "accessory",
+        "lift_variation": null,
+        "substituted_to": null
+      }
+    ],
+    "actual_logged_performance": [
+      {
+        "lift": "squat",
+        "performed_weight_lb": 135.0,
+        "top_set_reps": 5,
+        "top_rpe": 7.6,
+        "outcome": "success"
+      },
+      {
+        "lift": "bench",
+        "performed_weight_lb": 92.5,
+        "top_set_reps": 5,
+        "top_rpe": 7.7,
+        "outcome": "success"
+      }
+    ],
+    "scoring": {
+      "main_lifts": [
+        "squat",
+        "bench",
+        "deadlift",
+        "ohp"
+      ],
+      "load_agreement": "Main lift load is correct if predicted prescribed_weight_lb lies within expected acceptable_range_lb.",
+      "decision_agreement": "Decision matches expected decision for main lifts.",
+      "notes": "v6 uses evidence-aligned %1RM mapping by reps + explicit readiness_cut/break_reset/deload labeling."
+    }
+  }
+}

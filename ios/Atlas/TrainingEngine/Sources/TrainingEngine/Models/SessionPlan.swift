@@ -113,13 +113,34 @@ public struct ExercisePlan: Codable, Sendable, Hashable {
     /// Available substitutions (ranked by score).
     public let substitutions: [Substitution]
     
+    /// Recommended adjustment kind for this exercise (deload, readiness cut, etc.).
+    /// Surfaced to prevent baseline corruption when persisting results.
+    public let recommendedAdjustmentKind: SessionAdjustmentKind?
+    
+    /// Direction decision for this exercise (increase, hold, decrease, deload, reset).
+    public let direction: ProgressionDirection?
+    
+    /// Reason for the direction decision.
+    public let directionReason: DirectionReason?
+    
+    /// Human-readable explanation for the direction decision.
+    public let directionExplanation: String?
+    
+    /// Policy checks that were evaluated (for debugging/tracing).
+    public let policyChecks: [PolicyCheckResult]?
+    
     public init(
         exercise: Exercise,
         prescription: SetPrescription,
         sets: [SetPlan],
         progressionPolicy: ProgressionPolicyType,
         inSessionPolicy: InSessionAdjustmentPolicyType = .none,
-        substitutions: [Substitution] = []
+        substitutions: [Substitution] = [],
+        recommendedAdjustmentKind: SessionAdjustmentKind? = nil,
+        direction: ProgressionDirection? = nil,
+        directionReason: DirectionReason? = nil,
+        directionExplanation: String? = nil,
+        policyChecks: [PolicyCheckResult]? = nil
     ) {
         self.exercise = exercise
         self.prescription = prescription
@@ -127,6 +148,11 @@ public struct ExercisePlan: Codable, Sendable, Hashable {
         self.progressionPolicy = progressionPolicy
         self.inSessionPolicy = inSessionPolicy
         self.substitutions = substitutions
+        self.recommendedAdjustmentKind = recommendedAdjustmentKind
+        self.direction = direction
+        self.directionReason = directionReason
+        self.directionExplanation = directionExplanation
+        self.policyChecks = policyChecks
     }
     
     /// Total planned volume.

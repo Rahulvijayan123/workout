@@ -1,0 +1,23 @@
+{
+  "dataset_version": "v2",
+  "record_fields": [
+    "dataset_version",
+    "user_id",
+    "date",
+    "session_type",
+    "input",
+    "expected"
+  ],
+  "prescription_fields": [
+    "lift",
+    "lift_variation",
+    "substituted_to",
+    "sets",
+    "target_reps",
+    "target_rpe",
+    "prescribed_weight_lb",
+    "decision",
+    "delta_lb",
+    "reason_code"
+  ]
+}

@@ -49,10 +49,6 @@ struct HealthKitConnectView: View {
                     unavailableCard
                 }
                 
-                if let result = viewModel.authorizationResult {
-                    permissionResultCard(result: result)
-                }
-                
                 buttons
                     .padding(.bottom, 8)
             }
@@ -260,82 +256,23 @@ struct HealthKitConnectView: View {
         .liquidGlass()
     }
     
-    private func permissionResultCard(result: HealthKitService.AuthorizationResult) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Rectangle()
-                    .fill(Color.ironPurple)
-                    .frame(width: 2, height: 12)
-                    .cornerRadius(1)
-                
-                Text("PERMISSIONS")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(.ironTextTertiary)
-                    .tracking(1.5)
-            }
-            
-            VStack(spacing: 10) {
-                ForEach(result.requestedMetrics) { metric in
-                    let state = result.stateByMetric[metric] ?? .notDetermined
-                    HStack(spacing: 12) {
-                        Image(systemName: metric.systemImage)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.ironPurple)
-                            .frame(width: 24)
-                        
-                        Text(metric.displayName)
-                            .font(.system(size: 15, weight: .medium, design: .rounded))
-                            .foregroundColor(.ironTextSecondary)
-                        
-                        Spacer()
-                        
-                        permissionBadge(state: state)
-                    }
-                }
-            }
-            
-            Text("Permissions requested. Data will sync if enabled in Settings → Health.")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundColor(.ironTextTertiary)
-                .padding(.top, 4)
-        }
-        .padding(16)
-        .liquidGlass()
-    }
-    
-    private func permissionBadge(state: HealthKitService.PermissionState) -> some View {
-        // Note: For read-only HealthKit permissions, iOS never tells us the true state.
-        // "Denied" and "Not Determined" look the same to the API, so we show a neutral
-        // "Requested" state instead of misleading "Denied" labels.
-        let (text, color, icon): (String, Color, String) = {
-            switch state {
-            case .authorized:
-                return ("Authorized", .green.opacity(0.9), "checkmark.circle.fill")
-            case .denied, .notDetermined:
-                // For read permissions, we can't know the true state, so show neutral
-                return ("Requested", .orange.opacity(0.85), "clock.circle.fill")
-            }
-        }()
-        
-        return HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-            Text(text)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-        }
-        .foregroundColor(color)
-    }
-    
     private var buttons: some View {
         VStack(spacing: 12) {
             if viewModel.isHealthKitAvailable {
                 Button {
-                    Task { await viewModel.connect(modelContext: modelContext) }
+                    Task {
+                        await viewModel.connect(modelContext: modelContext)
+                        // After HealthKit permission popup is dismissed (user approved or denied),
+                        // automatically continue to the next step
+                        if !viewModel.showAlert {
+                            onContinue()
+                        }
+                    }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "bolt.horizontal.circle.fill")
                             .font(.system(size: 15, weight: .bold))
-                        Text(viewModel.isRequesting ? "INITIALIZING..." : "INITIALIZE SYNC")
+                        Text(viewModel.isRequesting ? "CONNECTING..." : "CONNECT HEALTH")
                             .font(.system(size: 14, weight: .bold))
                             .tracking(1.5)
                     }
@@ -480,7 +417,6 @@ extension HealthKitConnectView {
         private let healthKit: HealthKitService
         
         @Published var selection: HealthKitSelection = HealthKitSelection()
-        @Published var authorizationResult: HealthKitService.AuthorizationResult?
         
         @Published var isRequesting: Bool = false
         @Published var isHealthKitAvailable: Bool = true
@@ -508,8 +444,8 @@ extension HealthKitConnectView {
             defer { isRequesting = false }
             
             do {
-                let result = try await healthKit.requestAuthorization(selected: selection)
-                authorizationResult = result
+                // Request HealthKit authorization - iOS shows the permission popup
+                _ = try await healthKit.requestAuthorization(selected: selection)
                 
                 // Best-effort cache warm-up. Never blocks onboarding.
                 let repo = DailyBiometricsRepository(modelContext: modelContext, healthKit: healthKit)

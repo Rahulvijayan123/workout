@@ -1,0 +1,54 @@
+{
+  "U1": {
+    "user_id": "U1",
+    "name": "ExperiencedStrongMale",
+    "sex": "M",
+    "age": 27,
+    "height_cm": 178,
+    "training_age_years": 8,
+    "goal": "strength_maintenance_plus_slow_gain",
+    "nutrition_phase": "maintenance",
+    "body_weight_lb_start": 198.0,
+    "body_weight_lb_weekly_delta": 0.2,
+    "notes": "Experienced lifter, high absolute strength, slower progress, occasional plateau, deload in week 7."
+  },
+  "U2": {
+    "user_id": "U2",
+    "name": "IntermediateFemaleReturner",
+    "sex": "F",
+    "age": 22,
+    "height_cm": 165,
+    "training_age_years": 3,
+    "goal": "regain_strength_after_break",
+    "nutrition_phase": "maintenance",
+    "body_weight_lb_start": 130.0,
+    "body_weight_lb_weekly_delta": 0.0,
+    "notes": "Intermediate lifter returning after 6-week break. Faster early progress, one missed week, then normal progression."
+  },
+  "U3": {
+    "user_id": "U3",
+    "name": "LightweightAdvancedFemale",
+    "sex": "F",
+    "age": 24,
+    "height_cm": 157,
+    "training_age_years": 6,
+    "goal": "strength_with_high_relative_strength",
+    "nutrition_phase": "maintenance",
+    "body_weight_lb_start": 105.0,
+    "body_weight_lb_weekly_delta": 0.0,
+    "notes": "Lightweight, very strong relative to body weight, progress is very slow, relies on microloading, sensitive to fatigue."
+  },
+  "U4": {
+    "user_id": "U4",
+    "name": "IntermediateMaleCutting",
+    "sex": "M",
+    "age": 35,
+    "height_cm": 180,
+    "training_age_years": 5,
+    "goal": "maintain_strength_while_cutting",
+    "nutrition_phase": "cut",
+    "body_weight_lb_start": 185.0,
+    "body_weight_lb_weekly_delta": -1.2,
+    "notes": "Intermediate lifter in calorie deficit. Strength plateaus and slight regressions appear mid-cycle; needs conservative progression and deload."
+  }
+}

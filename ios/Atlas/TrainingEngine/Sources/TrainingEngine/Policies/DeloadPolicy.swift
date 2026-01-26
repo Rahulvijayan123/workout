@@ -96,6 +96,8 @@ public enum DeloadPolicy {
         }
         
         // 2. Check performance decline (multi-session trend)
+        // NOTE: Performance decline is now primarily handled at the LIFT level by DirectionPolicy.
+        // Session-level deload is only triggered if decline is severe AND widespread across multiple lifts.
         let performanceResult = evaluatePerformanceDecline(
             userProfile: userProfile,
             plan: plan,
@@ -104,13 +106,16 @@ public enum DeloadPolicy {
             calendar: calendar
         )
         triggeredRules.append(performanceResult)
+        // Don't trigger session-level deload for performance decline alone.
+        // DirectionPolicy handles this at the lift level with better granularity.
+        // The result is still logged for transparency but doesn't force a full session deload.
         if performanceResult.triggered {
-            shouldDeload = true
-            if primaryReason == nil { primaryReason = .performanceDecline }
-            explanations.append(performanceResult.details)
+            explanations.append("(lift-level) " + performanceResult.details)
         }
         
         // 3. Check low readiness
+        // NOTE: Low readiness is now handled at the LIFT level by DirectionPolicy as "decrease_slightly".
+        // Session-level deload should NOT be triggered by low readiness alone to avoid over-deloading.
         let readinessResult = evaluateLowReadiness(
             config: config,
             history: history,
@@ -119,13 +124,15 @@ public enum DeloadPolicy {
             calendar: calendar
         )
         triggeredRules.append(readinessResult)
+        // Don't trigger session-level deload for low readiness alone.
+        // DirectionPolicy produces "decrease_slightly" (2.5-5% cut) for acute low readiness.
         if readinessResult.triggered {
-            shouldDeload = true
-            if primaryReason == nil { primaryReason = .lowReadiness }
-            explanations.append(readinessResult.details)
+            explanations.append("(lift-level) " + readinessResult.details)
         }
         
-        // 4. Check high fatigue (low readiness + high volume)
+        // 4. Check high fatigue (low readiness + high volume = systemic overreaching)
+        // This is the only non-scheduled trigger that should force a full session deload,
+        // as it indicates systemic fatigue that affects all lifts.
         let fatigueResult = evaluateHighFatigue(
             config: config,
             history: history,
@@ -169,6 +176,30 @@ public enum DeloadPolicy {
                 details: "No scheduled deload configured"
             )
         }
+
+        // If the user is already in a scheduled deload "block" (typical: a deload week),
+        // keep recommending deload for the remainder of that block.
+        //
+        // Why:
+        // - A scheduled deload should not apply to only a single session, otherwise the next workout
+        //   in the same week can immediately ramp back up and defeat the purpose.
+        // - This is also closer to how real programs structure deloads (a microcycle, not one lift).
+        //
+        // Implementation detail:
+        // - We treat a scheduled deload block as lasting 7 days starting from the *first* deload
+        //   session in the most recent deload cluster.
+        if let blockStart = mostRecentDeloadBlockStart(from: history, upTo: date, calendar: calendar) {
+            let startDay = calendar.startOfDay(for: blockStart)
+            let today = calendar.startOfDay(for: date)
+            let daysSinceStart = calendar.dateComponents([.day], from: startDay, to: today).day ?? 0
+            if daysSinceStart >= 0 && daysSinceStart < 7 {
+                return DeloadTriggerResult(
+                    trigger: .scheduledDeload,
+                    triggered: true,
+                    details: "Continuing deload block: started \(daysSinceStart) day(s) ago"
+                )
+            }
+        }
         
         // Find last deload date across all exercises
         let lastDeloadDate = history.liftStates.values
@@ -207,6 +238,47 @@ public enum DeloadPolicy {
                 ? "Scheduled deload: \(weeksSinceDeload) weeks since last deload (threshold: \(scheduleWeeks))"
                 : "\(weeksSinceDeload) weeks since last deload, deload at \(scheduleWeeks)"
         )
+    }
+
+    /// Finds the start of the most recent SCHEDULED deload block from session history.
+    ///
+    /// A deload block is defined as a cluster of scheduled deload sessions where consecutive
+    /// sessions are separated by <7 days. This lets us treat "deload week" sessions as one
+    /// block without extending indefinitely.
+    ///
+    /// IMPORTANT: Only considers sessions where `deloadReason == .scheduledDeload`.
+    /// Fatigue-triggered or other deloads should NOT extend a 7-day scheduled block,
+    /// as they serve different purposes (acute recovery vs planned mesocycle periodization).
+    private static func mostRecentDeloadBlockStart(
+        from history: WorkoutHistory,
+        upTo date: Date,
+        calendar: Calendar
+    ) -> Date? {
+        let evaluationDay = calendar.startOfDay(for: date)
+        
+        // CRITICAL FIX: Only consider SCHEDULED deloads for block continuation.
+        // Fatigue-triggered deloads (`deloadReason == .highAccumulatedFatigue`) and
+        // other deloads should not extend a scheduled deload week.
+        let scheduledDeloadSessions = history.sessions
+            .filter { $0.wasDeload && $0.deloadReason == .scheduledDeload }
+            .filter { calendar.startOfDay(for: $0.date) <= evaluationDay }
+        
+        guard let newest = scheduledDeloadSessions.first else { return nil }
+        
+        var blockStart = calendar.startOfDay(for: newest.date)
+        
+        // Walk older scheduled deload sessions (history.sessions is already most-recent-first).
+        for older in scheduledDeloadSessions.dropFirst() {
+            let olderDay = calendar.startOfDay(for: older.date)
+            let gap = calendar.dateComponents([.day], from: olderDay, to: blockStart).day ?? Int.max
+            if gap >= 0 && gap < 7 {
+                blockStart = olderDay
+            } else {
+                break
+            }
+        }
+        
+        return blockStart
     }
     
     /// Evaluates performance decline trigger (multi-session trend).
@@ -410,8 +482,39 @@ public enum DeloadPolicy {
         date: Date,
         calendar: Calendar
     ) -> DeloadTriggerResult {
-        let threshold = config.readinessThreshold
+        let baseThreshold = config.readinessThreshold
         let requiredDays = config.lowReadinessDaysRequired
+        
+        // Baseline-aware thresholding:
+        // Some users have chronically lower readiness baselines (high stress, poor sleep, heavy life load).
+        // Using a fixed absolute threshold (e.g., <50) can cause perpetual false-positive deload loops.
+        //
+        // We adapt the threshold down toward the user's recent median readiness, while keeping a floor
+        // for safety. This preserves sensitivity to *relative* drops without over-triggering for
+        // chronically-low users.
+        let threshold: Int = {
+            let endDay = calendar.startOfDay(for: date)
+            let startDay = calendar.date(byAdding: .day, value: -27, to: endDay) ?? endDay
+            
+            // Collapse multiple records per day deterministically by taking the minimum score for the day.
+            var byDay: [Date: Int] = [:]
+            byDay.reserveCapacity(min(history.readinessHistory.count, 64))
+            for record in history.readinessHistory {
+                let d = calendar.startOfDay(for: record.date)
+                guard d >= startDay && d <= endDay else { continue }
+                byDay[d] = min(byDay[d] ?? 100, record.score)
+            }
+            
+            let scores = byDay.values.sorted()
+            guard scores.count >= 10 else {
+                return baseThreshold
+            }
+            
+            let median = scores[scores.count / 2]
+            let adjusted = min(baseThreshold, median - 5)
+            // Safety floor: avoid setting an unrealistically low threshold.
+            return max(35, adjusted)
+        }()
         
         // We treat `currentReadiness` as "today's" readiness and count prior consecutive low days
         // from readinessHistory. This avoids requiring readinessHistory to contain today's record.
@@ -432,7 +535,7 @@ public enum DeloadPolicy {
             triggered: triggered,
             details: triggered
                 ? "Low readiness for \(totalLowDays) consecutive days (threshold: \(requiredDays) days below \(threshold))"
-                : "Readiness OK: \(totalLowDays) low days (need \(requiredDays) for trigger)"
+                : "Readiness OK: \(totalLowDays) low days (need \(requiredDays) for trigger; threshold=\(threshold))"
         )
     }
     

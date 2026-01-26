@@ -128,6 +128,18 @@ public struct LoadRoundingPolicy: Codable, Sendable, Hashable {
     /// Standard rounding for kilograms (1.25 kg increments).
     public static let standardKilograms = LoadRoundingPolicy(increment: 1.25, unit: .kilograms)
     
+    /// Microloading for pounds (1.25 lb increments, useful for upper body presses).
+    public static let microPounds = LoadRoundingPolicy(increment: 1.25, unit: .pounds)
+    
+    /// Microloading for kilograms (0.5 kg increments).
+    public static let microKilograms = LoadRoundingPolicy(increment: 0.5, unit: .kilograms)
+    
+    /// Large increment rounding for pounds (5 lb increments, useful for lower body).
+    public static let largePounds = LoadRoundingPolicy(increment: 5.0, unit: .pounds)
+    
+    /// Large increment rounding for kilograms (2.5 kg increments).
+    public static let largeKilograms = LoadRoundingPolicy(increment: 2.5, unit: .kilograms)
+    
     /// Rounds the given load according to this policy.
     public func round(_ load: Load) -> Load {
         let converted = load.converted(to: unit)

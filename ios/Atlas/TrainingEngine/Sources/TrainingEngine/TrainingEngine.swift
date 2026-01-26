@@ -16,6 +16,7 @@ public enum Engine {
     ///   - plan: The training plan (templates, schedule, progression policies).
     ///   - history: Recent workout history.
     ///   - readiness: Today's readiness score (0-100).
+    ///   - plannedDeloadWeek: If true, forces a scheduled deload regardless of other triggers.
     /// - Returns: A `SessionPlan` with exercises, sets, target loads/reps, and substitutions.
     public static func recommendSession(
         date: Date,
@@ -23,6 +24,7 @@ public enum Engine {
         plan: TrainingPlan,
         history: WorkoutHistory,
         readiness: Int,
+        plannedDeloadWeek: Bool = false,
         calendar: Calendar = .current
     ) -> SessionPlan {
         let scheduler = TemplateScheduler(plan: plan, history: history, calendar: calendar)
@@ -43,6 +45,7 @@ public enum Engine {
             plan: plan,
             history: history,
             readiness: readiness,
+            plannedDeloadWeek: plannedDeloadWeek,
             excludingExerciseIds: [],
             calendar: calendar
         )
@@ -50,6 +53,9 @@ public enum Engine {
     
     /// Recommends a session plan for a specific template. Useful for mid-session replanning (equipment changes),
     /// or when the caller wants to bypass schedule selection.
+    ///
+    /// - Parameters:
+    ///   - plannedDeloadWeek: If true, forces a scheduled deload regardless of other triggers.
     public static func recommendSessionForTemplate(
         date: Date,
         templateId: WorkoutTemplateId,
@@ -57,6 +63,7 @@ public enum Engine {
         plan: TrainingPlan,
         history: WorkoutHistory,
         readiness: Int,
+        plannedDeloadWeek: Bool = false,
         excludingExerciseIds: Set<String> = [],
         calendar: Calendar = .current
     ) -> SessionPlan {
@@ -71,15 +78,25 @@ public enum Engine {
             )
         }
         
-        // Check deload triggers
-        let deloadDecision = DeloadPolicy.evaluate(
-            userProfile: userProfile,
-            plan: plan,
-            history: history,
-            readiness: readiness,
-            date: date,
-            calendar: calendar
-        )
+        // Check deload triggers (or use explicit planned deload override)
+        let deloadDecision: DeloadDecision = {
+            if plannedDeloadWeek {
+                return DeloadDecision(
+                    shouldDeload: true,
+                    reason: .scheduledDeload,
+                    explanation: "Planned deload week (explicit override)",
+                    triggeredRules: []
+                )
+            }
+            return DeloadPolicy.evaluate(
+                userProfile: userProfile,
+                plan: plan,
+                history: history,
+                readiness: readiness,
+                date: date,
+                calendar: calendar
+            )
+        }()
         
         var exercisePlans: [ExercisePlan] = []
         var usedExerciseIds: Set<String> = []
@@ -88,25 +105,6 @@ public enum Engine {
         // Original exercise IDs present in the template; used to avoid collisions where a substitute
         // would duplicate a different planned exercise.
         let reservedOriginalIds = Set(template.exercises.map(\.exercise.id))
-        
-        // Lookup table for quickly mapping an exerciseId back to its Exercise metadata.
-        // Used for "return to original after equipment outage" rebasing.
-        let exerciseById: [String: Exercise] = {
-            var m: [String: Exercise] = [:]
-            m.reserveCapacity(plan.substitutionPool.count + plan.templates.count * 8)
-            
-            for ex in plan.substitutionPool {
-                m[ex.id] = ex
-            }
-            
-            for t in plan.templates.values {
-                for te in t.exercises {
-                    m[te.exercise.id] = te.exercise
-                }
-            }
-            
-            return m
-        }()
         
         for templateExercise in template.exercises {
             let originalExercise = templateExercise.exercise
@@ -237,175 +235,69 @@ public enum Engine {
                 )
             }
             
-            // Progression is driven by the exercise being performed.
-            // If we substituted due to equipment and the substitute has no meaningful state yet,
-            // seed from the original lift state (scaled).
-            let effectiveExerciseId = exercise.id
+            // =====================================================================
+            // LIFT FAMILY STATE: Separate reference (read) and update (write) keys
+            // =====================================================================
+            // 
+            // Resolve the exercise to its lift family. This provides:
+            // - referenceStateKey: canonical key for READING baseline (family.id)
+            // - updateStateKey: key for WRITING state (exercise-specific for variations)
+            // - coefficient: scaling factor for load conversion (reference → performed)
+            //
+            // For reading (load estimation):
+            // - First try the exercise's own state (if it exists from a previous session)
+            // - Then fall back to family baseline and apply coefficient
+            //
+            // For writing: state goes to updateStateKey (handled in updateLiftState)
+            
+            let familyResolution = LiftFamilyResolver.resolve(exercise)
+            let referenceStateKey = familyResolution.referenceStateKey
+            let updateStateKey = familyResolution.updateStateKey
+            let familyCoefficient = familyResolution.coefficient
+            
+            // Also resolve the original exercise for policy lookups
+            let originalFamilyResolution = LiftFamilyResolver.resolve(originalExercise)
+            
+            // Look up state for load estimation:
+            // 1. First try exercise's own state (updateStateKey) - variations/subs build their own history
+            // 2. Then try family baseline (referenceStateKey) - for first-time variations
+            // 3. Finally, try original exercise state (for substitution migration)
             let liftState: LiftState = {
-                if let existing = history.liftStates[effectiveExerciseId], existing.lastWorkingWeight.value > 0 {
-                    // If we're returning to the *original* lift after a long gap (often due to equipment-driven substitutions),
-                    // try to rebase from the most recently-performed comparable substitute to avoid "false detraining".
-                    if effectiveExerciseId == originalExercise.id {
-                        let daysSinceLast: Int = {
-                            guard let last = existing.lastSessionDate else { return Int.max }
-                            let lastDay = calendar.startOfDay(for: last)
-                            let today = calendar.startOfDay(for: date)
-                            return calendar.dateComponents([.day], from: lastDay, to: today).day ?? Int.max
-                        }()
-                        
-                        if daysSinceLast >= 28 {
-                            // Find the most recently-performed comparable lift (often a substitute used during an outage)
-                            // and scale it back to the original lift to avoid treating the gap as true detraining.
-                            var best: (exercise: Exercise, state: LiftState, days: Int, score: Double)?
-                            let today = calendar.startOfDay(for: date)
-                            
-                            for (candidateId, st) in history.liftStates {
-                                guard candidateId != originalExercise.id else { continue }
-                                guard st.lastWorkingWeight.value > 0 else { continue }
-                                guard let last = st.lastSessionDate else { continue }
-                                
-                                let candidateExercise = exerciseById[candidateId]
-                                guard let candidateExercise else { continue }
-                                
-                                // Only treat very similar lifts as comparable for rebasing.
-                                guard candidateExercise.movementPattern == originalExercise.movementPattern else { continue }
-                                guard candidateExercise.equipment != .bodyweight else { continue }
-                                let overlap = candidateExercise.muscleOverlap(with: originalExercise)
-                                guard overlap >= 0.60 else { continue }
-                                
-                                let subDays = calendar.dateComponents(
-                                    [.day],
-                                    from: calendar.startOfDay(for: last),
-                                    to: today
-                                ).day ?? Int.max
-                                
-                                guard subDays < 28 else { continue }
-                                
-                                let strengthSignal = (st.rollingE1RM > 0) ? st.rollingE1RM : st.lastWorkingWeight.value
-                                // Prefer candidates that are both similar *and* represent meaningful loading.
-                                let score = max(0, strengthSignal) * (0.5 + overlap)
-                                
-                                if best == nil
-                                    || score > (best?.score ?? -Double.greatestFiniteMagnitude)
-                                    || (abs(score - (best?.score ?? 0)) < 0.0001 && subDays < (best?.days ?? Int.max))
-                                {
-                                    best = (candidateExercise, st, subDays, score)
-                                }
-                            }
-                            
-                            if let best, let recentComparableDate = best.state.lastSessionDate {
-                                // Key behavior: avoid "false detraining" when the user trained a comparable lift recently.
-                                //
-                                // Safety: returning from a substitute (e.g., dumbbell hinge) back to the original barbell lift
-                                // is often a bit harder (different stability + loading). We refresh the lastSessionDate so the
-                                // detraining reduction does not fire, but apply a small one-time "return-to-original" penalty
-                                // to keep the first session conservative.
-                                var refreshed = existing
-                                refreshed.lastSessionDate = recentComparableDate
-                                
-                                if best.exercise.equipment != originalExercise.equipment {
-                                    let penalty: Double = {
-                                        let originalBarbellLike = (originalExercise.equipment == .barbell || originalExercise.equipment == .trapBar || originalExercise.equipment == .ezBar)
-                                        let fromDumbbellLike = (best.exercise.equipment == .dumbbell || best.exercise.equipment == .kettlebell)
-                                        let fromMachineLike = (best.exercise.equipment == .machine || best.exercise.equipment == .cable || best.exercise.equipment == .smithMachine || best.exercise.equipment == .plateLoaded)
-                                        
-                                        if originalBarbellLike && fromDumbbellLike {
-                                            switch originalExercise.movementPattern {
-                                            case .squat:
-                                                return 0.85
-                                            case .hipHinge:
-                                                return 0.90
-                                            case .horizontalPush, .verticalPush:
-                                                return 0.90
-                                            default:
-                                                return 0.92
-                                            }
-                                        }
-                                        
-                                        if originalBarbellLike && fromMachineLike {
-                                            return 0.92
-                                        }
-                                        
-                                        return 0.90
-                                    }()
-                                    
-                                    refreshed.lastWorkingWeight = (refreshed.lastWorkingWeight * penalty)
-                                        .rounded(using: plan.loadRoundingPolicy)
-                                    
-                                    if refreshed.rollingE1RM > 0 {
-                                        refreshed.rollingE1RM *= penalty
-                                    }
-                                }
-                                
-                                return refreshed
-                            }
-                        }
-                    }
-                    
+                // Try exercise's own update state first (variations maintain their own state)
+                if let existing = history.liftStates[updateStateKey], existing.lastWorkingWeight.value > 0 {
                     return existing
                 }
                 
-                // If we substituted due to equipment and the substitute has no meaningful state yet,
-                // seed from the original lift state (scaled).
-                if effectiveExerciseId != originalExercise.id,
+                // Try canonical family reference key (for first-time variations)
+                // No coefficient scaling here - that's applied later to familyBaselineLoad
+                if updateStateKey != referenceStateKey,
+                   let existing = history.liftStates[referenceStateKey],
+                   existing.lastWorkingWeight.value > 0 {
+                    return existing
+                }
+                
+                // Fallback: try the performed exercise ID directly (backward compatibility)
+                if let existing = history.liftStates[exercise.id], existing.lastWorkingWeight.value > 0 {
+                    return existing
+                }
+                
+                // Fallback: try the original exercise ID (for substitution cases)
+                // This handles migration from old per-exercise states to canonical family states.
+                if exercise.id != originalExercise.id,
                    let originalState = history.liftStates[originalExercise.id],
                    originalState.lastWorkingWeight.value > 0
                 {
-                    return scaledLiftState(
-                        target: exercise,
-                        source: originalExercise,
-                        sourceState: originalState,
-                        roundingPolicy: plan.loadRoundingPolicy
-                    )
+                    // The old state was stored in exercise-specific terms.
+                    // Use it as-is; coefficient will be applied later if needed.
+                    return originalState
                 }
                 
-                // If we have no state for the (original) lift but we have a recent comparable substitute state,
-                // seed from that to avoid starting from 0 after an extended equipment change.
-                if effectiveExerciseId == originalExercise.id {
-                    var best: (exercise: Exercise, state: LiftState, days: Int, score: Double)?
-                    let today = calendar.startOfDay(for: date)
-                    
-                    for (candidateId, st) in history.liftStates {
-                        guard candidateId != originalExercise.id else { continue }
-                        guard st.lastWorkingWeight.value > 0 else { continue }
-                        guard let last = st.lastSessionDate else { continue }
-                        
-                        let candidateExercise = exerciseById[candidateId]
-                        guard let candidateExercise else { continue }
-                        guard candidateExercise.movementPattern == originalExercise.movementPattern else { continue }
-                        guard candidateExercise.equipment != .bodyweight else { continue }
-                        let overlap = candidateExercise.muscleOverlap(with: originalExercise)
-                        guard overlap >= 0.60 else { continue }
-                        
-                        let subDays = calendar.dateComponents(
-                            [.day],
-                            from: calendar.startOfDay(for: last),
-                            to: today
-                        ).day ?? Int.max
-                        guard subDays < 28 else { continue }
-                        
-                        let strengthSignal = (st.rollingE1RM > 0) ? st.rollingE1RM : st.lastWorkingWeight.value
-                        let score = max(0, strengthSignal) * (0.5 + overlap)
-                        if best == nil
-                            || score > (best?.score ?? -Double.greatestFiniteMagnitude)
-                            || (abs(score - (best?.score ?? 0)) < 0.0001 && subDays < (best?.days ?? Int.max))
-                        {
-                            best = (candidateExercise, st, subDays, score)
-                        }
-                    }
-                    
-                    if let best {
-                        return scaledLiftState(
-                            target: exercise,
-                            source: best.exercise,
-                            sourceState: best.state,
-                            roundingPolicy: plan.loadRoundingPolicy
-                        )
-                    }
-                }
-                
-                return history.liftStates[effectiveExerciseId] ?? LiftState(exerciseId: effectiveExerciseId)
+                // No state found - return empty state
+                return LiftState(exerciseId: referenceStateKey)
             }()
+            
+            // effectiveExerciseId is used for history lookups (which still use exercise IDs)
+            let effectiveExerciseId = exercise.id
             
             insights.append(contentsOf: CoachingInsightsPolicy.insightsForExercise(
                 exerciseId: effectiveExerciseId,
@@ -418,13 +310,6 @@ public enum Engine {
                 currentReadiness: readiness,
                 substitutions: substitutions
             ))
-            
-            let progressionContext = ProgressionContext(
-                userProfile: userProfile,
-                exercise: exercise,
-                date: date,
-                calendar: calendar
-            )
             
             // Determine between-session progression policy.
             // If a caller used `.rirAutoregulation` in the old `progressionPolicies` map, treat it as an
@@ -473,104 +358,222 @@ public enum Engine {
                 return false
             }
             
-            // Compute baseline target load.
-            // Global deload adjustments (intensity/volume) are applied below via plan.deloadConfig.
-            let baseTargetLoad: Load = {
-                // Safety: bodyweight exercises should not inherit external loads from substituted barbell/machine lifts.
-                if exercise.equipment == .bodyweight {
-                    return .zero
+            // =====================================================================
+            // DIRECTION/MAGNITUDE SYSTEM: Compute load and volume using new pipeline
+            // =====================================================================
+            
+            // Safety: bodyweight exercises should not inherit external loads.
+            guard exercise.equipment != .bodyweight else {
+                let setPlans = (0..<prescription.setCount).map { setIndex in
+                    SetPlan(
+                        setIndex: setIndex,
+                        targetLoad: .zero,
+                        targetReps: prescription.targetRepsRange.lowerBound,
+                        targetRIR: prescription.targetRIR,
+                        restSeconds: prescription.restSeconds,
+                        isWarmup: false,
+                        backoffPercentage: nil,
+                        inSessionPolicy: inSessionPolicy,
+                        roundingPolicy: plan.loadRoundingPolicy
+                    )
+                }
+                exercisePlans.append(ExercisePlan(
+                    exercise: exercise,
+                    prescription: prescription,
+                    sets: setPlans,
+                    progressionPolicy: progressionPolicy,
+                    inSessionPolicy: inSessionPolicy,
+                    substitutions: substitutions,
+                    recommendedAdjustmentKind: nil,
+                    direction: nil,
+                    directionReason: nil,
+                    directionExplanation: nil,
+                    policyChecks: nil
+                ))
+                continue
+            }
+            
+            // Compute baseline load (the "anchor" before direction/magnitude adjustments).
+            //
+            // State resolution:
+            // - If we found the exercise's own state (updateStateKey), it's already in exercise-specific terms
+            // - If we found the family baseline (referenceStateKey), apply coefficient to convert
+            //
+            // This ensures variations/substitutions that have their own history use their own loads,
+            // while new variations properly inherit from the family baseline.
+            let stateIsExerciseSpecific = (liftState.exerciseId == updateStateKey && updateStateKey != referenceStateKey)
+            
+            // DATA SANITY: If liftState.lastSessionDate is in the future relative to `date`,
+            // the state data is suspect (possibly from test data or clock issues).
+            // Treat such state as unreliable for baseline purposes.
+            let hasValidStateDate: Bool = {
+                guard let lastDate = liftState.lastSessionDate else { return true } // No date = OK
+                var cal = Calendar(identifier: .gregorian)
+                cal.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+                let daysDiff = cal.dateComponents([.day], from: date, to: lastDate).day ?? 0
+                return daysDiff <= 1 // Allow 1 day tolerance for timezone issues
+            }()
+            
+            let familyBaselineLoad: Load = {
+                // Helper: derive %e1RM from targetReps + targetRIR using inverse Brzycki
+                // This approximates what weight to use for a given rep/RIR target
+                func derivedPercentageFromRepsRIR(reps: Int, rir: Int) -> Double {
+                    // Effective reps = targetReps + targetRIR (assuming you could do RIR more)
+                    let effectiveReps = max(1, reps + rir)
+                    // Brzycki inverse: % = 1.0278 - 0.0278 * reps (roughly)
+                    // More conservative formula for higher rep ranges
+                    return E1RMCalculator.workingWeight(fromE1RM: 1.0, targetReps: effectiveReps)
                 }
                 
-                // If the prescription context changed materially since the last non-deload exposure,
-                // rebase the absolute load from rolling e1RM so we don't "fail into a deload" just
-                // because the protocol got harder (tempo/rest/rep-range changes) or different.
+                let unit = plan.loadRoundingPolicy.unit
+                
+                // 1) For explicit %e1RM strategies with percentage, ALWAYS compute from e1RM.
+                if case .percentageE1RM = prescription.loadStrategy,
+                   let pct = prescription.targetPercentage,
+                   liftState.rollingE1RM > 0,
+                   hasValidStateDate {
+                    return Load(value: liftState.rollingE1RM * pct, unit: unit)
+                        .rounded(using: plan.loadRoundingPolicy)
+                }
+                
+                // 2) For %e1RM with nil percentage OR rpeAutoregulated: derive % from reps+RIR
+                if (prescription.loadStrategy == .percentageE1RM && prescription.targetPercentage == nil) ||
+                   prescription.loadStrategy == .rpeAutoregulated,
+                   liftState.rollingE1RM > 0,
+                   hasValidStateDate {
+                    let targetReps = prescription.targetRepsRange.lowerBound
+                    let derivedPct = derivedPercentageFromRepsRIR(reps: targetReps, rir: prescription.targetRIR)
+                    return Load(value: liftState.rollingE1RM * derivedPct, unit: unit)
+                        .rounded(using: plan.loadRoundingPolicy)
+                }
+                
+                // 3) If prescription context changed materially, rebase from e1RM.
                 if let lastResult = history.exerciseResults(forExercise: effectiveExerciseId, limit: 1).first,
                    isMaterialPrescriptionChange(from: lastResult.prescription, to: prescription),
-                   liftState.rollingE1RM > 0
+                   liftState.rollingE1RM > 0,
+                   hasValidStateDate
                 {
-                    let unit: LoadUnit = (liftState.lastWorkingWeight.value > 0)
-                        ? liftState.lastWorkingWeight.unit
-                        : plan.loadRoundingPolicy.unit
-                    
-                    let e1rm = Load(value: liftState.rollingE1RM, unit: unit)
+                    let e1rmUnit: LoadUnit = liftState.lastWorkingWeight.value > 0 ? liftState.lastWorkingWeight.unit : unit
+                    let e1rm = Load(value: liftState.rollingE1RM, unit: e1rmUnit)
                     let targetReps = prescription.targetRepsRange.lowerBound
-                    let rebased = Load(value: E1RMCalculator.workingWeight(fromE1RM: e1rm.value, targetReps: targetReps), unit: unit)
+                    let rebased = Load(value: E1RMCalculator.workingWeight(fromE1RM: e1rm.value, targetReps: targetReps), unit: e1rm.unit)
                     return rebased.rounded(using: plan.loadRoundingPolicy)
                 }
-                switch prescription.loadStrategy {
-                case .percentageE1RM:
-                    if let pct = prescription.targetPercentage, liftState.rollingE1RM > 0 {
-                        // Prefer preserving the exercise's unit if we have an established working weight.
-                        let unit: LoadUnit = (liftState.lastWorkingWeight.value > 0)
-                            ? liftState.lastWorkingWeight.unit
-                            : plan.loadRoundingPolicy.unit
-                        return Load(value: liftState.rollingE1RM * pct, unit: unit)
-                    }
-                    // Fallback: if we can't compute %e1RM, use the progression baseline.
-                    return progressionPolicy.computeNextLoad(
-                        prescription: prescription,
-                        liftState: liftState,
-                        history: history,
-                        exerciseId: effectiveExerciseId,
-                        context: progressionContext
-                    )
-                    
-                default:
-                    return progressionPolicy.computeNextLoad(
-                        prescription: prescription,
-                        liftState: liftState,
-                        history: history,
-                        exerciseId: effectiveExerciseId,
-                        context: progressionContext
-                    )
-                }
-            }()
-
-            // Long hiatus / detraining handling (conservative):
-            // If the user hasn't performed the lift for weeks, ramp intensity down deterministically
-            // to avoid suggesting a "resume at peak" load.
-            let detrainingReduction: Double = {
-                guard let last = liftState.lastSessionDate else { return 0 }
-                let lastDay = calendar.startOfDay(for: last)
-                let today = calendar.startOfDay(for: date)
-                let days = calendar.dateComponents([.day], from: lastDay, to: today).day ?? 0
                 
-                switch days {
-                case 0..<28:
-                    return 0
-                case 28..<56:
-                    return 0.10
-                case 56..<84:
-                    return 0.20
-                default:
-                    return 0.30
+                // 4) Prefer last working weight as baseline if available (for absolute strategies).
+                if liftState.lastWorkingWeight.value > 0 && hasValidStateDate {
+                    return liftState.lastWorkingWeight
                 }
+                
+                // 5) Cold start: estimate if no baseline.
+                // Note: cold start estimate is already exercise-specific, so don't apply coefficient.
+                if liftState.lastWorkingWeight.value <= 0.0001 || !hasValidStateDate,
+                   history.exerciseResults(forExercise: effectiveExerciseId, limit: 1).isEmpty,
+                   let estimated = initialWorkingLoadEstimate(
+                    for: exercise,
+                    prescription: prescription,
+                    userProfile: userProfile,
+                    roundingPolicy: plan.loadRoundingPolicy
+                   )
+                {
+                    // Cold start is already exercise-specific; return directly
+                    return estimated
+                }
+                
+                // Fallback to zero (will be handled by magnitude).
+                return liftState.lastWorkingWeight
             }()
             
-            let detrainedBase = baseTargetLoad * (1.0 - detrainingReduction)
-            
-            let targetLoad: Load = {
-                guard deloadDecision.shouldDeload, let deloadConfig = plan.deloadConfig else {
-                    return detrainedBase
+            // Apply family coefficient to convert from family baseline to exercise-specific load.
+            // ONLY apply coefficient if:
+            // 1. We read from family baseline (not exercise-specific state)
+            // 2. Not a cold-start estimate (already exercise-specific)
+            let baselineLoad: Load = {
+                // If we used cold-start estimation, the load is already exercise-specific
+                let isColdStart = liftState.lastWorkingWeight.value <= 0.0001 &&
+                    history.exerciseResults(forExercise: effectiveExerciseId, limit: 1).isEmpty
+                
+                if isColdStart {
+                    return familyBaselineLoad
                 }
-                return detrainedBase * (1.0 - deloadConfig.intensityReduction)
+                
+                // If state is already exercise-specific, don't apply coefficient
+                if stateIsExerciseSpecific {
+                    return familyBaselineLoad
+                }
+                
+                // Apply coefficient for variations/substitutes reading from family baseline
+                return (familyBaselineLoad * familyCoefficient)
+                    .rounded(using: plan.loadRoundingPolicy)
             }()
-
-            // Output loads in the plan's rounding unit (supports unit switches like lb history → kg plan).
-            let sessionBaseLoad = targetLoad.converted(to: plan.loadRoundingPolicy.unit)
             
-            // Build set plans
+            // Build lift signals for direction/magnitude decision.
+            let signals = buildLiftSignals(
+                exerciseId: effectiveExerciseId,
+                exercise: exercise,
+                liftState: liftState,
+                prescription: prescription,
+                history: history,
+                userProfile: userProfile,
+                todayReadiness: readiness,
+                sessionDeloadTriggered: deloadDecision.shouldDeload,
+                sessionDeloadReason: deloadDecision.reason,
+                date: date,
+                calendar: calendar
+            )
+            
+            // Compute direction and magnitude.
+            let (finalLoad, directionDecision, magnitudeParams, volumeAdjustment, policyChecks) = computeTargetLoadWithDirectionMagnitude(
+                signals: signals,
+                baseTargetLoad: baselineLoad,
+                liftState: liftState,
+                plan: plan
+            )
+            
+            // Output loads in the plan's rounding unit.
+            let sessionBaseLoad = finalLoad.converted(to: plan.loadRoundingPolicy.unit)
+                .rounded(using: magnitudeParams.roundingPolicy)
+            
+            // Build set plans with direction-aware volume.
             var setPlans: [SetPlan] = []
             let baseTargetReps = progressionPolicy.computeNextTargetReps(
                 prescription: prescription,
                 history: history,
                 exerciseId: effectiveExerciseId
             )
-            let targetReps = deloadDecision.shouldDeload ? prescription.targetRepsRange.lowerBound : baseTargetReps
+            
+            // Use lower rep bound for deloads/resets, otherwise policy-computed reps.
+            let targetReps: Int = {
+                switch directionDecision.direction {
+                case .deload, .resetAfterBreak:
+                    return prescription.targetRepsRange.lowerBound
+                default:
+                    return baseTargetReps
+                }
+            }()
 
-            let setCount = deloadDecision.shouldDeload
-                ? max(1, prescription.setCount - (plan.deloadConfig?.volumeReduction ?? 1))
-                : prescription.setCount
+            // Apply volume adjustment based on direction.
+            // For deloads: use ~40% volume reduction (per rulebook) instead of fixed set count.
+            // This is more proportional and scales with the prescription's original volume.
+            let setCount: Int = {
+                let base = prescription.setCount
+                
+                switch directionDecision.direction {
+                case .deload:
+                    // ~40% volume reduction per rulebook intent
+                    let reductionSets = max(1, Int(round(0.4 * Double(base))))
+                    return max(1, base - reductionSets)
+                case .decreaseSlightly:
+                    // Small reduction for acute readiness: -1 set (from magnitude policy)
+                    return max(1, base + volumeAdjustment)
+                case .resetAfterBreak:
+                    // Break resets may have modest volume reduction
+                    return max(1, base + volumeAdjustment)
+                default:
+                    // Normal sessions: no volume adjustment
+                    return max(1, base + volumeAdjustment)
+                }
+            }()
             
             for setIndex in 0..<setCount {
                 let setLoad = progressionPolicy.computeSetLoad(
@@ -599,13 +602,32 @@ public enum Engine {
                 ))
             }
             
+            // Map direction to adjustment kind for persistence
+            let recommendedAdjustmentKind: SessionAdjustmentKind? = {
+                switch directionDecision.direction {
+                case .deload:
+                    return .deload
+                case .decreaseSlightly:
+                    return .readinessCut
+                case .resetAfterBreak:
+                    return .breakReset
+                case .increase, .hold:
+                    return SessionAdjustmentKind.none
+                }
+            }()
+            
             exercisePlans.append(ExercisePlan(
                 exercise: exercise,
                 prescription: prescription,
                 sets: setPlans,
                 progressionPolicy: progressionPolicy,
                 inSessionPolicy: inSessionPolicy,
-                substitutions: substitutions
+                substitutions: substitutions,
+                recommendedAdjustmentKind: recommendedAdjustmentKind,
+                direction: directionDecision.direction,
+                directionReason: directionDecision.primaryReason,
+                directionExplanation: directionDecision.explanation,
+                policyChecks: policyChecks
             ))
         }
         
@@ -617,6 +639,360 @@ public enum Engine {
             deloadReason: deloadDecision.reason,
             insights: insights
         )
+    }
+    
+    // MARK: - Direction/Magnitude System
+    
+    /// Builds lift signals for direction/magnitude decision.
+    private static func buildLiftSignals(
+        exerciseId: String,
+        exercise: Exercise,
+        liftState: LiftState,
+        prescription: SetPrescription,
+        history: WorkoutHistory,
+        userProfile: UserProfile,
+        todayReadiness: Int,
+        sessionDeloadTriggered: Bool,
+        sessionDeloadReason: DeloadReason?,
+        date: Date,
+        calendar: Calendar
+    ) -> LiftSignals {
+        // Get last session results for this exercise (non-deload)
+        let lastResult = history.exerciseResults(forExercise: exerciseId, limit: 1).first
+        let workingSets = lastResult?.workingSets ?? []
+        
+        // Determine if last session was a failure
+        let targetRepsLower = prescription.targetRepsRange.lowerBound
+        let lastSessionWasFailure = !workingSets.isEmpty && workingSets.contains { $0.reps < targetRepsLower }
+        
+        // Determine if last session was a grinder (success but RIR significantly below target)
+        //
+        // "True grinder" requires meaningful RIR shortfall to avoid false positives:
+        // - If target RIR = 2 and observed RIR = 1, that's NOT a grinder (just slightly harder)
+        // - If target RIR = 2 and observed RIR = 0, that's a grinder (truly grinding)
+        //
+        // This prevents over-deloading from marginal RIR misses.
+        let targetRIR = prescription.targetRIR
+        let observedRIRs = workingSets.compactMap(\.rirObserved)
+        let grinderRirDelta = DirectionPolicyConfig.default.grinderRirDelta // Minimum shortfall to count as grinder
+        let lastSessionWasGrinder: Bool = {
+            guard !observedRIRs.isEmpty, !lastSessionWasFailure else { return false }
+            guard targetRIR > 0 else { return false }
+            let minObserved = observedRIRs.min() ?? targetRIR
+            // Require RIR shortfall > delta to count as true grinder
+            // E.g., if delta=1 and targetRIR=2, only observed RIR<=0 is a grinder
+            return minObserved <= (targetRIR - grinderRirDelta - 1)
+        }()
+        
+        // Average observed RIR
+        let avgRIR: Double? = observedRIRs.isEmpty ? nil : Double(observedRIRs.reduce(0, +)) / Double(observedRIRs.count)
+        
+        // Days since last exposure
+        let daysSinceLastExposure = liftState.daysSinceLastSession(from: date, calendar: calendar)
+        
+        // Days since last deload
+        let daysSinceDeload = liftState.daysSinceDeload(from: date, calendar: calendar)
+        
+        // Infer session intent from prescription (or use template-level intent if available)
+        let sessionIntent = SessionIntent.infer(from: prescription)
+        
+        return LiftSignals(
+            exerciseId: exerciseId,
+            movementPattern: exercise.movementPattern,
+            equipment: exercise.equipment,
+            lastWorkingWeight: liftState.lastWorkingWeight,
+            rollingE1RM: liftState.rollingE1RM,
+            failStreak: liftState.failStreak,
+            highRpeStreak: liftState.highRpeStreak,
+            daysSinceLastExposure: daysSinceLastExposure,
+            daysSinceDeload: daysSinceDeload,
+            trend: liftState.trend,
+            successfulSessionsCount: liftState.successfulSessionsCount,
+            successStreak: liftState.successStreak,
+            lastSessionWasFailure: lastSessionWasFailure,
+            lastSessionWasGrinder: lastSessionWasGrinder,
+            lastSessionAvgRIR: avgRIR,
+            lastSessionReps: workingSets.map(\.reps),
+            todayReadiness: todayReadiness,
+            recentReadinessScores: liftState.recentReadinessScores,
+            prescription: prescription,
+            experienceLevel: userProfile.experience,
+            bodyWeight: userProfile.bodyWeight,
+            sessionDeloadTriggered: sessionDeloadTriggered,
+            sessionDeloadReason: sessionDeloadReason,
+            sessionIntent: sessionIntent
+        )
+    }
+    
+    /// Computes the target load using the direction/magnitude system.
+    private static func computeTargetLoadWithDirectionMagnitude(
+        signals: LiftSignals,
+        baseTargetLoad: Load,
+        liftState: LiftState,
+        plan: TrainingPlan,
+        directionConfig: DirectionPolicyConfig? = nil,
+        magnitudeConfig: MagnitudePolicyConfig? = nil
+    ) -> (load: Load, direction: DirectionDecision, magnitude: MagnitudeParams, volumeAdjustment: Int, checks: [PolicyCheckResult]) {
+        // Build direction config, deriving readiness thresholds from plan.deloadConfig when available.
+        // This ensures test harnesses and production code use consistent thresholds.
+        let effectiveDirectionConfig: DirectionPolicyConfig = {
+            if let explicit = directionConfig {
+                return explicit
+            }
+            // Derive from plan.deloadConfig if available
+            if let deloadConfig = plan.deloadConfig {
+                return DirectionPolicyConfig(
+                    extendedBreakDays: DirectionPolicyConfig.default.extendedBreakDays,
+                    trainingGapDays: DirectionPolicyConfig.default.trainingGapDays,
+                    readinessThreshold: deloadConfig.readinessThreshold,
+                    severeLowReadinessThreshold: max(20, deloadConfig.readinessThreshold - 10),
+                    persistentLowReadinessExposures: DirectionPolicyConfig.default.persistentLowReadinessExposures,
+                    baseFailStreakThreshold: DirectionPolicyConfig.default.baseFailStreakThreshold,
+                    baseHighRpeStreakThreshold: DirectionPolicyConfig.default.baseHighRpeStreakThreshold,
+                    grinderRirDelta: DirectionPolicyConfig.default.grinderRirDelta
+                )
+            }
+            return .default
+        }()
+        
+        // Build magnitude config, deriving deload parameters from plan.deloadConfig when available.
+        let effectiveMagnitudeConfig: MagnitudePolicyConfig = {
+            if let explicit = magnitudeConfig {
+                return explicit
+            }
+            // Derive from plan.deloadConfig if available
+            if let deloadConfig = plan.deloadConfig {
+                return MagnitudePolicyConfig(
+                    enableMicroloading: MagnitudePolicyConfig.default.enableMicroloading,
+                    baseDeloadReduction: deloadConfig.intensityReduction,
+                    deloadVolumeReduction: deloadConfig.volumeReduction,
+                    baseBreakResetReduction: MagnitudePolicyConfig.default.baseBreakResetReduction,
+                    acuteReadinessVolumeReduction: MagnitudePolicyConfig.default.acuteReadinessVolumeReduction
+                )
+            }
+            return .default
+        }()
+        
+        // Get direction decision with trace
+        let (direction, policyChecks) = DirectionPolicy.decideWithTrace(signals: signals, config: effectiveDirectionConfig)
+        
+        // Get magnitude params
+        let magnitude = MagnitudePolicy.compute(
+            direction: direction,
+            signals: signals,
+            baseRoundingPolicy: plan.loadRoundingPolicy,
+            config: effectiveMagnitudeConfig
+        )
+        
+        // Compute final load
+        var finalLoad = baseTargetLoad
+        
+        // Apply multiplier first
+        if magnitude.loadMultiplier != 1.0 {
+            finalLoad = finalLoad * magnitude.loadMultiplier
+        }
+        
+        // Apply absolute increment
+        if magnitude.absoluteIncrement.value != 0 {
+            finalLoad = finalLoad + magnitude.absoluteIncrement
+        }
+        
+        // Apply rounding
+        finalLoad = finalLoad.rounded(using: magnitude.roundingPolicy)
+        
+        // For hold/decrease directions, don't exceed the baseTargetLoad (not lastWorkingWeight).
+        // This prevents rounding from accidentally increasing load while still allowing
+        // %e1RM programs to prescribe loads that exceed the last working weight.
+        // The baseTargetLoad represents the "intended" load before direction/magnitude adjustments.
+        switch direction.direction {
+        case .hold, .decreaseSlightly:
+            let clampTarget = baseTargetLoad.converted(to: finalLoad.unit)
+            // Only clamp if final load exceeds the base target (due to rounding)
+            // Allow small epsilon for floating-point comparison
+            let epsilon = magnitude.roundingPolicy.increment * 0.1
+            if clampTarget.value > 0 && finalLoad.value > clampTarget.value + epsilon {
+                finalLoad = clampTarget.rounded(using: magnitude.roundingPolicy)
+            }
+        default:
+            break
+        }
+        
+        // SAFETY CLAMPS: Prevent unsafe step changes (except explicit reset/deload cases).
+        // This guards against unit mistakes or outlier prescriptions causing massive jumps.
+        // 
+        // IMPORTANT: These clamps apply against lastWorkingWeight, not against the program's
+        // target load. For %e1RM prescriptions that legitimately exceed lastWorkingWeight
+        // (e.g., program change or e1RM improvement), we should allow the jump.
+        // We detect this by checking if baseTargetLoad significantly differs from lastWorkingWeight.
+        let lastWorkingLb = liftState.lastWorkingWeight.converted(to: finalLoad.unit)
+        let baseTargetLb = baseTargetLoad.converted(to: finalLoad.unit)
+        
+        if lastWorkingLb.value > 0 {
+            let ratio = finalLoad.value / lastWorkingLb.value
+            let programRequestedRatio = baseTargetLb.value / lastWorkingLb.value
+            
+            // If the program (via %e1RM or prescription change) explicitly requests a different
+            // load than lastWorkingWeight, allow it within broader safety bounds.
+            let isProgramDrivenJump = abs(programRequestedRatio - 1.0) > 0.05 // >5% program change
+            
+            // Determine max allowed change ratio based on direction and movement pattern
+            let (minRatio, maxRatio): (Double, Double) = {
+                switch direction.direction {
+                case .deload, .resetAfterBreak:
+                    // Allow larger drops for deloads/resets
+                    return (0.60, 1.10)
+                case .increase:
+                    // Upper body gets tighter caps
+                    if signals.isUpperBodyPress {
+                        return (0.95, 1.15)
+                    } else {
+                        return (0.90, 1.25)
+                    }
+                default:
+                    // Hold/decrease: shouldn't increase more than a rounding step
+                    // UNLESS the program explicitly requests a different load
+                    if isProgramDrivenJump {
+                        // Allow program-driven changes up to 25% (covers most program transitions)
+                        return (0.75, 1.25)
+                    }
+                    if signals.isUpperBodyPress {
+                        return (0.85, 1.03)
+                    } else {
+                        return (0.80, 1.05)
+                    }
+                }
+            }()
+            
+            // Clamp if out of bounds
+            if ratio < minRatio {
+                finalLoad = Load(value: lastWorkingLb.value * minRatio, unit: finalLoad.unit)
+                    .rounded(using: magnitude.roundingPolicy)
+            } else if ratio > maxRatio {
+                finalLoad = Load(value: lastWorkingLb.value * maxRatio, unit: finalLoad.unit)
+                    .rounded(using: magnitude.roundingPolicy)
+            }
+        }
+        
+        return (finalLoad, direction, magnitude, magnitude.volumeAdjustment, policyChecks)
+    }
+    
+    // MARK: - Cold start / initial loading
+    
+    /// Estimate a safe, non-zero starting load for a lift when there is no prior history/state.
+    ///
+    /// This is intended to approximate "onboarding working weights" that a real app would collect.
+    /// It uses coarse strength-standard ratios (1RM as a multiple of bodyweight) and converts to a
+    /// working weight at the prescription's reps/RIR using inverse Brzycki.
+    ///
+    /// If bodyweight is missing, returns nil (caller should fall back to 0).
+    private static func initialWorkingLoadEstimate(
+        for exercise: Exercise,
+        prescription: SetPrescription,
+        userProfile: UserProfile,
+        roundingPolicy: LoadRoundingPolicy
+    ) -> Load? {
+        // Never estimate external load for bodyweight exercises.
+        guard exercise.equipment != .bodyweight else { return .zero }
+        
+        guard let bw = userProfile.bodyWeight?.converted(to: .pounds).value, bw > 0 else {
+            return nil
+        }
+        
+        // Map sex "other" to the mid-point of male/female ratios.
+        func blend(_ male: Double, _ female: Double) -> Double {
+            switch userProfile.sex {
+            case .male: return male
+            case .female: return female
+            case .other: return (male + female) / 2.0
+            }
+        }
+        
+        // Cold-start e1RM ratios are intentionally CONSERVATIVE to avoid over-prescribing
+        // for new users or returning lifters. It's better to start too light and progress
+        // than to start too heavy and need immediate deloads.
+        //
+        // These ratios are approximately 15-20% lower than typical strength standards,
+        // allowing room for technique refinement and building work capacity.
+        let ratio1RM: Double? = {
+            // Strength standards are most meaningful for compound patterns.
+            switch exercise.movementPattern {
+            case .horizontalPush:
+                switch userProfile.experience {
+                case .beginner: return blend(0.95, 0.45) // Was 1.18/0.55
+                case .intermediate: return blend(1.05, 0.60) // Was 1.25/0.75
+                case .advanced: return blend(1.20, 0.75) // Was 1.40/0.90
+                case .elite: return blend(1.35, 0.90) // Was 1.55/1.05
+                }
+            case .verticalPush:
+                switch userProfile.experience {
+                case .beginner: return blend(0.60, 0.28) // Was 0.77/0.35
+                case .intermediate: return blend(0.70, 0.40) // Was 0.85/0.50
+                case .advanced: return blend(0.80, 0.50) // Was 0.95/0.60
+                case .elite: return blend(0.90, 0.60) // Was 1.05/0.70
+                }
+            case .squat:
+                switch userProfile.experience {
+                case .beginner: return blend(1.25, 0.72) // Was 1.57/0.90
+                case .intermediate: return blend(1.40, 0.95) // Was 1.70/1.20
+                case .advanced: return blend(1.55, 1.15) // Was 1.85/1.40
+                case .elite: return blend(1.75, 1.35) // Was 2.10/1.60
+                }
+            case .hipHinge:
+                switch userProfile.experience {
+                case .beginner: return blend(1.40, 0.80) // Was 1.73/1.00
+                case .intermediate: return blend(1.65, 1.15) // Was 2.00/1.40
+                case .advanced: return blend(1.80, 1.35) // Was 2.20/1.65
+                case .elite: return blend(2.10, 1.55) // Was 2.50/1.85
+                }
+            case .horizontalPull, .verticalPull:
+                // Pulling strength varies widely by exercise selection; keep conservative.
+                switch userProfile.experience {
+                case .beginner: return blend(0.65, 0.45) // Was 0.80/0.55
+                case .intermediate: return blend(0.80, 0.55) // Was 0.95/0.70
+                case .advanced: return blend(0.90, 0.65) // Was 1.10/0.80
+                case .elite: return blend(1.00, 0.75) // Was 1.20/0.90
+                }
+            case .lunge:
+                // Unilateral lower body: treat as a conservative fraction of squat strength.
+                switch userProfile.experience {
+                case .beginner: return blend(0.85, 0.60) // Was 1.05/0.75
+                case .intermediate: return blend(0.95, 0.75) // Was 1.20/0.95
+                case .advanced: return blend(1.10, 0.90) // Was 1.35/1.10
+                case .elite: return blend(1.25, 1.00) // Was 1.55/1.25
+                }
+            default:
+                return nil
+            }
+        }()
+        
+        guard let ratio1RM else { return nil }
+        let e1rmEstimate = bw * ratio1RM
+        
+        // Interpret targetRIR as "reps in reserve": estimated failure reps ≈ target reps + RIR.
+        let targetReps = max(1, prescription.targetRepsRange.lowerBound)
+        let repsToFailure = max(1, min(12, targetReps + max(0, prescription.targetRIR)))
+        let rawWorking = E1RMCalculator.workingWeight(fromE1RM: e1rmEstimate, targetReps: repsToFailure)
+        
+        // Equipment-specific minimums to avoid returning tiny loads for barbell patterns.
+        let minLb: Double = {
+            switch exercise.equipment {
+            case .barbell, .trapBar, .ezBar:
+                return 45
+            case .smithMachine, .plateLoaded:
+                return 45
+            case .dumbbell, .kettlebell:
+                return 5
+            case .machine, .cable, .resistanceBand:
+                return 10
+            default:
+                return 0
+            }
+        }()
+        
+        let clamped = max(minLb, rawWorking)
+        return Load(value: clamped, unit: .pounds)
+            .converted(to: roundingPolicy.unit)
+            .rounded(using: roundingPolicy)
     }
     
     // MARK: - Next Prescription (Set-by-Set)
@@ -677,33 +1053,59 @@ public enum Engine {
             }
             
             let progressionContext: ProgressionContext? = userProfile.map {
-                ProgressionContext(userProfile: $0, exercise: exercise, date: date, calendar: calendar)
+                ProgressionContext(
+                    userProfile: $0,
+                    exercise: exercise,
+                    date: date,
+                    calendar: calendar,
+                    sessionIntent: SessionIntent.infer(from: prescription)
+                )
             }
-            switch prescription.loadStrategy {
-            case .percentageE1RM:
-                if let pct = prescription.targetPercentage, liftState.rollingE1RM > 0 {
-                    let unit: LoadUnit = (liftState.lastWorkingWeight.value > 0)
-                        ? liftState.lastWorkingWeight.unit
-                        : roundingPolicy.unit
-                    return Load(value: liftState.rollingE1RM * pct, unit: unit)
+            
+            let candidate: Load = {
+                switch prescription.loadStrategy {
+                case .percentageE1RM:
+                    if let pct = prescription.targetPercentage, liftState.rollingE1RM > 0 {
+                        let unit: LoadUnit = (liftState.lastWorkingWeight.value > 0)
+                            ? liftState.lastWorkingWeight.unit
+                            : roundingPolicy.unit
+                        return Load(value: liftState.rollingE1RM * pct, unit: unit)
+                    }
+                    return progressionPolicy.computeNextLoad(
+                        prescription: prescription,
+                        liftState: liftState,
+                        history: history,
+                        exerciseId: exerciseId,
+                        context: progressionContext
+                    )
+                    
+                default:
+                    return progressionPolicy.computeNextLoad(
+                        prescription: prescription,
+                        liftState: liftState,
+                        history: history,
+                        exerciseId: exerciseId,
+                        context: progressionContext
+                    )
                 }
-                return progressionPolicy.computeNextLoad(
-                    prescription: prescription,
-                    liftState: liftState,
-                    history: history,
-                    exerciseId: exerciseId,
-                    context: progressionContext
-                )
-                
-            default:
-                return progressionPolicy.computeNextLoad(
-                    prescription: prescription,
-                    liftState: liftState,
-                    history: history,
-                    exerciseId: exerciseId,
-                    context: progressionContext
-                )
+            }()
+            
+            // Cold start: estimate a starting load if we have no baseline and no history.
+            if candidate.value <= 0.0001,
+               liftState.lastWorkingWeight.value <= 0.0001,
+               history.exerciseResults(forExercise: exerciseId, limit: 1).isEmpty,
+               let up = userProfile,
+               let estimated = initialWorkingLoadEstimate(
+                for: exercise,
+                prescription: prescription,
+                userProfile: up,
+                roundingPolicy: roundingPolicy
+               )
+            {
+                return estimated
             }
+            
+            return candidate
         }()
         
         // Detraining reduction for long hiatuses.
@@ -714,8 +1116,10 @@ public enum Engine {
             let days = calendar.dateComponents([.day], from: lastDay, to: today).day ?? 0
             
             switch days {
-            case 0..<28:
+            case 0..<14:
                 return 0
+            case 14..<28:
+                return 0.05
             case 28..<56:
                 return 0.10
             case 56..<84:
@@ -747,9 +1151,13 @@ public enum Engine {
         let targetReps = isDeload ? prescription.targetRepsRange.lowerBound : baseTargetReps
         
         // Compute set count (reduce on deload).
-        let setCount = isDeload
-            ? max(1, prescription.setCount - (deloadConfig?.volumeReduction ?? 1))
-            : prescription.setCount
+        // Use ~40% volume reduction for deloads per rulebook intent.
+        let setCount: Int = {
+            guard isDeload else { return prescription.setCount }
+            let base = prescription.setCount
+            let reductionSets = max(1, Int(round(0.4 * Double(base))))
+            return max(1, base - reductionSets)
+        }()
         
         // Build set plans.
         var setPlans: [SetPlan] = []
@@ -891,12 +1299,71 @@ public enum Engine {
     ///
     /// - Parameter session: The completed session with results.
     /// - Returns: Updated lift states for each exercise performed.
+    /// NOTE: State is stored under canonical family keys for progression continuity.
     public static func updateLiftState(afterSession session: CompletedSession) -> [LiftState] {
         var updatedStates: [LiftState] = []
         
         for exerciseResult in session.exerciseResults {
             let exerciseId = exerciseResult.exerciseId
-            var state = session.previousLiftStates[exerciseId] ?? LiftState(exerciseId: exerciseId)
+            
+            // Resolve state keys: referenceStateKey for reading, updateStateKey for writing
+            let stateKeyResolution = LiftFamilyResolver.resolveStateKeys(fromId: exerciseId)
+            let referenceStateKey = stateKeyResolution.referenceStateKey
+            let updateStateKey = stateKeyResolution.updateStateKey
+            let familyCoefficient = stateKeyResolution.coefficient
+            
+            // Look up existing state. For variations/substitutions:
+            // - First try the exercise's own update key (it may have its own state)
+            // - Then fall back to the family reference key (for initial load estimation)
+            var state: LiftState = {
+                // Try update key first (exercise-specific state)
+                if let existing = session.previousLiftStates[updateStateKey] {
+                    return existing
+                }
+                // Try reference key (family baseline) if different
+                if updateStateKey != referenceStateKey, let existing = session.previousLiftStates[referenceStateKey] {
+                    // Scale the reference state's values by coefficient for migration
+                    let scaledLastWorkingWeight = existing.lastWorkingWeight * familyCoefficient
+                    let scaledRollingE1RM = existing.rollingE1RM * familyCoefficient
+                    return LiftState(
+                        exerciseId: updateStateKey,
+                        lastWorkingWeight: scaledLastWorkingWeight,
+                        rollingE1RM: scaledRollingE1RM,
+                        failureCount: 0, // Fresh start for this exercise
+                        highRpeStreak: 0,
+                        lastDeloadDate: existing.lastDeloadDate, // Inherit deload timing
+                        trend: .stable,
+                        e1rmHistory: [],
+                        lastSessionDate: nil,
+                        successfulSessionsCount: 0,
+                        recentReadinessScores: [],
+                        postBreakRamp: nil
+                    )
+                }
+                // Try exercise ID if different from update key
+                if let existing = session.previousLiftStates[exerciseId], exerciseId != updateStateKey {
+                    return existing
+                }
+                return LiftState(exerciseId: updateStateKey)
+            }()
+            
+            // Ensure state uses the correct update key
+            if state.exerciseId != updateStateKey {
+                state = LiftState(
+                    exerciseId: updateStateKey,
+                    lastWorkingWeight: state.lastWorkingWeight,
+                    rollingE1RM: state.rollingE1RM,
+                    failureCount: state.failureCount,
+                    highRpeStreak: state.highRpeStreak,
+                    lastDeloadDate: state.lastDeloadDate,
+                    trend: state.trend,
+                    e1rmHistory: state.e1rmHistory,
+                    lastSessionDate: state.lastSessionDate,
+                    successfulSessionsCount: state.successfulSessionsCount,
+                    recentReadinessScores: state.recentReadinessScores,
+                    postBreakRamp: state.postBreakRamp
+                )
+            }
             
             // Compute working sets (exclude warmups; require actual reps > 0).
             let workingSets = exerciseResult.sets.filter { $0.completed && !$0.isWarmup && $0.reps > 0 }
@@ -933,39 +1400,82 @@ public enum Engine {
                     }
                 }
             }
-            var proposedLastWorkingWeight = maxLoad.converted(to: sessionUnit)
+            
+            // For variations/substitutions (updateStateKey != referenceStateKey), store the load directly
+            // (no coefficient conversion). For direct family members, also store directly.
+            // 
+            // Previous behavior converted back to family baseline, but this caused state contamination
+            // where variations would overwrite the base lift's state.
+            //
+            // New behavior:
+            // - Variations/substitutions maintain their own state at their own scale
+            // - When we need to estimate a variation's load, we read from family baseline and apply coefficient
+            // - When we update, we write to the variation's own state at the performed scale
+            let performedLoad = maxLoad.converted(to: sessionUnit)
+            var proposedLastWorkingWeight: Load = performedLoad
 
-            // Compute session e1RM (best estimated 1RM from any set)
-            var sessionE1RM = workingSets
-                .map { set -> Double in
-                    let w = set.load.converted(to: sessionUnit).value
-                    return E1RMCalculator.brzycki(weight: w, reps: set.reps)
-                }
-                .max() ?? 0
+            // Compute session e1RM (best estimated 1RM from any set, at the performed scale)
+            var sessionE1RM: Double = {
+                let performedE1RM = workingSets
+                    .map { set -> Double in
+                        let w = set.load.converted(to: sessionUnit).value
+                        return E1RMCalculator.brzycki(weight: w, reps: set.reps)
+                    }
+                    .max() ?? 0
+                
+                return performedE1RM
+            }()
             
             // Check if session was a failure (any set below lower bound of rep range)
             let prescription = exerciseResult.prescription
             let anyFailure = workingSets.contains { $0.reps < prescription.targetRepsRange.lowerBound }
+            
+            // Check if session was a grinder (all reps achieved but RIR significantly below target)
+            // Use stricter definition to avoid over-counting marginal RIR misses
+            let targetRIR = prescription.targetRIR
+            let observedRIRs = workingSets.compactMap(\.rirObserved)
+            let grinderRirDelta = DirectionPolicyConfig.default.grinderRirDelta
+            let wasGrinder: Bool = {
+                guard !observedRIRs.isEmpty, !anyFailure else { return false }
+                guard targetRIR > 0 else { return false }
+                let minObserved = observedRIRs.min() ?? targetRIR
+                // Require meaningful RIR shortfall (> delta) to count as true grinder
+                return minObserved <= (targetRIR - grinderRirDelta - 1)
+            }()
+            
+            // Update readiness history if we have a readiness score
+            if let readiness = session.readinessScore {
+                state.appendReadinessScore(readiness)
+            }
+            
+            // Determine if baseline should be updated based on adjustment kind.
+            // Prefer per-exercise adjustment kind when present; fall back to session-level.
+            let effectiveAdjustmentKind = exerciseResult.adjustmentKind ?? session.adjustmentKind
+            let shouldUpdateBaseline: Bool = {
+                switch effectiveAdjustmentKind {
+                case .none:
+                    return true
+                case .deload, .readinessCut:
+                    return false
+                case .breakReset:
+                    // Break resets do update baseline (they're the new reality)
+                    return true
+                }
+            }()
 
-            // IMPORTANT: Deload sessions should not overwrite the lift's working-weight baseline or e1RM history.
+            // IMPORTANT: Deload and readiness-cut sessions should not overwrite the lift's working-weight baseline.
             //
             // Why:
-            // - Deload sessions intentionally reduce load and/or volume.
-            // - If we treat deload performance as a normal datapoint, the baseline (lastWorkingWeight / rollingE1RM)
-            //   will drift down and can create a "deload into the ground" spiral over long horizons.
+            // - These sessions intentionally reduce load and/or volume.
+            // - If we treat them as normal datapoints, the baseline can drift down.
             //
             // We still update:
             // - lastSessionDate (so detraining logic stays correct)
-            // - lastDeloadDate
-            // - failureCount (reset on a successful deload; increment if the user still failed)
-            if session.wasDeload {
-                // Special case: if this deload session is the *first exposure after a long gap* for this lift,
-                // we should update the working baseline. Otherwise, we can get a huge (unsafe/unrealistic)
-                // "bounce-back" next session because:
-                // - deload sessions don't update lastWorkingWeight / rollingE1RM
-                // - but they *do* update lastSessionDate (removing detraining reduction)
-                //
-                // Treat long-gap deloads as "return-to-training" exposures.
+            // - lastDeloadDate (for deloads)
+            // - failureCount / highRpeStreak
+            // - recentReadinessScores
+            // - postBreakRamp progress
+            if !shouldUpdateBaseline && effectiveAdjustmentKind != .breakReset {
                 let daysSinceLast: Int = {
                     var cal = Calendar(identifier: .gregorian)
                     cal.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
@@ -976,19 +1486,42 @@ public enum Engine {
                 }()
                 
                 state.lastSessionDate = session.date
-                state.lastDeloadDate = session.date
-                state.failureCount = anyFailure ? (state.failureCount + 1) : 0
+                
+                // Update deload date if this was a true deload
+                if effectiveAdjustmentKind == .deload {
+                    state.lastDeloadDate = session.date
+                    // Reset streaks after deload (includes successStreak)
+                    state.resetStreaks()
+                    
+                    // Start post-deload ramp if not already ramping
+                    // The target is the pre-deload working weight (stored in state.lastWorkingWeight)
+                    if state.postDeloadRamp == nil && state.lastWorkingWeight.value > 0 {
+                        state.startPostDeloadRamp(
+                            targetWeight: state.lastWorkingWeight,
+                            sessions: 2,
+                            date: session.date
+                        )
+                    }
+                } else {
+                    // For readiness cuts: DON'T track failure/grinder streaks
+                    // Readiness cuts are intentional load reductions, so failures/grinders
+                    // during a cut are NOT evidence that you need to deload.
+                    // 
+                    // We only reset success streak (cut sessions shouldn't count toward progression)
+                    // but we preserve failure/grinder counts - a cut shouldn't add to deload evidence.
+                    state.successStreak = 0
+                    // Note: we intentionally do NOT modify failureCount or highRpeStreak here
+                }
                 
                 let priorW = state.lastWorkingWeight.value
                 let currentW = proposedLastWorkingWeight.value
                 let ratio = (priorW > 0 && currentW > 0) ? (currentW / priorW) : 1.0
                 let isLargeBaselineShift = ratio < 0.75 || ratio > 1.35
                 
+                // Special case: long gaps or large baseline shifts should update even for deloads
                 if daysSinceLast >= 28 || isLargeBaselineShift {
-                    // Update baseline load + performance signals to reflect the new (post-hiatus) reality.
                     state.lastWorkingWeight = proposedLastWorkingWeight
                     
-                    // Update rolling e1RM with exponential smoothing.
                     let alpha = 0.3
                     if state.rollingE1RM > 0 {
                         state.rollingE1RM = alpha * sessionE1RM + (1 - alpha) * state.rollingE1RM
@@ -996,7 +1529,6 @@ public enum Engine {
                         state.rollingE1RM = sessionE1RM
                     }
                     
-                    // Update trend based on e1RM history.
                     state.e1rmHistory.append(E1RMSample(date: session.date, value: sessionE1RM))
                     if state.e1rmHistory.count > 10 {
                         state.e1rmHistory.removeFirst(state.e1rmHistory.count - 10)
@@ -1009,17 +1541,6 @@ public enum Engine {
             }
 
             // Guardrail: detect likely kg↔lb entry mistakes and prevent "state nukes".
-            //
-            // In the real app, unit switches should be explicit, but users can still type a number
-            // in the wrong unit (e.g., enter 85 thinking "kg" when the app expects "lb").
-            // If we blindly accept that value, the baseline can collapse and the engine will keep
-            // recommending absurdly low loads.
-            //
-            // Heuristic:
-            // - Only consider correction when the last known working weight is > 0
-            // - Only consider when the new weight is a large jump/drop vs prior
-            // - Only consider when the ratio is close to kg↔lb conversion factors
-            // - Only consider when the last session was recent (avoid overriding real detraining/injury resets)
             if state.lastWorkingWeight.value > 0, proposedLastWorkingWeight.value > 0 {
                 let daysSinceLast: Int = {
                     var cal = Calendar(identifier: .gregorian)
@@ -1034,30 +1555,22 @@ public enum Engine {
                 let current = proposedLastWorkingWeight.value
                 let ratio = current / prior
                 
-                // Only bother if it's a big discontinuity.
                 if ratio < 0.60 || ratio > 1.67 {
                     let kgToLb = 2.20462
                     let lbToKg = 0.453592
                     
                     func within(_ x: Double, _ lo: Double, _ hi: Double) -> Bool { x >= lo && x <= hi }
                     
-                    // If the ratio is extremely close to conversion factors, it's very likely a unit entry mistake,
-                    // even if the lift hasn't been performed recently.
                     let strongSignal = abs(ratio - lbToKg) < 0.03 || abs(ratio - kgToLb) < 0.12
                     let allowCorrection = strongSignal || (daysSinceLast < 56)
                     if allowCorrection {
-                        // If the ratio is close to lbToKg (~0.454), user likely entered kg number in a lb field.
                         if abs(ratio - lbToKg) < 0.08 {
                             let corrected = current * kgToLb
-                            // Only accept if it lands reasonably close to the prior baseline.
                             if within(corrected / prior, 0.75, 1.35) {
                                 proposedLastWorkingWeight = Load(value: corrected, unit: sessionUnit)
                                 sessionE1RM *= kgToLb
                             }
-                        }
-                        
-                        // If the ratio is close to kgToLb (~2.205), user likely entered lb number in a kg field.
-                        else if abs(ratio - kgToLb) < 0.25 {
+                        } else if abs(ratio - kgToLb) < 0.25 {
                             let corrected = current * lbToKg
                             if within(corrected / prior, 0.75, 1.35) {
                                 proposedLastWorkingWeight = Load(value: corrected, unit: sessionUnit)
@@ -1068,7 +1581,7 @@ public enum Engine {
                 }
             }
             
-            // Non-deload: update working baseline and performance signals.
+            // Normal session or break reset: update working baseline and performance signals.
             state.lastWorkingWeight = proposedLastWorkingWeight
             
             // Update rolling e1RM with exponential smoothing
@@ -1079,15 +1592,24 @@ public enum Engine {
                 state.rollingE1RM = sessionE1RM
             }
             
+            // Update streak counters
             if anyFailure {
                 state.failureCount += 1
-            } else {
+                state.highRpeStreak = 0
+                state.successStreak = 0 // Reset success streak on failure
+            } else if wasGrinder {
                 state.failureCount = 0
+                state.highRpeStreak += 1
+                state.successStreak = 0 // Reset success streak on grinder
+            } else {
+                // Clean success - reset negative streaks, increment success streak
+                state.failureCount = 0
+                state.highRpeStreak = 0
+                state.successStreak += 1
             }
             
             // Update trend based on e1RM history
             state.e1rmHistory.append(E1RMSample(date: session.date, value: sessionE1RM))
-            // Keep only last 10 samples
             if state.e1rmHistory.count > 10 {
                 state.e1rmHistory.removeFirst(state.e1rmHistory.count - 10)
             }
@@ -1096,6 +1618,34 @@ public enum Engine {
             state.lastSessionDate = session.date
             if !anyFailure {
                 state.successfulSessionsCount += 1
+            }
+            
+            // Handle post-break ramp progress
+            if effectiveAdjustmentKind == .breakReset {
+                // Start ramp if not already ramping (first session after break)
+                if state.postBreakRamp == nil && state.lastWorkingWeight.value > 0 {
+                    state.startPostBreakRamp(
+                        targetWeight: state.lastWorkingWeight,
+                        sessions: 2,
+                        date: session.date
+                    )
+                }
+                state.incrementRampProgress()
+            } else if state.postBreakRamp != nil && state.postBreakRamp?.isComplete == true {
+                // Clear completed ramp
+                state.clearPostBreakRamp()
+            }
+            
+            // Handle post-deload ramp progress on normal sessions
+            if let deloadRamp = state.postDeloadRamp {
+                if effectiveAdjustmentKind == .none || effectiveAdjustmentKind == .readinessCut {
+                    // Non-deload session while in deload ramp: progress the ramp
+                    state.incrementDeloadRampProgress()
+                }
+                // If deload ramp is complete, clear it
+                if deloadRamp.isComplete {
+                    state.clearPostDeloadRamp()
+                }
             }
             
             updatedStates.append(state)

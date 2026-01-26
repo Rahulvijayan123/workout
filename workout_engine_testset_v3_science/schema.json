@@ -1,0 +1,41 @@
+{
+  "dataset_version": "v3",
+  "record_fields": [
+    "dataset_version",
+    "user_id",
+    "date",
+    "session_type",
+    "input",
+    "expected"
+  ],
+  "input_fields": [
+    "user_profile",
+    "equipment",
+    "today_metrics",
+    "today_session_template",
+    "recent_lift_history",
+    "days_since_last_session",
+    "days_since_lift_exposure",
+    "event_flags",
+    "planned_deload_week"
+  ],
+  "expected_fields": [
+    "session_prescription_for_today",
+    "actual_logged_performance",
+    "expected_next_session_prescription",
+    "scoring"
+  ],
+  "prescription_fields": [
+    "lift",
+    "lift_variation",
+    "substituted_to",
+    "sets",
+    "target_reps",
+    "target_rpe",
+    "prescribed_weight_lb",
+    "acceptable_range_lb",
+    "decision",
+    "reason_code",
+    "readiness_flag"
+  ]
+}

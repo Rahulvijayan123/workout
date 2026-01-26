@@ -1,0 +1,544 @@
+{
+  "dataset_version": "v4",
+  "user_id": "U301",
+  "date": "2025-10-06",
+  "session_type": "FB_A",
+  "input": {
+    "user_profile": {
+      "sex": "male",
+      "age": 23,
+      "height_cm": 178,
+      "experience_level": "novice",
+      "program": "full_body_3x",
+      "goal": "strength_hypertrophy"
+    },
+    "equipment": {
+      "units": "lb",
+      "bar_weight_lb": 45,
+      "load_step_lb": 2.5
+    },
+    "today_metrics": {
+      "body_weight_lb": 176.3,
+      "sleep_hours": 5.6,
+      "hrv_ms": 47,
+      "resting_hr_bpm": 64,
+      "soreness_1_to_10": 7,
+      "stress_1_to_10": 5,
+      "steps": 8960,
+      "calories_est": 3348
+    },
+    "today_session_template": [
+      {
+        "lift": "squat",
+        "sets": 3,
+        "reps": 5
+      },
+      {
+        "lift": "bench",
+        "sets": 3,
+        "reps": 5
+      },
+      {
+        "lift": "row",
+        "sets": 3,
+        "reps": 8
+      },
+      {
+        "lift": "plank",
+        "sets": 3,
+        "reps": 45,
+        "unit": "sec"
+      }
+    ],
+    "recent_lift_history": {
+      "squat": [
+        {
+          "date": "2026-01-02",
+          "session_type": "FB_A",
+          "weight_lb": 92.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.4,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "hold_at_target_rpe_and_low_readiness"
+        },
+        {
+          "date": "2026-01-05",
+          "session_type": "FB_A",
+          "weight_lb": 87.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.2,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        },
+        {
+          "date": "2026-01-09",
+          "session_type": "FB_A",
+          "weight_lb": 85.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.2,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        }
+      ],
+      "bench": [
+        {
+          "date": "2026-01-02",
+          "session_type": "FB_A",
+          "weight_lb": 72.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.3,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "hold_at_target_rpe_and_low_readiness"
+        },
+        {
+          "date": "2026-01-05",
+          "session_type": "FB_A",
+          "weight_lb": 70.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.6,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        },
+        {
+          "date": "2026-01-09",
+          "session_type": "FB_A",
+          "weight_lb": 70.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.6,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        }
+      ],
+      "deadlift": [
+        {
+          "date": "2025-12-24",
+          "session_type": "FB_B",
+          "weight_lb": 165.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.5,
+          "outcome": "success",
+          "decision": "increase",
+          "reason_code": "increase_after_exceeding_reps_target"
+        },
+        {
+          "date": "2025-12-31",
+          "session_type": "FB_B",
+          "weight_lb": 165.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.6,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        },
+        {
+          "date": "2026-01-07",
+          "session_type": "FB_B",
+          "weight_lb": 165.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.1,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        }
+      ],
+      "ohp": [
+        {
+          "date": "2025-12-24",
+          "session_type": "FB_B",
+          "weight_lb": 62.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.3,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        },
+        {
+          "date": "2025-12-31",
+          "session_type": "FB_B",
+          "weight_lb": 62.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.0,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        },
+        {
+          "date": "2026-01-07",
+          "session_type": "FB_B",
+          "weight_lb": 62.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 6.9,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        }
+      ]
+    },
+    "recent_exercise_history": {
+      "squat": [
+        {
+          "date": "2026-01-02",
+          "session_type": "FB_A",
+          "base_lift": "squat",
+          "weight_lb": 92.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.4,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "hold_at_target_rpe_and_low_readiness"
+        },
+        {
+          "date": "2026-01-05",
+          "session_type": "FB_A",
+          "base_lift": "squat",
+          "weight_lb": 87.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.2,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        },
+        {
+          "date": "2026-01-09",
+          "session_type": "FB_A",
+          "base_lift": "squat",
+          "weight_lb": 85.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.2,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        }
+      ],
+      "bench": [
+        {
+          "date": "2026-01-02",
+          "session_type": "FB_A",
+          "base_lift": "bench",
+          "weight_lb": 72.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.3,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "hold_at_target_rpe_and_low_readiness"
+        },
+        {
+          "date": "2026-01-05",
+          "session_type": "FB_A",
+          "base_lift": "bench",
+          "weight_lb": 70.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.6,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        },
+        {
+          "date": "2026-01-09",
+          "session_type": "FB_A",
+          "base_lift": "bench",
+          "weight_lb": 70.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.6,
+          "outcome": "success",
+          "decision": "decrease_small",
+          "reason_code": "percent_1rm_rpe_target_and_low_readiness"
+        }
+      ],
+      "deadlift": [
+        {
+          "date": "2025-12-24",
+          "session_type": "FB_B",
+          "base_lift": "deadlift",
+          "weight_lb": 165.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.5,
+          "outcome": "success",
+          "decision": "increase",
+          "reason_code": "increase_after_exceeding_reps_target"
+        },
+        {
+          "date": "2025-12-31",
+          "session_type": "FB_B",
+          "base_lift": "deadlift",
+          "weight_lb": 165.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.6,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        },
+        {
+          "date": "2026-01-07",
+          "session_type": "FB_B",
+          "base_lift": "deadlift",
+          "weight_lb": 165.0,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.1,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        }
+      ],
+      "ohp": [
+        {
+          "date": "2025-12-24",
+          "session_type": "FB_B",
+          "base_lift": "ohp",
+          "weight_lb": 62.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 7.3,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        },
+        {
+          "date": "2025-12-31",
+          "session_type": "FB_B",
+          "base_lift": "ohp",
+          "weight_lb": 62.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 8.0,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        },
+        {
+          "date": "2026-01-07",
+          "session_type": "FB_B",
+          "base_lift": "ohp",
+          "weight_lb": 62.5,
+          "target_reps": 5,
+          "top_set_reps": 5,
+          "top_rpe": 6.9,
+          "outcome": "success",
+          "decision": "hold",
+          "reason_code": "hold_at_target_rpe"
+        }
+      ]
+    },
+    "days_since_last_session": null,
+    "days_since_lift_exposure": {
+      "squat": null,
+      "bench": null,
+      "deadlift": null,
+      "ohp": null
+    },
+    "event_flags": {
+      "missed_session": false,
+      "variation_overrides": {},
+      "substitutions": {},
+      "injury_flags": {}
+    },
+    "planned_deload_week": false
+  },
+  "expected": {
+    "session_prescription_for_today": [
+      {
+        "lift": "squat",
+        "performed_exercise": "squat",
+        "lift_variation": null,
+        "substituted_to": null,
+        "sets": 3,
+        "target_reps": 5,
+        "target_rpe": 7.5,
+        "prescribed_weight_lb": 152.5,
+        "acceptable_range_lb": [
+          150.0,
+          155.0
+        ],
+        "decision": "decrease_small",
+        "reason_code": "cold_start_estimate_and_low_readiness",
+        "readiness_flag": "low",
+        "updates_state_for": {
+          "type": "lift",
+          "name": "squat"
+        },
+        "coefficient_applied": null
+      },
+      {
+        "lift": "bench",
+        "performed_exercise": "bench",
+        "lift_variation": null,
+        "substituted_to": null,
+        "sets": 3,
+        "target_reps": 5,
+        "target_rpe": 7.5,
+        "prescribed_weight_lb": 115.0,
+        "acceptable_range_lb": [
+          112.5,
+          117.5
+        ],
+        "decision": "decrease_small",
+        "reason_code": "cold_start_estimate_and_low_readiness",
+        "readiness_flag": "low",
+        "updates_state_for": {
+          "type": "lift",
+          "name": "bench"
+        },
+        "coefficient_applied": null
+      },
+      {
+        "lift": "row",
+        "sets": 3,
+        "target_reps": 8,
+        "target_rpe": 7.5,
+        "prescribed_weight_lb": 135.0,
+        "decision": "accessory",
+        "reason_code": "accessory"
+      },
+      {
+        "lift": "plank",
+        "sets": 3,
+        "target_reps": 45,
+        "target_rpe": 7.5,
+        "prescribed_weight_lb": null,
+        "decision": "accessory",
+        "reason_code": "accessory"
+      }
+    ],
+    "actual_logged_performance": [
+      {
+        "exercise": "squat",
+        "performed_sets": [
+          {
+            "set": 1,
+            "weight_lb": 152.5,
+            "reps": 5,
+            "rpe": 8.6
+          },
+          {
+            "set": 2,
+            "weight_lb": 152.5,
+            "reps": 5,
+            "rpe": 8.8
+          },
+          {
+            "set": 3,
+            "weight_lb": 152.5,
+            "reps": 5,
+            "rpe": 9.0
+          }
+        ],
+        "top_set_rpe": 8.6,
+        "top_set_reps": 5,
+        "outcome": "success"
+      },
+      {
+        "exercise": "bench",
+        "performed_sets": [
+          {
+            "set": 1,
+            "weight_lb": 115.0,
+            "reps": 5,
+            "rpe": 8.3
+          },
+          {
+            "set": 2,
+            "weight_lb": 115.0,
+            "reps": 5,
+            "rpe": 8.5
+          },
+          {
+            "set": 3,
+            "weight_lb": 115.0,
+            "reps": 5,
+            "rpe": 8.7
+          }
+        ],
+        "top_set_rpe": 8.3,
+        "top_set_reps": 5,
+        "outcome": "success"
+      },
+      {
+        "exercise": "row",
+        "performed_sets": [
+          {
+            "set": 1,
+            "weight_lb": 135.0,
+            "reps": 8
+          },
+          {
+            "set": 2,
+            "weight_lb": 135.0,
+            "reps": 8
+          },
+          {
+            "set": 3,
+            "weight_lb": 135.0,
+            "reps": 8
+          }
+        ],
+        "top_set_rpe": 7.0,
+        "top_set_reps": 8,
+        "outcome": "success"
+      },
+      {
+        "exercise": "plank",
+        "performed_sets": [
+          {
+            "set": 1,
+            "weight_lb": null,
+            "reps": 45
+          },
+          {
+            "set": 2,
+            "weight_lb": null,
+            "reps": 45
+          },
+          {
+            "set": 3,
+            "weight_lb": null,
+            "reps": 45
+          }
+        ],
+        "top_set_rpe": 7.0,
+        "top_set_reps": 45,
+        "outcome": "success"
+      }
+    ],
+    "scoring": {
+      "main_lifts": [
+        "squat",
+        "bench",
+        "deadlift",
+        "ohp"
+      ],
+      "strict_fields": [
+        "prescribed_weight_lb",
+        "decision",
+        "performed_exercise"
+      ],
+      "load_agreement": "Within acceptable_range_lb. Substitution sessions are represented as lift='squat' with performed_exercise='leg_press'."
+    }
+  }
+}
