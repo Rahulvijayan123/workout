@@ -116,16 +116,19 @@ public struct LiftFamilyResolution: Sendable {
     }
     
     /// The state key to use for WRITING (persisting) state after a session.
-    /// - Direct family members (e.g., barbell back squat): write to family.id
-    /// - Variations (e.g., close-grip bench): write to their own exercise ID
+    /// - Direct family members (e.g., barbell back squat, bench, squat): write to family.id
+    /// - Variations (e.g., close-grip bench, pause bench, front squat): write to their own exercise ID
     /// - Substitutions (e.g., leg press for squat): write to their own exercise ID
     ///
     /// This prevents variations/substitutions from contaminating the base lift's state,
     /// while still allowing them to reference the base lift for initial load estimation.
+    ///
+    /// Note: Direct members write to family.id even if their ID is a shorthand (e.g., "bench" → "bench_press").
+    /// This ensures state continuity when switching between equivalent notations.
     public var updateStateKey: String {
-        // Direct family members (e.g., back_squat, bench_press) update the family state
+        // Direct family members update the family state (e.g., "bench" → "bench_press", "squat" → "squat")
         // Variations (e.g., close_grip_bench) and substitutions update their own state
-        isDirectMember && exerciseId.lowercased() == family.id.lowercased() ? family.id : exerciseId
+        isDirectMember ? family.id : exerciseId
     }
     
     /// Legacy stateKey - now aliases to referenceStateKey for backward compatibility
@@ -228,37 +231,43 @@ public enum LiftFamilyResolver {
         // Bench press family
         if matchesBenchPress(lower, name) {
             let coefficient = computeCoefficient(idLower: lower, nameLower: name, equipment: exercise.equipment, family: .benchPress)
-            return LiftFamilyResolution(family: .benchPress, coefficient: coefficient, isDirectMember: true, exerciseId: exercise.id)
+            let isDirectMember = isDirectBenchPressMember(lower)
+            return LiftFamilyResolution(family: .benchPress, coefficient: coefficient, isDirectMember: isDirectMember, exerciseId: exercise.id)
         }
         
         // Overhead press family
         if matchesOverheadPress(lower, name) {
             let coefficient = computeCoefficient(idLower: lower, nameLower: name, equipment: exercise.equipment, family: .overheadPress)
-            return LiftFamilyResolution(family: .overheadPress, coefficient: coefficient, isDirectMember: true, exerciseId: exercise.id)
+            let isDirectMember = isDirectOverheadPressMember(lower)
+            return LiftFamilyResolution(family: .overheadPress, coefficient: coefficient, isDirectMember: isDirectMember, exerciseId: exercise.id)
         }
         
         // Squat family
         if matchesSquat(lower, name) {
             let coefficient = computeCoefficient(idLower: lower, nameLower: name, equipment: exercise.equipment, family: .squat)
-            return LiftFamilyResolution(family: .squat, coefficient: coefficient, isDirectMember: true, exerciseId: exercise.id)
+            let isDirectMember = isDirectSquatMember(lower)
+            return LiftFamilyResolution(family: .squat, coefficient: coefficient, isDirectMember: isDirectMember, exerciseId: exercise.id)
         }
         
         // Deadlift family
         if matchesDeadlift(lower, name) {
             let coefficient = computeCoefficient(idLower: lower, nameLower: name, equipment: exercise.equipment, family: .deadlift)
-            return LiftFamilyResolution(family: .deadlift, coefficient: coefficient, isDirectMember: true, exerciseId: exercise.id)
+            let isDirectMember = isDirectDeadliftMember(lower)
+            return LiftFamilyResolution(family: .deadlift, coefficient: coefficient, isDirectMember: isDirectMember, exerciseId: exercise.id)
         }
         
         // Row family
         if matchesRow(lower, name) {
             let coefficient = computeCoefficient(idLower: lower, nameLower: name, equipment: exercise.equipment, family: .row)
-            return LiftFamilyResolution(family: .row, coefficient: coefficient, isDirectMember: true, exerciseId: exercise.id)
+            let isDirectMember = isDirectRowMember(lower)
+            return LiftFamilyResolution(family: .row, coefficient: coefficient, isDirectMember: isDirectMember, exerciseId: exercise.id)
         }
         
         // Pulldown/pull-up family
         if matchesPulldown(lower, name) {
             let coefficient = computeCoefficient(idLower: lower, nameLower: name, equipment: exercise.equipment, family: .pulldown)
-            return LiftFamilyResolution(family: .pulldown, coefficient: coefficient, isDirectMember: true, exerciseId: exercise.id)
+            let isDirectMember = isDirectPulldownMember(lower)
+            return LiftFamilyResolution(family: .pulldown, coefficient: coefficient, isDirectMember: isDirectMember, exerciseId: exercise.id)
         }
         
         // Check for substitutions based on movement pattern
@@ -273,6 +282,139 @@ public enum LiftFamilyResolver {
             isDirectMember: true,
             exerciseId: exercise.id
         )
+    }
+    
+    // MARK: - Direct Member Checks
+    // These determine whether an exercise ID represents a canonical/primary form of the lift
+    // (writes to family baseline) vs a variation/modification (writes to its own ID).
+    
+    /// Returns true if the ID represents the canonical bench press (not a variation).
+    private static func isDirectBenchPressMember(_ id: String) -> Bool {
+        // Direct members: standard flat bench press in any notation
+        // NOT direct: incline, decline, close-grip, wide-grip, pause, spoto, floor press, etc.
+        let directIds: Set<String> = [
+            "bench", "bench_press", "benchpress", "bench press",
+            "barbell_bench", "barbell_bench_press", "barbell_benchpress",
+            "flat_bench", "flat_bench_press", "flat_benchpress"
+        ]
+        if directIds.contains(id) { return true }
+        
+        // Exclude common variations
+        if id.contains("incline") || id.contains("decline") ||
+           id.contains("close") || id.contains("wide") ||
+           id.contains("pause") || id.contains("spoto") ||
+           id.contains("floor") || id.contains("tempo") ||
+           id.contains("touch") || id.contains("pin") ||
+           id.contains("dumbbell") || id.contains("db_") ||
+           id.contains("machine") || id.contains("smith") {
+            return false
+        }
+        
+        return false
+    }
+    
+    /// Returns true if the ID represents the canonical overhead press (not a variation).
+    private static func isDirectOverheadPressMember(_ id: String) -> Bool {
+        let directIds: Set<String> = [
+            "ohp", "overhead_press", "overheadpress", "overhead press",
+            "press", "military_press", "militarypress", "military press",
+            "barbell_ohp", "barbell_overhead_press", "standing_press"
+        ]
+        if directIds.contains(id) { return true }
+        
+        // Exclude variations
+        if id.contains("seated") || id.contains("push_press") ||
+           id.contains("behind") || id.contains("arnold") ||
+           id.contains("dumbbell") || id.contains("db_") ||
+           id.contains("machine") || id.contains("smith") {
+            return false
+        }
+        
+        return false
+    }
+    
+    /// Returns true if the ID represents the canonical back squat (not a variation).
+    private static func isDirectSquatMember(_ id: String) -> Bool {
+        let directIds: Set<String> = [
+            "squat", "back_squat", "backsquat", "back squat",
+            "barbell_squat", "barbell_back_squat", "bb_squat",
+            "high_bar_squat", "low_bar_squat"
+        ]
+        if directIds.contains(id) { return true }
+        
+        // Exclude variations
+        if id.contains("front") || id.contains("goblet") ||
+           id.contains("safety") || id.contains("ssb") ||
+           id.contains("zercher") || id.contains("overhead") ||
+           id.contains("pause") || id.contains("tempo") ||
+           id.contains("box") || id.contains("pin") ||
+           id.contains("dumbbell") || id.contains("db_") ||
+           id.contains("machine") || id.contains("smith") ||
+           id.contains("hack") || id.contains("leg_press") {
+            return false
+        }
+        
+        return false
+    }
+    
+    /// Returns true if the ID represents the canonical deadlift (not a variation).
+    private static func isDirectDeadliftMember(_ id: String) -> Bool {
+        let directIds: Set<String> = [
+            "deadlift", "dl", "conventional_deadlift", "conventional",
+            "barbell_deadlift", "bb_deadlift"
+        ]
+        if directIds.contains(id) { return true }
+        
+        // Exclude variations (sumo is often treated as primary but we'll keep it separate for state tracking)
+        if id.contains("sumo") || id.contains("romanian") ||
+           id.contains("rdl") || id.contains("stiff") ||
+           id.contains("trap_bar") || id.contains("trapbar") ||
+           id.contains("deficit") || id.contains("block") ||
+           id.contains("pause") || id.contains("snatch") ||
+           id.contains("dumbbell") || id.contains("db_") {
+            return false
+        }
+        
+        return false
+    }
+    
+    /// Returns true if the ID represents the canonical barbell row (not a variation).
+    private static func isDirectRowMember(_ id: String) -> Bool {
+        let directIds: Set<String> = [
+            "row", "barbell_row", "bb_row", "bent_over_row",
+            "bent_row", "pendlay_row"
+        ]
+        if directIds.contains(id) { return true }
+        
+        // Exclude variations
+        if id.contains("dumbbell") || id.contains("db_") ||
+           id.contains("cable") || id.contains("machine") ||
+           id.contains("seated") || id.contains("t_bar") || id.contains("tbar") ||
+           id.contains("meadows") || id.contains("seal") ||
+           id.contains("chest_supported") {
+            return false
+        }
+        
+        return false
+    }
+    
+    /// Returns true if the ID represents the canonical pulldown/pull-up (not a variation).
+    private static func isDirectPulldownMember(_ id: String) -> Bool {
+        let directIds: Set<String> = [
+            "pulldown", "lat_pulldown", "latpulldown", "lat pulldown",
+            "pull_up", "pullup", "pull-up", "chin_up", "chinup", "chin-up"
+        ]
+        if directIds.contains(id) { return true }
+        
+        // Exclude variations
+        if id.contains("close") || id.contains("wide") ||
+           id.contains("neutral") || id.contains("underhand") ||
+           id.contains("behind") || id.contains("assisted") ||
+           id.contains("weighted") || id.contains("machine") {
+            return false
+        }
+        
+        return false
     }
     
     /// Resolution result containing reference and update keys from just an exercise ID.
@@ -301,7 +443,17 @@ public enum LiftFamilyResolver {
         // Bench press family
         if lower.contains("bench") {
             let coefficient = computeCoefficient(idLower: lower, nameLower: lower, equipment: inferredEquipment, family: .benchPress)
-            let isDirectMember = (lower == "bench_press" || lower == "bench press" || lower == "benchpress")
+            // Direct members: canonical bench press IDs (not variations like pause_bench, close_grip_bench, incline_bench)
+            let isDirectMember = (
+                lower == "bench" ||
+                lower == "bench_press" || 
+                lower == "bench press" || 
+                lower == "benchpress" ||
+                lower == "barbell_bench" ||
+                lower == "barbell_bench_press" ||
+                lower == "flat_bench" ||
+                lower == "flat_bench_press"
+            )
             return StateKeyResolution(
                 referenceStateKey: LiftFamily.benchPress.id,
                 updateStateKey: isDirectMember ? LiftFamily.benchPress.id : exerciseId,

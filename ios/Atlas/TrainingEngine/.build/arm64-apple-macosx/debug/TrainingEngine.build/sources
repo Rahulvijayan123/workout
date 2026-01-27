@@ -1,3 +1,4 @@
+'/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/MLDataCollector.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/Models/CoachingInsight.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/Models/Equipment.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/Models/Exercise.swift'
@@ -26,4 +27,5 @@
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/Policies/TopSetBackoffPolicy.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/Scheduling/TemplateScheduler.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/Substitutions/SubstitutionRanker.swift'
+'/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/TrainingDataLogger.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/TrainingEngine.swift'

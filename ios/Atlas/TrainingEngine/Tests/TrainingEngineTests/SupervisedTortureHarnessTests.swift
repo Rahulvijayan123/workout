@@ -335,7 +335,8 @@ final class SupervisedTortureHarnessTests: XCTestCase {
         )
         
         let updated = Engine.updateLiftState(afterSession: partialSession)
-        let updatedBench = updated.first { $0.exerciseId == bench.id }!
+        let benchUpdateKey = LiftFamilyResolver.resolveStateKeys(fromId: bench.id).updateStateKey
+        let updatedBench = updated.first { $0.exerciseId == benchUpdateKey }!
         
         // No valid working sets -> state should remain unchanged.
         XCTAssertEqual(updatedBench.lastWorkingWeight, liftStates[bench.id]!.lastWorkingWeight)

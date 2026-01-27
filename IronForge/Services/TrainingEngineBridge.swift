@@ -387,22 +387,98 @@ enum TrainingEngineBridge {
         return max(0, min(10, rir))
     }
     
-    static func convertSetPrescription(from te: WorkoutTemplateExercise) -> TESetPrescription {
+    // MARK: - Load Strategy Selection Policy
+    
+    /// Determines the appropriate load strategy based on exercise, user experience, and rep targets.
+    /// 
+    /// Policy:
+    /// - `.percentageE1RM` (with nil targetPercentage → engine derives from reps+RIR) for:
+    ///   - Compound lifts when lifter is intermediate+ AND rep target is "heavy" (≤5 reps), OR
+    ///   - Compound lifts in DUP-style programs (detected by varying rep targets across templates)
+    /// - `.absolute` for:
+    ///   - All accessories
+    ///   - All beginner work (simpler mental model)
+    ///   - Compound lifts with higher rep ranges for beginners
+    ///
+    /// This leverages TrainingEngine's existing `%e1RM derived from reps + targetRIR` logic
+    /// when `targetPercentage` is nil.
+    static func determineLoadStrategy(
+        exercise: ExerciseRef,
+        experience: TEExperienceLevel,
+        repRangeMin: Int,
+        repRangeMax: Int,
+        programName: String? = nil
+    ) -> TrainingEngine.LoadStrategy {
+        let movementPattern = inferMovementPattern(
+            from: exercise.name,
+            equipment: exercise.equipment,
+            target: exercise.target
+        )
+        
+        // Accessories always use absolute loading (simpler, less critical)
+        guard movementPattern.isCompound else {
+            return .absolute
+        }
+        
+        // Beginners use absolute loading for simpler mental model
+        // (They're still building motor patterns and don't need %1RM complexity)
+        guard experience != .beginner else {
+            return .absolute
+        }
+        
+        // For intermediate+:
+        // Use %e1RM for heavy work (≤5 reps) on compounds
+        // This allows the engine to derive appropriate intensity from reps + RIR
+        let isHeavyWork = repRangeMax <= 5
+        
+        // Detect DUP-style programs by name (common naming conventions)
+        let isDUP = programName?.lowercased().contains("dup") ?? false
+        
+        // Use %e1RM for:
+        // 1. Heavy compound work (strength focus)
+        // 2. DUP programs (which vary rep targets and need consistent %e1RM basis)
+        if isHeavyWork || isDUP {
+            return .percentageE1RM
+        }
+        
+        // Default to absolute for moderate rep ranges on compounds
+        // (Still provides good results with simpler model)
+        return .absolute
+    }
+    
+    static func convertSetPrescription(
+        from te: WorkoutTemplateExercise,
+        experience: TEExperienceLevel = .intermediate,
+        programName: String? = nil
+    ) -> TESetPrescription {
+        let loadStrategy = determineLoadStrategy(
+            exercise: te.exercise,
+            experience: experience,
+            repRangeMin: te.repRangeMin,
+            repRangeMax: te.repRangeMax,
+            programName: programName
+        )
+        
         return TESetPrescription(
             setCount: te.setsTarget,
             targetRepsRange: te.repRangeMin...te.repRangeMax,
             targetRIR: max(0, min(5, te.targetRIR)),
             tempo: convertTempo(te.tempo),
             restSeconds: max(0, te.restSeconds),
-            loadStrategy: .absolute,
-            targetPercentage: nil,
+            loadStrategy: loadStrategy,
+            targetPercentage: nil, // Let engine derive from reps+RIR when using %e1RM
             increment: TELoad.pounds(te.increment)
         )
     }
     
-    static func convertTemplateExercise(_ te: WorkoutTemplateExercise, order: Int) -> TETemplateExercise {
+    static func convertTemplateExercise(
+        _ te: WorkoutTemplateExercise,
+        order: Int,
+        experience: TEExperienceLevel = .intermediate,
+        programName: String? = nil
+    ) -> TETemplateExercise {
         let exercise = convertExerciseRef(te.exercise)
-        let prescription = convertSetPrescription(from: te)
+        let prescription = convertSetPrescription(from: te, experience: experience, programName: programName)
         
         return TETemplateExercise(
             id: te.id,
@@ -414,9 +490,13 @@ enum TrainingEngineBridge {
         )
     }
     
-    static func convertWorkoutTemplate(_ template: WorkoutTemplate) -> TEWorkoutTemplate {
+    static func convertWorkoutTemplate(
+        _ template: WorkoutTemplate,
+        experience: TEExperienceLevel = .intermediate,
+        programName: String? = nil
+    ) -> TEWorkoutTemplate {
         let exercises = template.exercises.enumerated().map { idx, te in
-            convertTemplateExercise(te, order: idx)
+            convertTemplateExercise(te, order: idx, experience: experience, programName: programName)
         }
         
         let targetMuscles = exercises.flatMap { $0.exercise.primaryMuscles }
@@ -450,13 +530,15 @@ enum TrainingEngineBridge {
     
     static func buildTrainingPlan(
         from templates: [WorkoutTemplate],
-        substitutionPool: [Exercise] = []
+        substitutionPool: [Exercise] = [],
+        experience: TEExperienceLevel = .intermediate,
+        programName: String? = nil
     ) -> TETrainingPlan {
         var teTemplates: [UUID: TEWorkoutTemplate] = [:]
         var progressionPolicies: [String: TEProgressionPolicyType] = [:]
         
         for template in templates {
-            let converted = convertWorkoutTemplate(template)
+            let converted = convertWorkoutTemplate(template, experience: experience, programName: programName)
             teTemplates[template.id] = converted
             
             // Register progression policies for each exercise
@@ -473,7 +555,7 @@ enum TrainingEngineBridge {
         
         return TETrainingPlan(
             id: UUID(),
-            name: "IronForge Plan",
+            name: programName ?? "IronForge Plan",
             templates: teTemplates,
             schedule: schedule,
             progressionPolicies: progressionPolicies,
@@ -556,7 +638,9 @@ enum TrainingEngineBridge {
         liftStates: [String: ExerciseState],
         dailyBiometrics: [DailyBiometrics] = [],
         referenceDate: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        experience: TEExperienceLevel = .intermediate,
+        programName: String? = nil
     ) -> TEWorkoutHistory {
         let completedSessions = sessions.compactMap { session -> TECompletedSession? in
             guard let endedAt = session.endedAt else { return nil }
@@ -578,13 +662,22 @@ enum TrainingEngineBridge {
                     )
                 }
                 
+                // Determine load strategy based on exercise and experience
+                let loadStrategy = determineLoadStrategy(
+                    exercise: perf.exercise,
+                    experience: experience,
+                    repRangeMin: perf.repRangeMin,
+                    repRangeMax: perf.repRangeMax,
+                    programName: programName
+                )
+                
                 let prescription = TESetPrescription(
                     setCount: perf.setsTarget,
                     targetRepsRange: perf.repRangeMin...perf.repRangeMax,
                     targetRIR: max(0, min(5, perf.targetRIR)),
                     tempo: convertTempo(perf.tempo),
                     restSeconds: max(0, perf.restSeconds),
-                    loadStrategy: .absolute,
+                    loadStrategy: loadStrategy,
                     targetPercentage: nil,
                     increment: TELoad.pounds(perf.increment)
                 )
@@ -775,7 +868,9 @@ enum TrainingEngineBridge {
     
     static func convertCompletedSession(
         _ session: WorkoutSession,
-        previousLiftStates: [String: ExerciseState]
+        previousLiftStates: [String: ExerciseState],
+        experience: TEExperienceLevel = .intermediate,
+        programName: String? = nil
     ) -> TECompletedSession {
         var exerciseResults: [TEExerciseSessionResult] = []
         
@@ -785,22 +880,31 @@ enum TrainingEngineBridge {
                     id: set.id,
                     reps: set.reps,
                     load: TELoad.pounds(set.weight),
-                        rirObserved: derivedRIR(from: set),
-                        tempoObserved: nil,
+                    rirObserved: derivedRIR(from: set),
+                    tempoObserved: nil,
                     completed: set.isCompleted,
-                        isWarmup: set.isWarmup,
+                    isWarmup: set.isWarmup,
                     completedAt: nil,
-                        notes: set.notes
+                    notes: set.notes
                 )
             }
+            
+            // Determine load strategy based on exercise and experience
+            let loadStrategy = determineLoadStrategy(
+                exercise: perf.exercise,
+                experience: experience,
+                repRangeMin: perf.repRangeMin,
+                repRangeMax: perf.repRangeMax,
+                programName: programName
+            )
             
             let prescription = TESetPrescription(
                 setCount: perf.setsTarget,
                 targetRepsRange: perf.repRangeMin...perf.repRangeMax,
-                    targetRIR: max(0, min(5, perf.targetRIR)),
-                    tempo: convertTempo(perf.tempo),
-                    restSeconds: max(0, perf.restSeconds),
-                loadStrategy: .absolute,
+                targetRIR: max(0, min(5, perf.targetRIR)),
+                tempo: convertTempo(perf.tempo),
+                restSeconds: max(0, perf.restSeconds),
+                loadStrategy: loadStrategy,
                 targetPercentage: nil,
                 increment: TELoad.pounds(perf.increment)
             )
@@ -850,16 +954,25 @@ enum TrainingEngineBridge {
         readiness: Int = 75,
         substitutionPool: [Exercise] = [],
         dailyBiometrics: [DailyBiometrics] = [],
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        programName: String? = nil
     ) -> TESessionPlan {
         let teUserProfile = convertUserProfile(userProfile)
-        let plan = buildTrainingPlan(from: templates, substitutionPool: substitutionPool)
+        let experience = teUserProfile.experience
+        let plan = buildTrainingPlan(
+            from: templates,
+            substitutionPool: substitutionPool,
+            experience: experience,
+            programName: programName
+        )
         let history = buildWorkoutHistory(
             sessions: sessions,
             liftStates: liftStates,
             dailyBiometrics: dailyBiometrics,
             referenceDate: date,
-            calendar: calendar
+            calendar: calendar,
+            experience: experience,
+            programName: programName
         )
         
         return TrainingEngine.Engine.recommendSession(
@@ -882,16 +995,25 @@ enum TrainingEngineBridge {
         readiness: Int = 75,
         substitutionPool: [Exercise] = [],
         dailyBiometrics: [DailyBiometrics] = [],
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        programName: String? = nil
     ) -> TESessionPlan {
         let teUserProfile = convertUserProfile(userProfile)
-        let plan = buildTrainingPlan(from: templates, substitutionPool: substitutionPool)
+        let experience = teUserProfile.experience
+        let plan = buildTrainingPlan(
+            from: templates,
+            substitutionPool: substitutionPool,
+            experience: experience,
+            programName: programName
+        )
         let history = buildWorkoutHistory(
             sessions: sessions,
             liftStates: liftStates,
             dailyBiometrics: dailyBiometrics,
             referenceDate: date,
-            calendar: calendar
+            calendar: calendar,
+            experience: experience,
+            programName: programName
         )
         
         return TrainingEngine.Engine.recommendSessionForTemplate(
@@ -909,9 +1031,16 @@ enum TrainingEngineBridge {
     
     static func updateLiftStates(
         afterSession session: WorkoutSession,
-        previousLiftStates: [String: ExerciseState]
+        previousLiftStates: [String: ExerciseState],
+        experience: TEExperienceLevel = .intermediate,
+        programName: String? = nil
     ) -> [String: ExerciseState] {
-        let completedSession = convertCompletedSession(session, previousLiftStates: previousLiftStates)
+        let completedSession = convertCompletedSession(
+            session,
+            previousLiftStates: previousLiftStates,
+            experience: experience,
+            programName: programName
+        )
         let updatedStates = TrainingEngine.Engine.updateLiftState(afterSession: completedSession)
         
         var result: [String: ExerciseState] = previousLiftStates

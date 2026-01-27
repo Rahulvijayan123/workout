@@ -2,6 +2,13 @@
   "": {
     "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/master.swiftdeps"
   },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/MLDataCollector.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/MLDataCollector.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/MLDataCollector.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/MLDataCollector~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/MLDataCollector.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/MLDataCollector.dia"
+  },
   "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/Models/CoachingInsight.swift": {
     "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/CoachingInsight.d",
     "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/CoachingInsight.swift.o",
@@ -197,6 +204,13 @@
     "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/SubstitutionRanker~partial.swiftmodule",
     "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/SubstitutionRanker.swiftdeps",
     "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/SubstitutionRanker.dia"
+  },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/TrainingDataLogger.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/TrainingDataLogger.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/TrainingDataLogger.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/TrainingDataLogger~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/TrainingDataLogger.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/TrainingDataLogger.dia"
   },
   "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Sources/TrainingEngine/TrainingEngine.swift": {
     "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngine.build/TrainingEngine.d",

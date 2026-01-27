@@ -1,0 +1,37 @@
+{
+  "version": "7.0.0",
+  "created": "2026-01-26",
+  "files": [
+    {
+      "path": "scenarios/beginner_linear_progression.jsonl",
+      "count": 54
+    },
+    {
+      "path": "scenarios/messy_adherence_breaks.jsonl",
+      "count": 10
+    },
+    {
+      "path": "scenarios/microloading_pressing.jsonl",
+      "count": 30
+    },
+    {
+      "path": "scenarios/cut_recomp_intermediate.jsonl",
+      "count": 10
+    },
+    {
+      "path": "scenarios/variations_substitutions.jsonl",
+      "count": 12
+    }
+  ],
+  "total_cases": 116,
+  "tags": [
+    "beginner",
+    "breaks",
+    "microloading",
+    "cut",
+    "variations",
+    "substitutions",
+    "readiness",
+    "deload"
+  ]
+}

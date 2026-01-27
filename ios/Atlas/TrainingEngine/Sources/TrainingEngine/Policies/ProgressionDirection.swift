@@ -677,72 +677,130 @@ public enum DirectionPolicy {
         
         // 5) Acute low readiness (single day, but not persistent)
         // 
-        // Dataset alignment: The dataset uses a higher threshold for "low readiness" (~70) and
-        // expects small decreases even for moderately low readiness. We use a tiered approach:
-        // - Severe low (<= 40): decrease_slightly
-        // - Moderate low (41-65): decrease_slightly for intermediate+, hold for beginners
-        // - Borderline (66-69): hold (let other factors decide)
+        // V6 alignment: Use a history-aware and level-aware approach to reduce false
+        // hold→decrease_small flips while still respecting the dataset's expectations.
         //
-        // Cold start handling: When we have no prior session data and readiness is <= 65,
-        // apply decrease_slightly to match the dataset's %1RM + readiness adjustment model.
-        let moderateLowReadinessThreshold = 65 // Matches dataset's "low" readiness flag range
-        let isModeratelyLowReadiness = signals.todayReadiness <= moderateLowReadinessThreshold && 
+        // Tiered approach:
+        // - Severe low (< severeLowReadinessThreshold): always decrease_slightly
+        // - Clear low (≤ clearLowReadinessThreshold): decrease_slightly for intermediate+
+        // - Borderline (clearLow+1 to moderateLow): hold UNLESS corroborated by fatigue signal
+        // - Above moderateLowReadinessThreshold: no readiness-based adjustment
+        //
+        // Corroborating signals (any one of these justifies decrease in borderline zone):
+        // - Recent grinder or miss (highRpeStreak >= 1 or lastSessionWasGrinder or lastSessionWasFailure)
+        // - Declining trend
+        // - Low readiness count >= 2 (not yet persistent, but trending)
+        //
+        // Cold start handling: Only apply decrease_slightly if readiness is clearly low (≤60),
+        // otherwise hold to establish a baseline first.
+        let isModeratelyLowReadiness = signals.todayReadiness <= config.moderateLowReadinessThreshold && 
                                        lowReadinessCount < config.persistentLowReadinessExposures
+        let isClearlyLowReadiness = signals.todayReadiness <= config.clearLowReadinessThreshold
         let isSevereLowReadiness = signals.todayReadiness < config.severeLowReadinessThreshold
+        let isBorderlineReadiness = signals.todayReadiness > config.clearLowReadinessThreshold && 
+                                    signals.todayReadiness <= config.moderateLowReadinessThreshold
         let isColdStart = signals.lastSessionReps.isEmpty
+        
+        // Check for corroborating fatigue signals that justify a decrease in the borderline zone
+        let hasCorroboratingFatigueSignal = 
+            signals.highRpeStreak >= 1 ||
+            signals.lastSessionWasGrinder ||
+            signals.lastSessionWasFailure ||
+            signals.trend == .declining ||
+            lowReadinessCount >= 2
         
         let acuteLowReadinessCheck = PolicyCheckResult(
             checkName: "acute_low_readiness",
             triggered: isModeratelyLowReadiness,
-            condition: "readiness <= \(moderateLowReadinessThreshold) AND lowReadinessCount < \(config.persistentLowReadinessExposures)",
-            observed: "readiness=\(signals.todayReadiness) count=\(lowReadinessCount) cold=\(isColdStart)",
+            condition: "readiness <= \(config.moderateLowReadinessThreshold) AND lowReadinessCount < \(config.persistentLowReadinessExposures)",
+            observed: "readiness=\(signals.todayReadiness) count=\(lowReadinessCount) cold=\(isColdStart) corroborated=\(hasCorroboratingFatigueSignal)",
             wouldProduce: .decreaseSlightly
         )
         checks.append(acuteLowReadinessCheck)
         
         if isModeratelyLowReadiness {
-            // For low readiness (65 or below): apply decrease_slightly for better alignment with
-            // %1RM program expectations. The dataset expects readiness adjustments to loads.
+            // Decision matrix (V6-aligned, history-aware):
             //
-            // Decision matrix:
-            // - Severe low (< 40): always decrease_slightly 
-            // - Cold start + low: decrease_slightly (no history to build on)
-            // - Moderately low (40-60) with history: decrease_slightly (dataset expects adjustment)
-            // - Borderline low (61-65): hold for beginners, decrease_slightly for others
-            let shouldDecrease = isSevereLowReadiness || 
-                                 isColdStart || 
-                                 signals.todayReadiness <= 60 ||
-                                 (signals.experienceLevel != .beginner)
+            // For BEGINNERS:
+            // - Severe low (< 40): decrease_slightly
+            // - Clear/borderline low: hold (simpler mental model, let them retry)
+            //
+            // For INTERMEDIATE+:
+            // - Severe low (< 40): always decrease_slightly
+            // - Clear low (≤60) with or without corroboration: decrease_slightly
+            // - Borderline (61-65) WITH corroboration: decrease_slightly
+            // - Borderline (61-65) WITHOUT corroboration: hold (avoid over-adjustment)
+            //
+            // For COLD START:
+            // - Only decrease if severely low; otherwise hold to establish baseline
+            
+            let shouldDecrease: Bool = {
+                // Always decrease for severe low readiness
+                if isSevereLowReadiness { return true }
+                
+                // Beginners: only decrease for severe low, otherwise hold
+                if signals.experienceLevel == .beginner { return false }
+                
+                // Cold starts without history: only decrease if clearly low
+                if isColdStart { return isClearlyLowReadiness }
+                
+                // Intermediate+ with history:
+                // - Clearly low: decrease
+                // - Borderline: only if corroborated
+                if isClearlyLowReadiness { return true }
+                if isBorderlineReadiness && hasCorroboratingFatigueSignal { return true }
+                
+                return false
+            }()
             
             if shouldDecrease {
+                var explanation: String
+                if isColdStart {
+                    explanation = "Cold start with low readiness (\(signals.todayReadiness)). Small reduction from baseline."
+                } else if isBorderlineReadiness && hasCorroboratingFatigueSignal {
+                    explanation = "Borderline low readiness (\(signals.todayReadiness)) with corroborating fatigue signal. Small temporary reduction."
+                } else {
+                    explanation = "Acute low readiness (\(signals.todayReadiness)). Small temporary reduction."
+                }
+                
                 return (DirectionDecision(
                     direction: .decreaseSlightly,
                     primaryReason: .lowReadinessAcute,
-                    explanation: isColdStart 
-                        ? "Cold start with low readiness (\(signals.todayReadiness)). Small reduction from baseline."
-                        : "Acute low readiness (\(signals.todayReadiness)). Small temporary reduction."
+                    explanation: explanation
                 ), checks)
             } else {
                 return (DirectionDecision(
                     direction: .hold,
                     primaryReason: .acuteLowReadinessSingleDay,
-                    explanation: "Borderline low readiness today (\(signals.todayReadiness)). Hold weight."
+                    explanation: isBorderlineReadiness 
+                        ? "Borderline low readiness (\(signals.todayReadiness)) without corroborating fatigue signal. Hold weight."
+                        : "Moderately low readiness today (\(signals.todayReadiness)). Hold weight."
                 ), checks)
             }
         }
         
         // 6) Grinder (last session was a grinder - success but too hard)
+        //
+        // V6 rulebook alignment: "Single grinder/miss for intermediate+: slight reduction (~2.5%)"
+        // 
+        // Decision matrix:
+        // - Beginners: hold (simpler mental model, let them consolidate)
+        // - Intermediate+: decreaseSlightly (~2.5%) per V6 rulebook
+        //   - Exception: volume day with light intent can hold for first grinder
+        //
+        // This aligns with the V6 dataset's "single_grind_or_miss_2p5pct" reason code.
         let isGrinder = signals.lastSessionWasGrinder && !signals.lastSessionWasFailure
         let grinderCheck = PolicyCheckResult(
             checkName: "grinder",
             triggered: isGrinder,
             condition: "lastSessionWasGrinder AND NOT lastSessionWasFailure",
-            observed: "grinder=\(signals.lastSessionWasGrinder) failure=\(signals.lastSessionWasFailure)",
+            observed: "grinder=\(signals.lastSessionWasGrinder) failure=\(signals.lastSessionWasFailure) exp=\(signals.experienceLevel.rawValue)",
             wouldProduce: signals.experienceLevel == .beginner ? .hold : .decreaseSlightly
         )
         checks.append(grinderCheck)
         
         if isGrinder {
+            // Beginners: hold to let them consolidate and build confidence
             if signals.experienceLevel == .beginner {
                 return (DirectionDecision(
                     direction: .hold,
@@ -751,18 +809,21 @@ public enum DirectionPolicy {
                 ), checks)
             }
             
-            if signals.sessionIntent == .volume && signals.highRpeStreak < 2 {
+            // Intermediate+: V6 rulebook says single grinder should yield ~2.5% decrease
+            // Only exception: light intent sessions can hold on first grinder
+            if signals.sessionIntent == .light && signals.highRpeStreak < 2 {
                 return (DirectionDecision(
                     direction: .hold,
                     primaryReason: .grinderSuccess,
-                    explanation: "Volume day grinder (success but harder than target). Hold to consolidate."
+                    explanation: "Light day grinder (success but harder than target). Hold to consolidate."
                 ), checks)
             }
             
+            // For all other intermediate+ cases (including volume days), apply small decrease
             return (DirectionDecision(
                 direction: .decreaseSlightly,
                 primaryReason: .minorFatigueSignal,
-                explanation: "Last session was a grinder (success but harder than target). Small decrease to consolidate."
+                explanation: "Last session was a grinder (success but harder than target). Small decrease (~2.5%) per evidence-aligned policy."
             ), checks)
         }
         
@@ -973,6 +1034,14 @@ public struct DirectionPolicyConfig: Sendable {
     /// Severe low readiness threshold (triggers decrease vs hold).
     public let severeLowReadinessThreshold: Int
     
+    /// Moderate low readiness threshold - below this triggers potential decrease for non-beginners.
+    /// Range 61-65 is considered "borderline" where we prefer hold unless corroborated.
+    public let moderateLowReadinessThreshold: Int
+    
+    /// Clear low readiness threshold - below this (e.g., ≤60), intermediate+ get decrease
+    /// even without corroboration. Above this but below moderate threshold is "borderline".
+    public let clearLowReadinessThreshold: Int
+    
     /// Number of low-readiness exposures before escalating to deload (needs corroboration).
     public let persistentLowReadinessExposures: Int
     
@@ -994,6 +1063,8 @@ public struct DirectionPolicyConfig: Sendable {
         trainingGapDays: Int = 8,
         readinessThreshold: Int = 50,
         severeLowReadinessThreshold: Int = 40,
+        moderateLowReadinessThreshold: Int = 65,
+        clearLowReadinessThreshold: Int = 60,
         persistentLowReadinessExposures: Int = 4, // Raised from 3 to require more exposures
         baseFailStreakThreshold: Int = 2,
         baseHighRpeStreakThreshold: Int = 3, // Raised from 2 - grinders need more repetition
@@ -1003,6 +1074,8 @@ public struct DirectionPolicyConfig: Sendable {
         self.trainingGapDays = trainingGapDays
         self.readinessThreshold = readinessThreshold
         self.severeLowReadinessThreshold = severeLowReadinessThreshold
+        self.moderateLowReadinessThreshold = moderateLowReadinessThreshold
+        self.clearLowReadinessThreshold = clearLowReadinessThreshold
         self.persistentLowReadinessExposures = persistentLowReadinessExposures
         self.baseFailStreakThreshold = baseFailStreakThreshold
         self.baseHighRpeStreakThreshold = baseHighRpeStreakThreshold
@@ -1166,6 +1239,14 @@ public enum MagnitudePolicy {
     }
     
     /// Selects appropriate rounding policy, enabling microloading for upper body presses.
+    ///
+    /// **CRITICAL**: This function NEVER returns an increment smaller than `basePolicy.increment`.
+    /// The base policy represents the gym's available equipment (e.g., smallest plate pairs).
+    /// If the gym only has 2.5 lb increments, we cannot use 1.25 lb microloading.
+    ///
+    /// Microloading is only enabled when:
+    /// 1. `config.enableMicroloading` is true AND
+    /// 2. The desired microloading increment is >= `basePolicy.increment` (gym constraint)
     private static func selectRoundingPolicy(
         signals: LiftSignals,
         basePolicy: LoadRoundingPolicy,
@@ -1173,25 +1254,34 @@ public enum MagnitudePolicy {
     ) -> LoadRoundingPolicy {
         guard config.enableMicroloading else { return basePolicy }
         
+        // The gym's minimum increment is the floor - we can never go below this
+        let gymMinIncrement = basePolicy.increment
+        
         // Microloading for upper body barbell presses (bench, OHP)
         let isBarbellLike = signals.equipment == .barbell || signals.equipment == .ezBar
         if signals.isUpperBodyPress && isBarbellLike {
-            // Use 1.25 lb (or 0.5 kg) increments for intermediate+ lifters
+            // Use 1.25 lb (or 0.5 kg) increments for intermediate+ lifters, BUT ONLY if gym supports it
             if signals.experienceLevel != .beginner {
-                return LoadRoundingPolicy(
-                    increment: basePolicy.unit == .pounds ? 1.25 : 0.5,
-                    unit: basePolicy.unit,
-                    mode: basePolicy.mode
-                )
+                let desiredMicroIncrement = basePolicy.unit == .pounds ? 1.25 : 0.5
+                // Only use microloading if the gym's equipment supports it
+                if desiredMicroIncrement >= gymMinIncrement {
+                    return LoadRoundingPolicy(
+                        increment: desiredMicroIncrement,
+                        unit: basePolicy.unit,
+                        mode: basePolicy.mode
+                    )
+                }
+                // If gym doesn't support microloading, fall through to use gym's increment
             }
         }
         
         // Smaller increments for advanced/elite lifters on all compounds
         if signals.isCompound && (signals.experienceLevel == .advanced || signals.experienceLevel == .elite) {
-            let smallerIncrement = basePolicy.unit == .pounds ? 2.5 : 1.25
-            if basePolicy.increment > smallerIncrement {
+            let desiredSmallerIncrement = basePolicy.unit == .pounds ? 2.5 : 1.25
+            // Only use smaller increment if it's within gym constraints
+            if desiredSmallerIncrement >= gymMinIncrement && basePolicy.increment > desiredSmallerIncrement {
                 return LoadRoundingPolicy(
-                    increment: smallerIncrement,
+                    increment: desiredSmallerIncrement,
                     unit: basePolicy.unit,
                     mode: basePolicy.mode
                 )
@@ -1294,6 +1384,8 @@ public enum MagnitudePolicy {
     }
     
     /// Computes break reset reduction based on gap length and ramp progress.
+    /// 
+    /// V6 rulebook alignment: ">14 days since lift exposure: apply ~10% reduction (break_reset)."
     private static func computeBreakResetReduction(
         signals: LiftSignals,
         config: MagnitudePolicyConfig
@@ -1302,19 +1394,24 @@ public enum MagnitudePolicy {
             return config.baseBreakResetReduction
         }
         
-        // Base reduction by gap length
+        // Base reduction by gap length, aligned with V6 rulebook:
+        // - 8-13 days: smaller reset (5%) - just getting back into routine
+        // - 14-27 days: standard break reset (~10%) per V6 rulebook
+        // - 28-55 days: moderate detraining (~15%)
+        // - 56-83 days: significant detraining (~20%)
+        // - 84+ days: major detraining (~25%)
         let baseReduction: Double = {
             switch days {
             case 8..<14:
-                return 0.05
+                return 0.05  // Minor layoff
             case 14..<28:
-                return 0.08
+                return 0.10  // V6 rulebook: ~10% for >14 days
             case 28..<56:
-                return 0.12
+                return 0.15  // ~4-8 weeks: noticeable detraining
             case 56..<84:
-                return 0.18
+                return 0.20  // ~8-12 weeks: significant detraining
             default:
-                return 0.25
+                return 0.25  // 12+ weeks: major detraining
             }
         }()
         

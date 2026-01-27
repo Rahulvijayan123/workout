@@ -1,36 +1,33 @@
-v5 replay detailed diagnostics @ 2026-01-26T19:53:24Z
+v5 replay detailed diagnostics @ 2026-01-26T23:38:16Z
 sessions=216 mainLiftPrescriptions=394
-decisionAgree=253/394 loadAgree=184/394 mae=12.35
+decisionAgree=253/394 loadAgree=142/394 mae=14.24
 
 Decision confusion matrix (rows=expected, cols=predicted):
       exp\pred        deload          hold      increasedecrease_small
-        deload            52             7             0            19
-          hold             3            53            45            28
-      increase             0             1             2             1
-decrease_small            10            26             1           146
+        deload            51            10             0            17
+          hold             3            62            45            19
+      increase             0             2             2             0
+decrease_small             5            39             1           138
 
 Buckets by lift:
-  squat: n=115 dec=0.63 load=0.42 mae=11.2
-  bench: n=116 dec=0.65 load=0.51 mae=15.5
-  deadlift: n=93 dec=0.68 load=0.42 mae=14.2
-  ohp: n=70 dec=0.60 load=0.54 mae=6.4
+  squat: n=115 dec=0.62 load=0.39 mae=11.3
+  bench: n=116 dec=0.63 load=0.28 mae=17.5
+  deadlift: n=93 dec=0.69 load=0.43 mae=14.2
+  ohp: n=70 dec=0.64 load=0.34 mae=13.7
 
 Per-user buckets:
-  U501: n=60 dec=0.43 load=0.75 mae=4.8
-  U502: n=72 dec=0.44 load=0.69 mae=6.3
-  U503: n=82 dec=0.62 load=0.43 mae=6.4
-  U504: n=96 dec=0.81 load=0.14 mae=25.0
-  U505: n=84 dec=0.79 load=0.49 mae=14.3
+  U501: n=60 dec=0.38 load=0.65 mae=5.2
+  U502: n=72 dec=0.47 load=0.67 mae=6.9
+  U503: n=82 dec=0.66 load=0.23 mae=13.3
+  U504: n=96 dec=0.78 load=0.12 mae=19.9
+  U505: n=84 dec=0.80 load=0.29 mae=21.4
 
 Sample mismatches (up to 20):
-  U501 2025-10-15 FB_B lift=deadlift exp=hold(hold_at_target_or_uncertain) pred=decrease_small err<=step dir=decrease_slightly reason=low_readiness_acute
-  U501 2025-10-15 FB_B lift=ohp exp=hold(hold_at_target_or_uncertain) pred=decrease_small err<=step dir=decrease_slightly reason=low_readiness_acute
-  U501 2025-10-17 FB_A lift=squat exp=hold(hold_at_target_or_uncertain) pred=decrease_small err<=step dir=decrease_slightly reason=low_readiness_acute
-  U501 2025-10-17 FB_A lift=bench exp=hold(hold_at_target_or_uncertain) pred=decrease_small err<=step dir=decrease_slightly reason=low_readiness_acute
   U501 2025-10-20 FB_A lift=squat exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
   U501 2025-10-20 FB_A lift=bench exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
-  U501 2025-10-24 FB_A lift=squat exp=increase(increase_after_exceeding_reps_target) pred=decrease_small err>2step dir=decrease_slightly reason=low_readiness_acute
-  U501 2025-10-24 FB_A lift=bench exp=hold(hold_at_target_or_uncertain) pred=decrease_small err<=step dir=decrease_slightly reason=low_readiness_acute
+  U501 2025-10-22 FB_B lift=deadlift exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold err>2step dir=hold reason=acute_low_readiness_single_day
+  U501 2025-10-22 FB_B lift=ohp exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold err<=step dir=hold reason=acute_low_readiness_single_day
+  U501 2025-10-24 FB_A lift=squat exp=increase(increase_after_exceeding_reps_target) pred=hold err>2step dir=hold reason=acute_low_readiness_single_day
   U501 2025-10-27 FB_A lift=squat exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
   U501 2025-10-27 FB_A lift=bench exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
   U501 2025-10-31 FB_A lift=squat exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
@@ -38,8 +35,11 @@ Sample mismatches (up to 20):
   U501 2025-11-03 FB_A lift=squat exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
   U501 2025-11-03 FB_A lift=bench exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
   U501 2025-11-05 FB_B lift=deadlift exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
+  U501 2025-11-07 FB_A lift=squat exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold err>2step dir=hold reason=acute_low_readiness_single_day
+  U501 2025-11-07 FB_A lift=bench exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold err<=2step dir=hold reason=acute_low_readiness_single_day
+  U501 2025-11-10 FB_A lift=squat exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold err<=2step dir=hold reason=acute_low_readiness_single_day
+  U501 2025-11-10 FB_A lift=bench exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold err<=2step dir=hold reason=acute_low_readiness_single_day
   U501 2025-11-12 FB_B lift=deadlift exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
   U501 2025-11-12 FB_B lift=ohp exp=hold(hold_at_target_or_uncertain) pred=increase err<=step dir=increase reason=all_reps_at_top
   U501 2025-11-14 FB_A lift=bench exp=deload(fatigue_deload_after_streak) pred=hold err>2step dir=hold reason=consolidating
-  U501 2025-12-01 FB_A lift=squat exp=decrease_small(break_reset_10pct_and_readiness_cut) pred=deload err>2step dir=reset_after_break reason=extended_break
-  U501 2025-12-01 FB_A lift=bench exp=decrease_small(break_reset_10pct_and_readiness_cut) pred=deload err<=2step dir=reset_after_break reason=extended_break
+  U501 2025-12-01 FB_A lift=squat exp=decrease_small(break_reset_10pct_and_readiness_cut) pred=deload err<=2step dir=reset_after_break reason=extended_break

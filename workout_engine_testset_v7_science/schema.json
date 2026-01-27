@@ -1,0 +1,25 @@
+{
+  "version": "v7",
+  "record_fields": [
+    "test_id",
+    "test_category",
+    "description",
+    "input",
+    "expected_output",
+    "assertions"
+  ],
+  "input_required": [
+    "user_profile",
+    "equipment",
+    "today_metrics",
+    "today_session_template",
+    "recent_lift_history",
+    "days_since_last_session",
+    "days_since_lift_exposure",
+    "event_flags"
+  ],
+  "expected_output_fields": [
+    "session_prescription_for_today"
+  ],
+  "notes": "v7 is test-case oriented (not session-log JSONL). Each record is a self-contained scenario with embedded history and optional lift_state."
+}

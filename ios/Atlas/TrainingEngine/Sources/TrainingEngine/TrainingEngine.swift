@@ -3,6 +3,31 @@
 
 import Foundation
 
+// MARK: - Session Planning Context (for logging)
+
+/// Context collected during session planning, used for ML training data logging.
+public struct SessionPlanningContext {
+    public let sessionId: UUID
+    public let userId: String
+    public let sessionDate: Date
+    public let isPlannedDeloadWeek: Bool
+    public let calendar: Calendar
+    
+    public init(
+        sessionId: UUID = UUID(),
+        userId: String = "anonymous",
+        sessionDate: Date,
+        isPlannedDeloadWeek: Bool = false,
+        calendar: Calendar = .current
+    ) {
+        self.sessionId = sessionId
+        self.userId = userId
+        self.sessionDate = sessionDate
+        self.isPlannedDeloadWeek = isPlannedDeloadWeek
+        self.calendar = calendar
+    }
+}
+
 /// The main entry point for the Training Engine.
 /// Provides deterministic session recommendations, in-session adjustments, and state updates.
 /// Note: Named `Engine` (not `TrainingEngine`) to avoid shadowing the module name.
@@ -553,16 +578,16 @@ public enum Engine {
             }()
 
             // Apply volume adjustment based on direction.
-            // For deloads: use ~40% volume reduction (per rulebook) instead of fixed set count.
-            // This is more proportional and scales with the prescription's original volume.
+            //
+            // IMPORTANT:
+            // - Deload volume reduction must respect `DeloadConfig.volumeReduction` (sets to remove),
+            //   which is threaded through the magnitude layer as `volumeAdjustment`.
             let setCount: Int = {
                 let base = prescription.setCount
                 
                 switch directionDecision.direction {
                 case .deload:
-                    // ~40% volume reduction per rulebook intent
-                    let reductionSets = max(1, Int(round(0.4 * Double(base))))
-                    return max(1, base - reductionSets)
+                    return max(1, base + volumeAdjustment)
                 case .decreaseSlightly:
                     // Small reduction for acute readiness: -1 set (from magnitude policy)
                     return max(1, base + volumeAdjustment)
@@ -629,6 +654,36 @@ public enum Engine {
                 directionExplanation: directionDecision.explanation,
                 policyChecks: policyChecks
             ))
+            
+            // Log decision for ML training data collection
+            logDecisionIfEnabled(
+                sessionId: UUID(), // Caller can override via context
+                userId: "anonymous",
+                sessionDate: date,
+                exerciseId: effectiveExerciseId,
+                history: history,
+                liftState: liftState,
+                signals: signals,
+                direction: directionDecision,
+                magnitude: magnitudeParams,
+                baselineLoad: baselineLoad,
+                finalLoad: sessionBaseLoad,
+                targetReps: targetReps,
+                targetRIR: prescription.targetRIR,
+                setCount: setCount,
+                volumeAdjustment: volumeAdjustment,
+                isSessionDeload: deloadDecision.shouldDeload,
+                adjustmentKind: recommendedAdjustmentKind ?? .none,
+                policyChecks: policyChecks,
+                plan: plan,
+                userProfile: userProfile,
+                exercise: exercise,
+                originalExercise: originalExercise,
+                familyResolution: familyResolution,
+                stateIsExerciseSpecific: stateIsExerciseSpecific,
+                isPlannedDeloadWeek: plannedDeloadWeek,
+                calendar: calendar
+            )
         }
         
         return SessionPlan(
@@ -1234,6 +1289,134 @@ public enum Engine {
             isDeload: isDeload,
             roundingPolicy: roundingPolicy
         )
+    }
+    
+    // MARK: - ML Training Data Logging
+    
+    /// Internal helper to log decisions when logging is enabled.
+    private static func logDecisionIfEnabled(
+        sessionId: UUID,
+        userId: String,
+        sessionDate: Date,
+        exerciseId: String,
+        history: WorkoutHistory,
+        liftState: LiftState,
+        signals: LiftSignals,
+        direction: DirectionDecision,
+        magnitude: MagnitudeParams,
+        baselineLoad: Load,
+        finalLoad: Load,
+        targetReps: Int,
+        targetRIR: Int,
+        setCount: Int,
+        volumeAdjustment: Int,
+        isSessionDeload: Bool,
+        adjustmentKind: SessionAdjustmentKind,
+        policyChecks: [PolicyCheckResult],
+        plan: TrainingPlan,
+        userProfile: UserProfile,
+        exercise: Exercise,
+        originalExercise: Exercise,
+        familyResolution: LiftFamilyResolution,
+        stateIsExerciseSpecific: Bool,
+        isPlannedDeloadWeek: Bool,
+        calendar: Calendar
+    ) {
+        // Build variation context
+        let variationContext = VariationContext(
+            isPrimaryExercise: exercise.id == originalExercise.id,
+            isSubstitution: exercise.id != originalExercise.id,
+            originalExerciseId: exercise.id != originalExercise.id ? originalExercise.id : nil,
+            familyReferenceKey: familyResolution.referenceStateKey,
+            familyUpdateKey: familyResolution.updateStateKey,
+            familyCoefficient: familyResolution.coefficient,
+            movementPattern: exercise.movementPattern,
+            equipment: exercise.equipment,
+            stateIsExerciseSpecific: stateIsExerciseSpecific
+        )
+        
+        TrainingDataLogger.shared.logDecision(
+            sessionId: sessionId,
+            exerciseId: exerciseId,
+            userId: userId,
+            sessionDate: sessionDate,
+            history: history,
+            liftState: liftState,
+            signals: signals,
+            direction: direction,
+            magnitude: magnitude,
+            baselineLoad: baselineLoad,
+            finalLoad: finalLoad,
+            targetReps: targetReps,
+            targetRIR: targetRIR,
+            setCount: setCount,
+            volumeAdjustment: volumeAdjustment,
+            isSessionDeload: isSessionDeload,
+            adjustmentKind: adjustmentKind,
+            policyChecks: policyChecks,
+            plan: plan,
+            userProfile: userProfile,
+            variationContext: variationContext,
+            isPlannedDeloadWeek: isPlannedDeloadWeek,
+            calendar: calendar
+        )
+    }
+    
+    /// Records outcome for a completed exercise result.
+    /// Call this after a session is completed to link outcomes to decisions.
+    public static func recordOutcome(
+        sessionId: UUID,
+        exerciseResult: ExerciseSessionResult,
+        readinessScore: Int?
+    ) {
+        TrainingDataLogger.shared.recordOutcome(
+            sessionId: sessionId,
+            exerciseId: exerciseResult.exerciseId,
+            exerciseResult: exerciseResult,
+            readinessScore: readinessScore
+        )
+    }
+    
+    /// Links next-session performance to a previous session.
+    /// Call this when the same exercise is performed again to capture longitudinal outcomes.
+    public static func linkNextSessionPerformance(
+        previousSessionId: UUID,
+        exerciseId: String,
+        nextSessionDate: Date,
+        nextExerciseResult: ExerciseSessionResult,
+        previousSessionDate: Date,
+        previousE1RM: Double,
+        calendar: Calendar = .current
+    ) {
+        TrainingDataLogger.shared.linkNextSessionPerformance(
+            previousSessionId: previousSessionId,
+            exerciseId: exerciseId,
+            nextSessionDate: nextSessionDate,
+            nextExerciseResult: nextExerciseResult,
+            previousSessionDate: previousSessionDate,
+            previousE1RM: previousE1RM,
+            calendar: calendar
+        )
+    }
+    
+    /// Enables or disables ML training data logging.
+    public static func setLoggingEnabled(_ enabled: Bool) {
+        TrainingDataLogger.shared.isEnabled = enabled
+    }
+    
+    /// Sets a custom log handler for ML training data.
+    public static func setLogHandler(_ handler: @escaping (DecisionLogEntry) -> Void) {
+        TrainingDataLogger.shared.logHandler = handler
+    }
+    
+    /// Creates a file-based JSONL log handler.
+    public static func createFileLogHandler(path: String) -> (DecisionLogEntry) -> Void {
+        TrainingDataLogger.fileLogHandler(path: path)
+    }
+    
+    /// Adds a counterfactual policy for comparison logging.
+    public static func addCounterfactualPolicy(_ policy: CounterfactualPolicy) {
+        TrainingDataLogger.shared.counterfactualPolicies.append(policy)
     }
     
     // MARK: - In-Session Adjustments

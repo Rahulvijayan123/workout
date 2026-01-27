@@ -9,6 +9,13 @@
     "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/AdaptiveProgressionNuanceTests.swiftdeps",
     "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/AdaptiveProgressionNuanceTests.dia"
   },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/BreakDetectionTests.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/BreakDetectionTests.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/BreakDetectionTests.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/BreakDetectionTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/BreakDetectionTests.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/BreakDetectionTests.dia"
+  },
   "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/BrutalLongHorizonReplayTests.swift": {
     "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/BrutalLongHorizonReplayTests.d",
     "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/BrutalLongHorizonReplayTests.swift.o",
@@ -22,6 +29,13 @@
     "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DeloadPolicyTests~partial.swiftmodule",
     "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DeloadPolicyTests.swiftdeps",
     "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DeloadPolicyTests.dia"
+  },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/DirectionPolicyGrinderTests.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DirectionPolicyGrinderTests.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DirectionPolicyGrinderTests.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DirectionPolicyGrinderTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DirectionPolicyGrinderTests.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DirectionPolicyGrinderTests.dia"
   },
   "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/DoubleProgressionTests.swift": {
     "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/DoubleProgressionTests.d",
@@ -50,6 +64,20 @@
     "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/HardHumanScenarioTests~partial.swiftmodule",
     "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/HardHumanScenarioTests.swiftdeps",
     "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/HardHumanScenarioTests.dia"
+  },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/LiftFamilyResolverKeyingTests.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/LiftFamilyResolverKeyingTests.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/LiftFamilyResolverKeyingTests.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/LiftFamilyResolverKeyingTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/LiftFamilyResolverKeyingTests.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/LiftFamilyResolverKeyingTests.dia"
+  },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MicroloadingConstraintTests.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MicroloadingConstraintTests.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MicroloadingConstraintTests.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MicroloadingConstraintTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MicroloadingConstraintTests.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MicroloadingConstraintTests.dia"
   },
   "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/ProductionGradeConfidenceTests.swift": {
     "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/ProductionGradeConfidenceTests.d",
@@ -148,5 +176,19 @@
     "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV5ReplayTests~partial.swiftmodule",
     "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV5ReplayTests.swiftdeps",
     "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV5ReplayTests.dia"
+  },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV6ReplayTests.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV6ReplayTests.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV6ReplayTests.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV6ReplayTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV6ReplayTests.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV6ReplayTests.dia"
+  },
+  "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV7ReplayTests.swift": {
+    "dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV7ReplayTests.d",
+    "object": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV7ReplayTests.swift.o",
+    "swiftmodule": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV7ReplayTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV7ReplayTests.swiftdeps",
+    "diagnostics": "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV7ReplayTests.dia"
   }
 }

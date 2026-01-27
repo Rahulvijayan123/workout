@@ -1,116 +1,116 @@
-v4 replay detailed diagnostics @ 2026-01-26T07:12:18Z
+v4 replay detailed diagnostics @ 2026-01-26T23:38:16Z
 sessions=294 mainLiftPrescriptions=443
-decisionAgree=259/443 loadAgree=154/443 mae=15.92
+decisionAgree=227/443 loadAgree=176/443 mae=17.06
 
 Decision confusion matrix (rows=expected, cols=predicted):
      exp\\pred        deload          hold      increasedecrease_small      estimate     prescribe
-        deload            52             1             0             1             0             0
-          hold             0            50            10            13             0             0
+        deload            53             1             0             0             0             0
+          hold             0            53            10            10             0             0
       increase             0             7             7             4             0             0
-decrease_small            26            59             3           150             0             0
+decrease_small            22            99             3           114             0             0
       estimate             0             1             0             0             0             0
-     prescribe             0            25             2            32             0             0
+     prescribe             0            33             2            24             0             0
 
 Top mismatch pairs (expected->predicted):
-  decrease_small->hold: 59
-    top reason_code: percent_1rm_rpe_target_and_low_readiness=27, hold_at_target_rpe_and_low_readiness=24, increase_after_exceeding_reps_target_and_low_readiness=4, decrease_small_after_grind_or_miss_and_low_readiness=2, cold_start_estimate_leg_press_and_low_readiness=1, decrease_small_after_grind_or_miss=1
+  decrease_small->hold: 99
+    top reason_code: percent_1rm_rpe_target_and_low_readiness=57, hold_at_target_rpe_and_low_readiness=27, increase_after_exceeding_reps_target_and_low_readiness=6, cold_start_estimate_and_low_readiness=4, decrease_small_after_grind_or_miss_and_low_readiness=3, decrease_small_after_grind_or_miss=1
     samples:
-      U301 2025-10-29 FB_B lift=deadlift performed=deadlift rf=good ready=85 step=2.50 exp=decrease_small(decrease_small_after_grind_or_miss) pred=hold err<=2step dir=hold dirReason=recent_miss adj=none baseState{w=172.50 e1rm=190.0 fail=0 grinder=0 streak=0 last=2025-10-22}
-      U301 2025-10-31 FB_A lift=squat performed=squat rf=low ready=65 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=hold err>2step dir=hold dirReason=acute_low_readiness_single_day adj=none baseState{w=140.00 e1rm=146.1 fail=0 grinder=0 streak=3 last=2025-10-27}
-      U301 2025-10-31 FB_A lift=bench performed=bench rf=low ready=65 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=hold err<=2step dir=hold dirReason=acute_low_readiness_single_day adj=none baseState{w=107.50 e1rm=112.2 fail=0 grinder=0 streak=3 last=2025-10-27}
-  prescribe->decrease_small: 32
-    top reason_code: percent_1rm_rpe_target=32
+      U301 2025-10-06 FB_A lift=squat performed=squat rf=low ready=50 step=2.50 exp=decrease_small(cold_start_estimate_and_low_readiness) pred=hold err>2step dir=hold dirReason=acute_low_readiness_single_day adj=none baseState{w=85.00 e1rm=95.6 fail=0 grinder=0 streak=0 last=2026-01-09}
+      U301 2025-10-06 FB_A lift=bench performed=bench rf=low ready=50 step=2.50 exp=decrease_small(cold_start_estimate_and_low_readiness) pred=hold err>2step dir=hold dirReason=acute_low_readiness_single_day adj=none baseState{w=70.00 e1rm=78.8 fail=0 grinder=2 streak=0 last=2026-01-09}
+      U301 2025-10-08 FB_B lift=deadlift performed=deadlift rf=low ready=55 step=2.50 exp=decrease_small(cold_start_estimate_and_low_readiness) pred=hold err>2step dir=hold dirReason=acute_low_readiness_single_day adj=none baseState{w=165.00 e1rm=185.6 fail=0 grinder=0 streak=0 last=2026-01-07}
+  prescribe->hold: 33
+    top reason_code: percent_1rm_rpe_target=33
     samples:
-      U301 2025-11-12 FB_B lift=deadlift performed=deadlift rf=ok ready=50 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=decrease_small err<=step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=167.50 e1rm=190.5 fail=0 grinder=0 streak=2 last=2025-11-05}
-      U301 2025-11-12 FB_B lift=ohp performed=ohp rf=ok ready=50 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=67.50 e1rm=74.9 fail=0 grinder=0 streak=2 last=2025-11-05}
-      U301 2025-12-29 FB_A lift=squat performed=squat rf=ok ready=60 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=decrease_small err<=2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=95.00 e1rm=114.8 fail=0 grinder=1 streak=0 last=2025-12-26}
-  decrease_small->deload: 26
-    top reason_code: percent_1rm_rpe_target_and_low_readiness=21, decrease_small_after_grind_or_miss_and_low_readiness=3, hold_at_target_rpe_and_low_readiness=2
+      U301 2025-10-15 FB_B lift=ohp performed=ohp rf=good ready=95 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=hold err<=step dir=hold dirReason=grinder_success adj=none baseState{w=70.00 e1rm=72.8 fail=0 grinder=1 streak=0 last=2025-10-08}
+      U301 2025-10-20 FB_A lift=squat performed=squat rf=ok ready=80 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=hold err<=2step dir=hold dirReason=consolidating adj=none baseState{w=140.00 e1rm=145.3 fail=0 grinder=0 streak=4 last=2025-10-17}
+      U301 2025-10-20 FB_A lift=bench performed=bench rf=ok ready=80 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=hold err<=step dir=hold dirReason=consolidating adj=none baseState{w=105.00 e1rm=111.2 fail=0 grinder=0 streak=4 last=2025-10-17}
+  prescribe->decrease_small: 24
+    top reason_code: percent_1rm_rpe_target=24
     samples:
-      U301 2025-11-26 FB_B lift=deadlift performed=deadlift rf=low ready=65 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=deload err<=step dir=reset_after_break dirReason=extended_break adj=break_reset baseState{w=167.50 e1rm=190.5 fail=0 grinder=0 streak=0 last=2025-11-12}
+      U302 2025-10-17 FB_A lift=squat performed=squat rf=good ready=85 step=1.25 exp=prescribe(percent_1rm_rpe_target) pred=decrease_small err<=step dir=decrease_slightly dirReason=minor_fatigue_signal adj=readiness_cut baseState{w=190.00 e1rm=177.9 fail=0 grinder=0 streak=0 last=2025-10-13}
+      U302 2025-10-17 FB_A lift=bench performed=bench rf=good ready=85 step=1.25 exp=prescribe(percent_1rm_rpe_target) pred=decrease_small err<=step dir=decrease_slightly dirReason=minor_fatigue_signal adj=readiness_cut baseState{w=133.75 e1rm=134.6 fail=0 grinder=0 streak=0 last=2025-10-13}
+      U302 2025-11-07 FB_A lift=squat performed=squat rf=good ready=80 step=1.25 exp=prescribe(percent_1rm_rpe_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=minor_fatigue_signal adj=readiness_cut baseState{w=166.25 e1rm=191.8 fail=1 grinder=0 streak=0 last=2025-11-03}
+  decrease_small->deload: 22
+    top reason_code: percent_1rm_rpe_target_and_low_readiness=13, decrease_small_after_grind_or_miss_and_low_readiness=5, hold_at_target_rpe_and_low_readiness=4
+    samples:
+      U301 2025-11-26 FB_B lift=deadlift performed=deadlift rf=low ready=65 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=deload err>2step dir=reset_after_break dirReason=extended_break adj=break_reset baseState{w=165.00 e1rm=188.7 fail=0 grinder=0 streak=3 last=2025-11-12}
+      U301 2025-11-26 FB_B lift=ohp performed=ohp rf=low ready=65 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=deload err<=2step dir=reset_after_break dirReason=extended_break adj=break_reset baseState{w=67.50 e1rm=76.7 fail=0 grinder=0 streak=3 last=2025-11-12}
       U303 2025-10-09 UpperB lift=ohp performed=ohp rf=low ready=55 step=1.25 exp=decrease_small(percent_1rm_rpe_target_and_low_readiness) pred=deload err>2step dir=deload dirReason=fail_streak_threshold adj=deload baseState{w=80.00 e1rm=90.0 fail=3 grinder=0 streak=0 last=2026-01-08}
-      U303 2025-10-16 UpperB lift=ohp performed=ohp rf=low ready=35 step=1.25 exp=decrease_small(percent_1rm_rpe_target_and_low_readiness) pred=deload err>2step dir=deload dirReason=fail_streak_threshold adj=deload baseState{w=108.75 e1rm=100.9 fail=0 grinder=0 streak=0 last=2025-10-09}
-  prescribe->hold: 25
-    top reason_code: percent_1rm_rpe_target=25
-    samples:
-      U301 2025-10-15 FB_B lift=ohp performed=ohp rf=good ready=95 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=hold err>2step dir=hold dirReason=grinder_success adj=none baseState{w=62.50 e1rm=70.3 fail=0 grinder=0 streak=0 last=2025-10-08}
-      U301 2025-10-20 FB_A lift=squat performed=squat rf=ok ready=80 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=hold err>2step dir=hold dirReason=consolidating adj=none baseState{w=152.50 e1rm=118.4 fail=0 grinder=0 streak=0 last=2025-10-17}
-      U301 2025-10-20 FB_A lift=bench performed=bench rf=ok ready=80 step=2.50 exp=prescribe(percent_1rm_rpe_target) pred=hold err>2step dir=hold dirReason=consolidating adj=none baseState{w=115.00 e1rm=93.9 fail=0 grinder=2 streak=0 last=2025-10-17}
-  hold->decrease_small: 13
-    top reason_code: hold_at_target_rpe=13
+  hold->decrease_small: 10
+    top reason_code: hold_at_target_rpe=10
     samples:
       U302 2025-10-24 FB_A lift=squat performed=squat rf=good ready=60 step=1.25 exp=hold(hold_at_target_rpe) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=183.75 e1rm=186.6 fail=0 grinder=0 streak=1 last=2025-10-20}
       U302 2025-10-24 FB_A lift=bench performed=bench rf=good ready=60 step=1.25 exp=hold(hold_at_target_rpe) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=128.75 e1rm=137.7 fail=0 grinder=0 streak=1 last=2025-10-20}
-      U302 2025-10-27 FB_A lift=squat performed=squat rf=ok ready=65 step=1.25 exp=hold(hold_at_target_rpe) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=183.75 e1rm=186.6 fail=0 grinder=0 streak=0 last=2025-10-24}
+      U304 2025-11-03 UpperHeavy lift=ohp performed=ohp rf=ok ready=80 step=1.25 exp=hold(hold_at_target_rpe) pred=decrease_small err>2step dir=decrease_slightly dirReason=minor_fatigue_signal adj=readiness_cut baseState{w=168.75 e1rm=150.5 fail=0 grinder=0 streak=0 last=2025-10-27}
   hold->increase: 10
     top reason_code: hold_at_target_rpe=10
     samples:
-      U301 2025-10-27 FB_A lift=bench performed=bench rf=ok ready=85 step=2.50 exp=hold(hold_at_target_rpe) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=107.50 e1rm=108.5 fail=0 grinder=0 streak=2 last=2025-10-24}
-      U301 2025-11-28 FB_A lift=squat performed=squat rf=ok ready=75 step=2.50 exp=hold(hold_at_target_rpe) pred=increase err>2step dir=increase dirReason=all_reps_at_top adj=none baseState{w=122.50 e1rm=141.9 fail=1 grinder=0 streak=0 last=2025-11-24}
-      U301 2025-12-01 FB_A lift=squat performed=squat rf=ok ready=70 step=2.50 exp=hold(hold_at_target_rpe) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=110.00 e1rm=136.4 fail=0 grinder=0 streak=1 last=2025-11-28}
+      U301 2025-10-27 FB_A lift=bench performed=bench rf=ok ready=85 step=2.50 exp=hold(hold_at_target_rpe) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=107.50 e1rm=117.0 fail=0 grinder=0 streak=6 last=2025-10-24}
+      U301 2025-11-28 FB_A lift=squat performed=squat rf=ok ready=75 step=2.50 exp=hold(hold_at_target_rpe) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=110.00 e1rm=132.8 fail=0 grinder=0 streak=1 last=2025-11-24}
+      U301 2025-12-01 FB_A lift=squat performed=squat rf=ok ready=70 step=2.50 exp=hold(hold_at_target_rpe) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=110.00 e1rm=130.1 fail=0 grinder=0 streak=2 last=2025-11-28}
   increase->hold: 7
     top reason_code: increase_after_exceeding_reps_target=7
     samples:
-      U302 2025-10-22 FB_B lift=deadlift performed=deadlift rf=ok ready=75 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=hold err>2step dir=hold dirReason=consolidating adj=none baseState{w=231.25 e1rm=270.6 fail=0 grinder=0 streak=1 last=2025-10-15}
-      U302 2025-10-29 FB_B lift=ohp performed=ohp rf=good ready=75 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=hold err>2step dir=hold dirReason=consolidating adj=none baseState{w=85.00 e1rm=93.8 fail=0 grinder=0 streak=2 last=2025-10-22}
-      U302 2025-12-22 FB_A lift=squat performed=squat rf=ok ready=70 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=hold err>2step dir=hold dirReason=consolidating adj=none baseState{w=131.25 e1rm=154.0 fail=0 grinder=0 streak=6 last=2025-12-19}
+      U302 2025-10-22 FB_B lift=deadlift performed=deadlift rf=ok ready=75 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=hold err>2step dir=hold dirReason=consolidating adj=none baseState{w=231.25 e1rm=268.2 fail=0 grinder=0 streak=2 last=2025-10-15}
+      U302 2025-10-29 FB_B lift=ohp performed=ohp rf=good ready=75 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=hold err<=2step dir=hold dirReason=consolidating adj=none baseState{w=85.00 e1rm=95.1 fail=0 grinder=0 streak=3 last=2025-10-22}
+      U302 2025-12-22 FB_A lift=squat performed=squat rf=ok ready=70 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=hold err>2step dir=hold dirReason=consolidating adj=none baseState{w=131.25 e1rm=154.1 fail=0 grinder=0 streak=6 last=2025-12-19}
   increase->decrease_small: 4
     top reason_code: increase_after_exceeding_reps_target=4
     samples:
-      U304 2025-11-11 LowerHeavy lift=squat performed=squat rf=ok ready=60 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=270.00 e1rm=288.8 fail=1 grinder=0 streak=0 last=2025-11-07}
-      U304 2025-12-30 LowerHeavy lift=squat performed=squat rf=ok ready=65 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=190.00 e1rm=264.1 fail=0 grinder=0 streak=0 last=2025-12-26}
-      U304 2026-01-05 UpperHeavy lift=bench performed=close_grip_bench rf=ok ready=65 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=91.25 e1rm=119.2 fail=0 grinder=0 streak=0 last=2026-01-01}
+      U304 2025-11-11 LowerHeavy lift=squat performed=squat rf=ok ready=60 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=270.00 e1rm=309.7 fail=1 grinder=0 streak=0 last=2025-11-07}
+      U304 2025-12-30 LowerHeavy lift=squat performed=squat rf=ok ready=65 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=190.00 e1rm=274.4 fail=0 grinder=0 streak=0 last=2025-12-26}
+      U304 2026-01-05 UpperHeavy lift=bench performed=close_grip_bench rf=ok ready=65 step=1.25 exp=increase(increase_after_exceeding_reps_target) pred=decrease_small err>2step dir=decrease_slightly dirReason=low_readiness_acute adj=readiness_cut baseState{w=91.25 e1rm=163.6 fail=0 grinder=0 streak=0 last=2026-01-01}
   decrease_small->increase: 3
     top reason_code: hold_at_target_rpe_and_low_readiness=2, increase_after_exceeding_reps_target_and_low_readiness=1
     samples:
-      U301 2025-12-26 FB_A lift=squat performed=squat rf=low ready=70 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=increase err>2step dir=increase dirReason=all_reps_at_top adj=none baseState{w=100.00 e1rm=118.2 fail=0 grinder=0 streak=1 last=2025-12-22}
-      U305 2025-12-03 FB_B lift=deadlift performed=deadlift rf=low ready=20 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=increase err>2step dir=increase dirReason=all_reps_at_top adj=none baseState{w=175.00 e1rm=195.9 fail=0 grinder=0 streak=3 last=2025-11-26}
-      U306 2025-12-01 UpperA lift=bench performed=bench rf=low ready=75 step=5.00 exp=decrease_small(increase_after_exceeding_reps_target_and_low_readiness) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=105.00 e1rm=122.1 fail=0 grinder=0 streak=1 last=2025-11-24}
+      U301 2025-12-26 FB_A lift=squat performed=squat rf=low ready=70 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=increase err>2step dir=increase dirReason=all_reps_at_top adj=none baseState{w=100.00 e1rm=115.3 fail=0 grinder=0 streak=3 last=2025-12-22}
+      U305 2025-12-03 FB_B lift=deadlift performed=deadlift rf=low ready=20 step=2.50 exp=decrease_small(hold_at_target_rpe_and_low_readiness) pred=increase err>2step dir=increase dirReason=all_reps_at_top adj=none baseState{w=175.00 e1rm=199.2 fail=0 grinder=0 streak=3 last=2025-11-26}
+      U306 2025-12-01 UpperA lift=bench performed=bench rf=low ready=75 step=5.00 exp=decrease_small(increase_after_exceeding_reps_target_and_low_readiness) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=105.00 e1rm=122.4 fail=0 grinder=0 streak=2 last=2025-11-24}
   prescribe->increase: 2
     top reason_code: percent_1rm_rpe_target=2
     samples:
       U302 2026-01-05 FB_A lift=squat performed=squat rf=good ready=90 step=1.25 exp=prescribe(percent_1rm_rpe_target) pred=increase err>2step dir=increase dirReason=all_reps_at_top adj=none baseState{w=141.25 e1rm=156.2 fail=0 grinder=0 streak=10 last=2026-01-02}
-      U302 2026-01-07 FB_B lift=ohp performed=ohp rf=good ready=85 step=1.25 exp=prescribe(percent_1rm_rpe_target) pred=increase err<=step dir=increase dirReason=all_reps_at_top adj=none baseState{w=81.25 e1rm=91.5 fail=0 grinder=0 streak=5 last=2025-12-31}
+      U302 2026-01-07 FB_B lift=ohp performed=ohp rf=good ready=85 step=1.25 exp=prescribe(percent_1rm_rpe_target) pred=increase err>2step dir=increase dirReason=all_reps_at_top adj=none baseState{w=81.25 e1rm=91.6 fail=0 grinder=0 streak=5 last=2025-12-31}
 
 Buckets by expected readiness_flag:
-  low: n=257 dec=0.65 load=0.28 mae=16.0
+  low: n=257 dec=0.52 load=0.31 mae=17.6
     exp: decrease_small=219, deload=38
-    pred: decrease_small=133, deload=62, hold=59, increase=3
-  ok: n=109 dec=0.42 load=0.37 mae=21.8
+    pred: hold=99, decrease_small=96, deload=59, increase=3
+  ok: n=109 dec=0.44 load=0.46 mae=22.1
     exp: prescribe=38, hold=34, decrease_small=13, deload=12, increase=11, estimate=1
-    pred: decrease_small=48, hold=38, deload=12, increase=11
-  good: n=77 dec=0.58 load=0.53 mae=7.2
+    pred: hold=47, decrease_small=39, deload=12, increase=11
+  good: n=77 dec=0.60 load=0.61 mae=8.1
     exp: hold=39, prescribe=21, increase=7, decrease_small=6, deload=4
-    pred: hold=46, decrease_small=19, increase=8, deload=4
+    pred: hold=48, decrease_small=17, increase=8, deload=4
 
 Buckets by lift:
-  squat: n=138 dec=0.58 load=0.28 mae=23.2
-    pred: decrease_small=65, hold=46, deload=21, increase=6
-  bench: n=139 dec=0.59 load=0.40 mae=9.4
-    pred: decrease_small=62, hold=49, deload=24, increase=4
-  deadlift: n=83 dec=0.60 load=0.40 mae=19.1
-    pred: decrease_small=38, hold=27, deload=11, increase=7
-  ohp: n=83 dec=0.57 load=0.31 mae=11.6
-    pred: decrease_small=35, deload=22, hold=21, increase=5
+  squat: n=138 dec=0.49 load=0.27 mae=26.1
+    pred: hold=62, decrease_small=47, deload=23, increase=6
+  bench: n=139 dec=0.49 load=0.45 mae=13.0
+    pred: hold=63, decrease_small=44, deload=28, increase=4
+  deadlift: n=83 dec=0.55 load=0.41 mae=18.9
+    pred: hold=33, decrease_small=31, deload=12, increase=7
+  ohp: n=83 dec=0.55 load=0.52 mae=7.0
+    pred: hold=36, decrease_small=30, deload=12, increase=5
 
 Buckets by load_step_lb:
-  step<=1.25: n=221 dec=0.70 load=0.30 mae=19.8
-    pred: decrease_small=104, hold=61, deload=45, increase=11
-  step<=2.5: n=166 dec=0.43 load=0.37 mae=11.0
-    pred: hold=74, decrease_small=58, deload=25, increase=9
-  step>2.5: n=56 dec=0.57 load=0.45 mae=15.0
-    pred: decrease_small=38, deload=8, hold=8, increase=2
+  step<=1.25: n=221 dec=0.74 load=0.34 mae=20.2
+    pred: decrease_small=108, hold=68, deload=34, increase=11
+  step<=2.5: n=166 dec=0.17 load=0.48 mae=13.2
+    pred: hold=115, deload=33, increase=9, decrease_small=9
+  step>2.5: n=56 dec=0.61 load=0.38 mae=15.9
+    pred: decrease_small=35, hold=11, deload=8, increase=2
 
 Per-user buckets (decision accuracy + predicted dist):
-  U301: n=82 dec=0.37 load=0.46 mae=5.4
-    pred: hold=45, decrease_small=28, increase=8, deload=1
-  U302: n=84 dec=0.69 load=0.60 mae=6.5
-    pred: hold=49, decrease_small=18, increase=11, deload=6
-  U303: n=55 dec=0.73 load=0.16 mae=17.1
-    pred: decrease_small=32, deload=21, hold=2
-  U304: n=82 dec=0.70 load=0.10 mae=35.4
-    pred: decrease_small=54, deload=18, hold=10
-  U305: n=84 dec=0.50 load=0.29 mae=16.5
-    pred: decrease_small=30, hold=29, deload=24, increase=1
-  U306: n=56 dec=0.57 load=0.45 mae=15.0
-    pred: decrease_small=38, hold=8, deload=8, increase=2
+  U301: n=82 dec=0.10 load=0.57 mae=4.5
+    pred: hold=71, increase=8, deload=3
+  U302: n=84 dec=0.70 load=0.65 mae=5.8
+    pred: hold=53, decrease_small=14, increase=11, deload=6
+  U303: n=55 dec=0.93 load=0.22 mae=14.2
+    pred: decrease_small=43, deload=10, hold=2
+  U304: n=82 dec=0.66 load=0.11 mae=39.1
+    pred: decrease_small=51, deload=18, hold=13
+  U305: n=84 dec=0.25 load=0.38 mae=21.7
+    pred: hold=44, deload=30, decrease_small=9, increase=1
+  U306: n=56 dec=0.61 load=0.38 mae=15.9
+    pred: decrease_small=35, hold=11, deload=8, increase=2
