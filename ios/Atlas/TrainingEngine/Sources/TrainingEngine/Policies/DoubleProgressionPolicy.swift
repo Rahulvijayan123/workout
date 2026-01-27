@@ -237,12 +237,14 @@ public enum DoubleProgressionPolicy {
         var targetPerExposureRate = expectedWeeklyRate / exposuresPerWeek
         
         // Strength-tier adjustment: as relative strength climbs, increments need to get smaller.
+        // Use sex-aware thresholds so female lifters get appropriate scaling.
         let bodyWeight = context.userProfile.bodyWeight?.converted(to: unit).value
         targetPerExposureRate *= strengthScalingFactor(
             e1rm: estimatedE1RM,
             bodyWeight: bodyWeight,
             movement: context.exercise.movementPattern,
-            unit: unit
+            unit: unit,
+            sex: context.userProfile.sex
         )
         
         // "Learning" adjustment: compare observed e1RM growth vs expected.
@@ -366,47 +368,74 @@ public enum DoubleProgressionPolicy {
         e1rm: Double,
         bodyWeight: Double?,
         movement: MovementPattern,
-        unit: LoadUnit
+        unit: LoadUnit,
+        sex: BiologicalSex = .male
     ) -> Double {
+        // Sex-based scaling for relative strength thresholds.
+        // Female thresholds are approximately 60-65% of male thresholds.
+        let femaleScale: Double = 0.62
+        let sexScale: Double = {
+            switch sex {
+            case .male: return 1.0
+            case .female: return femaleScale
+            case .other: return (1.0 + femaleScale) / 2.0
+            }
+        }()
+        
         // If we have bodyweight, use relative strength; otherwise fallback to absolute e1RM thresholds.
         if let bodyWeight, bodyWeight > 0 {
             let ratio = e1rm / bodyWeight
             switch movement {
             case .horizontalPush, .verticalPush:
-                // Bench/press: ~1.0 BW is intermediate, ~1.5 BW is advanced.
-                if ratio >= 1.75 { return 0.60 }
-                if ratio >= 1.25 { return 0.80 }
+                // Bench/press: ~1.0 BW is intermediate, ~1.5 BW is advanced (male baseline).
+                // Apply sex scaling to thresholds so female lifters get appropriate scaling.
+                let highThreshold = 1.75 * sexScale
+                let mediumThreshold = 1.25 * sexScale
+                if ratio >= highThreshold { return 0.60 }
+                if ratio >= mediumThreshold { return 0.80 }
                 return 1.00
             case .squat:
-                if ratio >= 2.50 { return 0.60 }
-                if ratio >= 2.00 { return 0.80 }
+                let highThreshold = 2.50 * sexScale
+                let mediumThreshold = 2.00 * sexScale
+                if ratio >= highThreshold { return 0.60 }
+                if ratio >= mediumThreshold { return 0.80 }
                 return 1.00
             case .hipHinge:
-                if ratio >= 2.75 { return 0.60 }
-                if ratio >= 2.25 { return 0.80 }
+                let highThreshold = 2.75 * sexScale
+                let mediumThreshold = 2.25 * sexScale
+                if ratio >= highThreshold { return 0.60 }
+                if ratio >= mediumThreshold { return 0.80 }
                 return 1.00
             default:
                 // Accessories: keep stable
-                if ratio >= 1.75 { return 0.80 }
+                let threshold = 1.75 * sexScale
+                if ratio >= threshold { return 0.80 }
                 return 1.00
             }
         }
         
         // Absolute fallback (lb or kg). Conservative thresholds.
+        // Also apply sex scaling to absolute thresholds.
         let e1rmLb = (unit == .pounds) ? e1rm : Load(value: e1rm, unit: .kilograms).converted(to: .pounds).value
         
         switch movement {
         case .horizontalPush, .verticalPush:
-            if e1rmLb >= 315 { return 0.55 }
-            if e1rmLb >= 225 { return 0.75 }
+            let highThreshold = 315 * sexScale
+            let mediumThreshold = 225 * sexScale
+            if e1rmLb >= highThreshold { return 0.55 }
+            if e1rmLb >= mediumThreshold { return 0.75 }
             return 1.00
         case .squat:
-            if e1rmLb >= 405 { return 0.55 }
-            if e1rmLb >= 315 { return 0.75 }
+            let highThreshold = 405 * sexScale
+            let mediumThreshold = 315 * sexScale
+            if e1rmLb >= highThreshold { return 0.55 }
+            if e1rmLb >= mediumThreshold { return 0.75 }
             return 1.00
         case .hipHinge:
-            if e1rmLb >= 495 { return 0.55 }
-            if e1rmLb >= 405 { return 0.75 }
+            let highThreshold = 495 * sexScale
+            let mediumThreshold = 405 * sexScale
+            if e1rmLb >= highThreshold { return 0.55 }
+            if e1rmLb >= mediumThreshold { return 0.75 }
             return 1.00
         default:
             return 1.00

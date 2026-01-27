@@ -391,6 +391,9 @@ public struct LiftSignals: Sendable {
     /// User's experience level.
     public let experienceLevel: ExperienceLevel
     
+    /// User's biological sex (for sex-aware increment scaling).
+    public let sex: BiologicalSex
+    
     /// User's body weight (for relative strength calculations).
     public let bodyWeight: Load?
     
@@ -402,6 +405,9 @@ public struct LiftSignals: Sendable {
     
     /// Session intent (heavy/volume/light/general) for DUP-aware progression.
     public let sessionIntent: SessionIntent
+    
+    /// User's primary training goal (for cut/maintenance awareness).
+    public let primaryGoal: TrainingGoal?
     
     // MARK: - Derived properties
     
@@ -456,10 +462,12 @@ public struct LiftSignals: Sendable {
         recentReadinessScores: [Int],
         prescription: SetPrescription,
         experienceLevel: ExperienceLevel,
+        sex: BiologicalSex = .male,
         bodyWeight: Load?,
         sessionDeloadTriggered: Bool,
         sessionDeloadReason: DeloadReason?,
-        sessionIntent: SessionIntent = .general
+        sessionIntent: SessionIntent = .general,
+        primaryGoal: TrainingGoal? = nil
     ) {
         self.exerciseId = exerciseId
         self.movementPattern = movementPattern
@@ -481,10 +489,12 @@ public struct LiftSignals: Sendable {
         self.recentReadinessScores = recentReadinessScores
         self.prescription = prescription
         self.experienceLevel = experienceLevel
+        self.sex = sex
         self.bodyWeight = bodyWeight
         self.sessionDeloadTriggered = sessionDeloadTriggered
         self.sessionDeloadReason = sessionDeloadReason
         self.sessionIntent = sessionIntent
+        self.primaryGoal = primaryGoal
     }
 }
 
@@ -881,7 +891,25 @@ public enum DirectionPolicy {
             case .advanced, .elite: return 3
             }
         }()
-        let hasSuccessStreak = signals.successStreak >= successStreakThreshold
+        // Cut/maintenance phase gate - bias toward hold unless clear surplus
+        // When goal is fat_loss, we prioritize strength maintenance over progression
+        let isCutOrMaintenancePhase = signals.primaryGoal == .fatLoss
+        let cutMaintenanceCheck = PolicyCheckResult(
+            checkName: "cut_maintenance_gate",
+            triggered: isCutOrMaintenancePhase && allInRange && !sessionWasEasyByRIR,
+            condition: "primaryGoal == fatLoss AND allInRange AND NOT easyByRIR",
+            observed: "goal=\(signals.primaryGoal?.rawValue ?? "nil") allInRange=\(allInRange) easyByRIR=\(sessionWasEasyByRIR)",
+            wouldProduce: .hold
+        )
+        checks.append(cutMaintenanceCheck)
+        
+        if isCutOrMaintenancePhase && allInRange && !sessionWasEasyByRIR {
+            return (DirectionDecision(
+                direction: .hold,
+                primaryReason: .consolidating,
+                explanation: "Cut/maintenance phase: holding to preserve strength. Increase requires clear RIR surplus."
+            ), checks)
+        }
         
         // Insufficient data or first exposure
         // NOTE: Cold starts with low readiness are handled earlier (in acute_low_readiness check)
@@ -928,6 +956,33 @@ public enum DirectionPolicy {
             }
         }
         
+        // High-effort success gate: effort was AT target limit (no surplus)
+        // This catches cases where reps were hit but RIR shows no room to spare
+        // V8 dataset expects holds when RPE 7.5-8.5 even with successful reps
+        let effortAtTargetLimit: Bool = {
+            guard let avgRIR = observedRIR else { return false }
+            // Effort was at or very close to target (within 0.5 RIR of target)
+            // This means no clear surplus to justify an increase
+            return avgRIR <= Double(targetRIR) + 0.5 && avgRIR >= Double(targetRIR) - 0.5
+        }()
+        
+        let effortAtLimitCheck = PolicyCheckResult(
+            checkName: "effort_at_target_limit",
+            triggered: effortAtTargetLimit && allInRange && !sessionWasEasyByRIR,
+            condition: "observedRIR within 0.5 of targetRIR AND allInRange AND NOT easyByRIR",
+            observed: "observedRIR=\(observedRIR.map { String(format: "%.1f", $0) } ?? "nil") target=\(targetRIR)",
+            wouldProduce: .hold
+        )
+        checks.append(effortAtLimitCheck)
+        
+        if effortAtTargetLimit && allInRange && !sessionWasEasyByRIR {
+            return (DirectionDecision(
+                direction: .hold,
+                primaryReason: .consolidating,
+                explanation: "Session met targets but effort was at limit (RIR \(String(format: "%.1f", observedRIR ?? 0)) vs target \(targetRIR)). Hold to consolidate before progressing."
+            ), checks)
+        }
+        
         // All reps at top (variable rep range)
         let allAtTopCheck = PolicyCheckResult(
             checkName: "all_at_top",
@@ -972,16 +1027,21 @@ public enum DirectionPolicy {
         }
         
         // Fixed-rep with success streak (no RIR data)
+        // Use conservative threshold: at least 2 sessions required when no RIR data
+        // This prevents premature increases based on a single session without effort data
+        let conservativeStreakThreshold = max(2, successStreakThreshold)
+        let hasConservativeSuccessStreak = signals.successStreak >= conservativeStreakThreshold
+        
         let successStreakCheck = PolicyCheckResult(
             checkName: "success_streak_gate",
-            triggered: isFixedRepRange && hasSuccessStreak && !hasRIRData && allInRange,
-            condition: "fixedRep AND successStreak >= \(successStreakThreshold) AND noRIR",
+            triggered: isFixedRepRange && hasConservativeSuccessStreak && !hasRIRData && allInRange,
+            condition: "fixedRep AND successStreak >= \(conservativeStreakThreshold) AND noRIR",
             observed: "fixed=\(isFixedRepRange) streak=\(signals.successStreak) hasRIR=\(hasRIRData)",
             wouldProduce: .increase
         )
         checks.append(successStreakCheck)
         
-        if isFixedRepRange && hasSuccessStreak && !hasRIRData && allInRange {
+        if isFixedRepRange && hasConservativeSuccessStreak && !hasRIRData && allInRange {
             return (DirectionDecision(
                 direction: .increase,
                 primaryReason: .successfulProgression,
@@ -1313,9 +1373,10 @@ public enum MagnitudePolicy {
         }()
         
         // Scale by relative strength (stronger = smaller increments)
+        // Use sex-aware thresholds so female lifters get appropriate scaling
         var strengthScale = 1.0
         if let relativeStrength = signals.relativeStrength {
-            let thresholds = config.strengthScalingThresholds(for: signals.movementPattern)
+            let thresholds = config.strengthScalingThresholds(for: signals.movementPattern, sex: signals.sex)
             if relativeStrength >= thresholds.high {
                 strengthScale = 0.6
             } else if relativeStrength >= thresholds.medium {
@@ -1415,6 +1476,16 @@ public enum MagnitudePolicy {
             }
         }()
         
+        // Cap reduction for low absolute loads (improves female cohort stability)
+        // At low loads, percentage reductions are more impactful and can drop below
+        // minimum meaningful increments. Cap at 7.5% for loads under 100 lb.
+        let lowLoadThreshold = 100.0 // lb
+        let currentLoadLb = signals.lastWorkingWeight.converted(to: .pounds).value
+        
+        if currentLoadLb > 0 && currentLoadLb < lowLoadThreshold {
+            return min(baseReduction, 0.075)
+        }
+        
         return baseReduction
     }
 }
@@ -1506,17 +1577,37 @@ public struct MagnitudePolicyConfig: Sendable {
         }
     }
     
-    /// Strength scaling thresholds by movement pattern.
-    public func strengthScalingThresholds(for pattern: MovementPattern) -> (medium: Double, high: Double) {
-        switch pattern {
-        case .horizontalPush, .verticalPush:
-            return (medium: 1.25, high: 1.75)
-        case .squat:
-            return (medium: 2.0, high: 2.5)
-        case .hipHinge:
-            return (medium: 2.25, high: 2.75)
-        default:
-            return (medium: 1.5, high: 2.0)
+    /// Strength scaling thresholds by movement pattern and biological sex.
+    /// Female thresholds are approximately 60-65% of male thresholds based on population strength standards.
+    /// "Other" uses a midpoint blend.
+    public func strengthScalingThresholds(for pattern: MovementPattern, sex: BiologicalSex = .male) -> (medium: Double, high: Double) {
+        // Male baseline thresholds (relative strength = e1RM / bodyweight)
+        let maleThresholds: (medium: Double, high: Double) = {
+            switch pattern {
+            case .horizontalPush, .verticalPush:
+                return (medium: 1.25, high: 1.75)
+            case .squat:
+                return (medium: 2.0, high: 2.5)
+            case .hipHinge:
+                return (medium: 2.25, high: 2.75)
+            default:
+                return (medium: 1.5, high: 2.0)
+            }
+        }()
+        
+        // Female thresholds are lower to account for biological differences in strength standards
+        // Roughly 60-65% of male thresholds based on strength standard databases
+        let femaleScale: Double = 0.62
+        
+        switch sex {
+        case .male:
+            return maleThresholds
+        case .female:
+            return (medium: maleThresholds.medium * femaleScale, high: maleThresholds.high * femaleScale)
+        case .other:
+            // Midpoint between male and female
+            let midScale = (1.0 + femaleScale) / 2.0
+            return (medium: maleThresholds.medium * midScale, high: maleThresholds.high * midScale)
         }
     }
 }

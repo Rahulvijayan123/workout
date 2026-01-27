@@ -772,10 +772,12 @@ public enum Engine {
             recentReadinessScores: liftState.recentReadinessScores,
             prescription: prescription,
             experienceLevel: userProfile.experience,
+            sex: userProfile.sex,
             bodyWeight: userProfile.bodyWeight,
             sessionDeloadTriggered: sessionDeloadTriggered,
             sessionDeloadReason: sessionDeloadReason,
-            sessionIntent: sessionIntent
+            sessionIntent: sessionIntent,
+            primaryGoal: userProfile.goals.first
         )
     }
     

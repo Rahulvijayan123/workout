@@ -826,6 +826,7 @@ public struct LiftSignalsSnapshot: Codable, Sendable, Hashable {
     public let hasTrainingGap: Bool
     public let hasExtendedBreak: Bool
     public let relativeStrength: Double?
+    public let primaryGoal: TrainingGoal?
     
     public init(from signals: LiftSignals) {
         self.exerciseId = signals.exerciseId
@@ -860,6 +861,7 @@ public struct LiftSignalsSnapshot: Codable, Sendable, Hashable {
         self.hasTrainingGap = signals.hasTrainingGap
         self.hasExtendedBreak = signals.hasExtendedBreak
         self.relativeStrength = signals.relativeStrength
+        self.primaryGoal = signals.primaryGoal
     }
 }
 

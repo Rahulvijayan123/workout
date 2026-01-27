@@ -11,6 +11,7 @@
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MicroloadingConstraintTests.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/ProductionGradeConfidenceTests.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/RIRAutoregulationTests.swift'
+'/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/SexBodyweightScalingTests.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/SubstitutionRankerTests.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/SupervisedTortureHarnessTests.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/SyntheticCalibrationReplayTests.swift'
@@ -25,3 +26,4 @@
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV5ReplayTests.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV6ReplayTests.swift'
 '/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV7ReplayTests.swift'
+'/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV8ReplayTests.swift'

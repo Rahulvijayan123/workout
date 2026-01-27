@@ -1,0 +1,62 @@
+================================================================================
+V8 FULL E2E REPLAY DIAGNOSTICS (sex/bodyweight scaling) @ 2026-01-27T02:57:31Z
+================================================================================
+
+OVERALL SUMMARY:
+  Total test cases: 61
+  Main lift prescriptions scored: 102
+
+  📊 Load Agreement: 82/102 = 80.4%
+  🎯 Decision Agreement: 95/102 = 93.1%
+  📏 Mean Absolute Error: 4.94 lb
+  ✅ Assertions Passed: 101/122 = 82.8%
+
+--------------------------------------------------------------------------------
+DECISION CONFUSION MATRIX (rows=expected, cols=predicted):
+      exp\pred        deload          hold      increasedecrease_small
+        deload             6             0             0             0
+          hold             2            48             1             0
+      increase             0             0            26             0
+decrease_small             0             4             0            15
+
+--------------------------------------------------------------------------------
+PER-SEX BREAKDOWN (sex-aware scaling):
+  female:
+    lifts=20 load=65.0% dec=85.0% mae=8.7lb
+  male:
+    lifts=79 load=83.5% dec=94.9% mae=4.2lb
+  other:
+    lifts=3 load=100.0% dec=100.0% mae=0.0lb
+
+--------------------------------------------------------------------------------
+PER-TIER BREAKDOWN (base/medium/high):
+  base:
+    lifts=11 load=100.0% dec=100.0% mae=3.6lb
+  high:
+    lifts=5 load=80.0% dec=80.0% mae=1.0lb
+  medium:
+    lifts=4 load=100.0% dec=100.0% mae=0.3lb
+  unknown:
+    lifts=82 load=76.8% dec=92.7% mae=5.6lb
+
+--------------------------------------------------------------------------------
+PER-SCENARIO BREAKDOWN:
+  beginner_lp_realistic:
+    lifts=54 load=87.0% dec=96.3% mae=3.8lb
+  cut_rel_strength_drift:
+    lifts=8 load=100.0% dec=100.0% mae=5.0lb
+  messy_adherence_sex_pairs:
+    lifts=28 load=57.1% dec=85.7% mae=9.1lb
+  microloading_sex_bw_scaling:
+    lifts=3 load=66.7% dec=66.7% mae=2.1lb
+  sex_bw_thresholds:
+    lifts=9 load=100.0% dec=100.0% mae=0.0lb
+
+--------------------------------------------------------------------------------
+PER-CATEGORY BREAKDOWN:
+  break_recovery: lifts=28 load=57.1% dec=85.7% mae=9.1lb
+  progression: lifts=66 load=87.9% dec=95.5% mae=3.2lb
+  readiness: lifts=8 load=100.0% dec=100.0% mae=5.0lb
+
+--------------------------------------------------------------------------------
+MISMATCH SAMPLES: 7 total (set V8_VERBOSE=1 for details)

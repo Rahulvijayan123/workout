@@ -274,6 +274,45 @@ final class HealthKitService: @unchecked Sendable {
         }
     }
     
+    // MARK: - Body Mass
+    
+    /// Fetches the most recent body mass measurement from HealthKit.
+    /// - Returns: Body mass in pounds (lbs), or `nil` if no measurement is available.
+    func fetchMostRecentBodyMassLbs() async throws -> Double? {
+        guard let bodyMassType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
+            return nil
+        }
+        
+        // Query for the single most recent sample, sorted by end date descending
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: bodyMassType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [sortDescriptor]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                
+                // Convert to pounds
+                let poundsUnit = HKUnit.pound()
+                let massInLbs = sample.quantity.doubleValue(for: poundsUnit)
+                continuation.resume(returning: massInLbs)
+            }
+            
+            self.healthStore.execute(query)
+        }
+    }
+    
     // MARK: - Workouts (optional)
     
     func fetchWorkouts(lastNDays: Int) async throws -> [HKWorkoutSummary] {

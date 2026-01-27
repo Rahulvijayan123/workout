@@ -86,6 +86,24 @@ struct MainAppView: View {
             healthKit: healthKit
         )
         await repo.refreshDailyBiometrics(lastNDays: 30)
+        
+        // If user has no bodyweight set, try to populate from HealthKit body mass
+        if appState.userProfile.bodyWeightLbs == nil {
+            do {
+                if let bodyMassLbs = try await healthKit.fetchMostRecentBodyMassLbs() {
+                    print("[HealthKit] Populating bodyWeightLbs from HealthKit: \(bodyMassLbs) lbs")
+                    appState.userProfile.bodyWeightLbs = bodyMassLbs
+                    appState.saveUserProfile()
+                } else {
+                    print("[HealthKit] No body mass data available")
+                }
+            } catch {
+                print("[HealthKit] Failed to fetch body mass: \(error.localizedDescription)")
+            }
+        } else {
+            print("[HealthKit] bodyWeightLbs already set (\(appState.userProfile.bodyWeightLbs!) lbs), not overwriting")
+        }
+        
         print("[HealthKit] Refresh complete")
     }
 }

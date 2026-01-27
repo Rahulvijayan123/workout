@@ -1,5 +1,5 @@
 ================================================================================
-V6 REPLAY DETAILED DIAGNOSTICS @ 2026-01-26T23:38:17Z
+V6 REPLAY DETAILED DIAGNOSTICS @ 2026-01-27T01:53:10Z
 ================================================================================
 
 SUMMARY:
@@ -27,11 +27,11 @@ TOP MISMATCH PAIRS (exp→pred:engineReason):
   10x  deload→decrease_small:minor_fatigue_signal
   7x  decrease_small→increase:all_reps_at_top
   4x  decrease_small→deload:fail_streak_threshold
-  4x  hold→deload:fail_streak_threshold
   4x  deload→hold:consolidating
+  4x  hold→deload:fail_streak_threshold
   4x  decrease_small→hold:insufficient_data
-  2x  increase→decrease_small:low_readiness_acute
   2x  increase→decrease_small:minor_fatigue_signal
+  2x  increase→decrease_small:low_readiness_acute
   1x  deload→increase:all_reps_at_top
 
 --------------------------------------------------------------------------------

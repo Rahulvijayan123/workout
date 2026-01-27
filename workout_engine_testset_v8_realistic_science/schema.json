@@ -1,0 +1,25 @@
+{
+  "version": "v8",
+  "record_fields": [
+    "test_id",
+    "test_category",
+    "description",
+    "input",
+    "expected_output",
+    "assertions"
+  ],
+  "input_required": [
+    "user_profile",
+    "equipment",
+    "equipment_config",
+    "today_metrics",
+    "today_session_template",
+    "recent_lift_history",
+    "lift_state",
+    "days_since_last_session",
+    "days_since_lift_exposure",
+    "event_flags",
+    "config_overrides"
+  ],
+  "notes": "v8 focuses on realism + sex/bodyweight-aware increment scaling and includes boundary cases around tier thresholds."
+}

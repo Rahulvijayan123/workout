@@ -1,0 +1,36 @@
+{
+  "version": "8.0.0",
+  "created": "2026-01-26",
+  "total_cases": 61,
+  "files": [
+    {
+      "path": "scenarios/sex_bw_thresholds.jsonl",
+      "count": 9
+    },
+    {
+      "path": "scenarios/beginner_lp_realistic.jsonl",
+      "count": 27
+    },
+    {
+      "path": "scenarios/microloading_sex_bw_scaling.jsonl",
+      "count": 3
+    },
+    {
+      "path": "scenarios/cut_rel_strength_drift.jsonl",
+      "count": 8
+    },
+    {
+      "path": "scenarios/messy_adherence_sex_pairs.jsonl",
+      "count": 14
+    }
+  ],
+  "tags": [
+    "realism",
+    "sex_bw_scaling",
+    "thresholds",
+    "beginner",
+    "microloading",
+    "cut",
+    "breaks"
+  ]
+}
