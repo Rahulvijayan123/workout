@@ -1288,8 +1288,6 @@ private struct ExerciseLoggingView: View {
     let workoutStore: WorkoutStore
     @Environment(\.dismiss) private var dismiss
     
-    @State private var showingCompletionAlert = false
-    @State private var completionSnapshot: NextPrescriptionSnapshot?
     @State private var animatePulse = false
     
     private var exercise: ExercisePerformance {
@@ -1376,26 +1374,6 @@ private struct ExerciseLoggingView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .font(IronFont.bodySemibold(16))
-                    .foregroundColor(neonPurple)
-                }
-            }
-            .alert("Exercise Completed", isPresented: $showingCompletionAlert) {
-                Button("OK") { }
-            } message: {
-                if let snapshot = completionSnapshot {
-                    if hasEnoughHistoryForSuggestions {
-                        Text("Next time: \(formatWeight(snapshot.nextWorkingWeight)) lb × \(snapshot.targetReps) reps\n\(snapshot.reason.displayText)")
-                    } else {
-                        Text("Baseline saved. Keep logging for 1–2 workouts to unlock recommendations.")
-                    }
-                }
-            }
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
@@ -1945,12 +1923,11 @@ private struct ExerciseLoggingView: View {
             }
         }
         
-        if let snapshot = workoutStore.completeExercise(performanceId: exercise.id) {
+        if workoutStore.completeExercise(performanceId: exercise.id) != nil {
             if let updatedSession = workoutStore.activeSession {
                 session = updatedSession
             }
-            completionSnapshot = snapshot
-            showingCompletionAlert = true
+            dismiss()
         }
     }
     

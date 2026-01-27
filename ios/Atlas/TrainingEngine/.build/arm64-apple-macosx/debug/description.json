@@ -572,6 +572,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MovementIncrementScalingTests.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/ProductionGradeConfidenceTests.swift"
         },
         {
@@ -605,6 +609,14 @@
         {
           "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/UltraRealisticPressureTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/V10BaselineAndProgressionTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV10ReplayTests.swift"
         },
         {
           "kind" : "file",
@@ -644,6 +656,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV9ReplayTests.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
         },
         {
@@ -670,6 +686,7 @@
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/HardHumanScenarioTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/LiftFamilyResolverKeyingTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MicroloadingConstraintTests.swift.o",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MovementIncrementScalingTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/ProductionGradeConfidenceTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/RIRAutoregulationTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/SexBodyweightScalingTests.swift.o",
@@ -679,6 +696,8 @@
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/TopSetBackoffTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/UltraLongTermDiaryTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/UltraRealisticPressureTests.swift.o",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/V10BaselineAndProgressionTests.swift.o",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV10ReplayTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV1JSONLReplayTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV1ReplayTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV2ReplayTests.swift.o",
@@ -687,7 +706,8 @@
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV5ReplayTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV6ReplayTests.swift.o",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV7ReplayTests.swift.o",
-        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV8ReplayTests.swift.o"
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV8ReplayTests.swift.o",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV9ReplayTests.swift.o"
       ],
       "otherArguments" : [
         "-target",
@@ -791,6 +811,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MovementIncrementScalingTests.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/ProductionGradeConfidenceTests.swift.o"
         },
         {
@@ -824,6 +848,14 @@
         {
           "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/UltraRealisticPressureTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/V10BaselineAndProgressionTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV10ReplayTests.swift.o"
         },
         {
           "kind" : "file",
@@ -863,6 +895,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV9ReplayTests.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/Modules/TrainingEngineTests.swiftmodule"
         }
       ],
@@ -879,6 +915,7 @@
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/HardHumanScenarioTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/LiftFamilyResolverKeyingTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MicroloadingConstraintTests.swift",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MovementIncrementScalingTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/ProductionGradeConfidenceTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/RIRAutoregulationTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/SexBodyweightScalingTests.swift",
@@ -888,6 +925,8 @@
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/TopSetBackoffTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/UltraLongTermDiaryTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/UltraRealisticPressureTests.swift",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/V10BaselineAndProgressionTests.swift",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV10ReplayTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV1JSONLReplayTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV1ReplayTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV2ReplayTests.swift",
@@ -896,7 +935,8 @@
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV5ReplayTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV6ReplayTests.swift",
         "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV7ReplayTests.swift",
-        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV8ReplayTests.swift"
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV8ReplayTests.swift",
+        "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV9ReplayTests.swift"
       ],
       "tempsPath" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build",
       "wholeModuleOptimization" : false
@@ -1088,6 +1128,7 @@
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/HardHumanScenarioTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/LiftFamilyResolverKeyingTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MicroloadingConstraintTests.swift",
+      "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MovementIncrementScalingTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/ProductionGradeConfidenceTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/RIRAutoregulationTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/SexBodyweightScalingTests.swift",
@@ -1097,6 +1138,8 @@
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/TopSetBackoffTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/UltraLongTermDiaryTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/UltraRealisticPressureTests.swift",
+      "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/V10BaselineAndProgressionTests.swift",
+      "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV10ReplayTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV1JSONLReplayTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV1ReplayTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV2ReplayTests.swift",
@@ -1106,6 +1149,7 @@
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV6ReplayTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV7ReplayTests.swift",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV8ReplayTests.swift",
+      "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV9ReplayTests.swift",
       "-I",
       "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/Modules",
       "-target",
@@ -1527,6 +1571,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/MovementIncrementScalingTests.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/ProductionGradeConfidenceTests.swift.o"
         },
         {
@@ -1563,6 +1611,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/V10BaselineAndProgressionTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV10ReplayTests.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV1JSONLReplayTests.swift.o"
         },
         {
@@ -1596,6 +1652,10 @@
         {
           "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV8ReplayTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/WorkoutEngineTestsetV9ReplayTests.swift.o"
         }
       ],
       "outputFilePath" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEnginePackageTests.product/Objects.LinkFileList"
@@ -1653,6 +1713,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/MovementIncrementScalingTests.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/ProductionGradeConfidenceTests.swift"
         },
         {
@@ -1689,6 +1753,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/V10BaselineAndProgressionTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV10ReplayTests.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV1JSONLReplayTests.swift"
         },
         {
@@ -1722,6 +1794,10 @@
         {
           "kind" : "file",
           "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV8ReplayTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/Tests/TrainingEngineTests/WorkoutEngineTestsetV9ReplayTests.swift"
         }
       ],
       "outputFilePath" : "/Users/rahulvijayan/Atlas 3/ios/Atlas/TrainingEngine/.build/arm64-apple-macosx/debug/TrainingEngineTests.build/sources"

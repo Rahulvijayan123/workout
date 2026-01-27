@@ -1,0 +1,73 @@
+{
+  "version": "10.0.0",
+  "created": "2026-01-27",
+  "dataset_version": "v10",
+  "total_cases": 171,
+  "files": [
+    {
+      "path": "scenarios/01_microloading_torture_suite.jsonl",
+      "count": 108,
+      "tags": [
+        "microloading"
+      ]
+    },
+    {
+      "path": "scenarios/02_cut_maintenance_regime.jsonl",
+      "count": 28,
+      "tags": [
+        "cut_maintenance"
+      ]
+    },
+    {
+      "path": "scenarios/03_isolation_double_progression.jsonl",
+      "count": 20,
+      "tags": [
+        "isolation_dp"
+      ]
+    },
+    {
+      "path": "scenarios/04_variation_substitution_integrity.jsonl",
+      "count": 10,
+      "tags": [
+        "variation_substitution"
+      ]
+    },
+    {
+      "path": "scenarios/05_messy_adherence_time_semantics.jsonl",
+      "count": 4,
+      "tags": [
+        "messy_adherence"
+      ]
+    },
+    {
+      "path": "scenarios/06_cross_signal_conflicts.jsonl",
+      "count": 1,
+      "tags": [
+        "cross_signal_conflict"
+      ]
+    }
+  ],
+  "coverage": {
+    "primary_suites": [
+      "microloading",
+      "cut_maintenance",
+      "isolation_dp"
+    ],
+    "secondary_suites": [
+      "variation_substitution",
+      "messy_adherence",
+      "cross_signal_conflict"
+    ],
+    "plate_profiles": [
+      "micro_1.25",
+      "standard_2.5",
+      "kg_0.5",
+      "no_microplates"
+    ],
+    "time_horizons": {
+      "microloading_weeks": 12,
+      "cut_weeks": 14,
+      "isolation_weeks": 10
+    }
+  }
+}

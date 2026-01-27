@@ -154,8 +154,10 @@ public struct LoadRoundingPolicy: Codable, Sendable, Hashable {
             roundedValue = (converted.value / increment).rounded(.down) * increment
         }
         
-        let roundedLoad = Load(value: max(0, roundedValue), unit: unit)
-        return roundedLoad.converted(to: load.unit)
+        // Return the rounded value in the policy's unit.
+        // The rounding policy represents the gym/plan's execution unit, and downstream code
+        // expects `targetLoad.unit == policy.unit` for consistency (especially when plans switch units).
+        return Load(value: max(0, roundedValue), unit: unit)
     }
 }
 

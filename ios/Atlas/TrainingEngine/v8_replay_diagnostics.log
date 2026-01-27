@@ -1,30 +1,30 @@
 ================================================================================
-V8 FULL E2E REPLAY DIAGNOSTICS (sex/bodyweight scaling) @ 2026-01-27T02:57:31Z
+V8 FULL E2E REPLAY DIAGNOSTICS (sex/bodyweight scaling) @ 2026-01-27T21:54:46Z
 ================================================================================
 
 OVERALL SUMMARY:
   Total test cases: 61
   Main lift prescriptions scored: 102
 
-  📊 Load Agreement: 82/102 = 80.4%
-  🎯 Decision Agreement: 95/102 = 93.1%
-  📏 Mean Absolute Error: 4.94 lb
-  ✅ Assertions Passed: 101/122 = 82.8%
+  📊 Load Agreement: 72/102 = 70.6%
+  🎯 Decision Agreement: 74/102 = 72.5%
+  📏 Mean Absolute Error: 5.50 lb
+  ✅ Assertions Passed: 91/122 = 74.6%
 
 --------------------------------------------------------------------------------
 DECISION CONFUSION MATRIX (rows=expected, cols=predicted):
       exp\pred        deload          hold      increasedecrease_small
         deload             6             0             0             0
           hold             2            48             1             0
-      increase             0             0            26             0
-decrease_small             0             4             0            15
+      increase             0            15            11             0
+decrease_small             0            10             0             9
 
 --------------------------------------------------------------------------------
 PER-SEX BREAKDOWN (sex-aware scaling):
   female:
     lifts=20 load=65.0% dec=85.0% mae=8.7lb
   male:
-    lifts=79 load=83.5% dec=94.9% mae=4.2lb
+    lifts=79 load=70.9% dec=68.4% mae=4.9lb
   other:
     lifts=3 load=100.0% dec=100.0% mae=0.0lb
 
@@ -37,12 +37,12 @@ PER-TIER BREAKDOWN (base/medium/high):
   medium:
     lifts=4 load=100.0% dec=100.0% mae=0.3lb
   unknown:
-    lifts=82 load=76.8% dec=92.7% mae=5.6lb
+    lifts=82 load=64.6% dec=67.1% mae=6.3lb
 
 --------------------------------------------------------------------------------
 PER-SCENARIO BREAKDOWN:
   beginner_lp_realistic:
-    lifts=54 load=87.0% dec=96.3% mae=3.8lb
+    lifts=54 load=68.5% dec=57.4% mae=4.8lb
   cut_rel_strength_drift:
     lifts=8 load=100.0% dec=100.0% mae=5.0lb
   messy_adherence_sex_pairs:
@@ -55,8 +55,8 @@ PER-SCENARIO BREAKDOWN:
 --------------------------------------------------------------------------------
 PER-CATEGORY BREAKDOWN:
   break_recovery: lifts=28 load=57.1% dec=85.7% mae=9.1lb
-  progression: lifts=66 load=87.9% dec=95.5% mae=3.2lb
+  progression: lifts=66 load=72.7% dec=63.6% mae=4.0lb
   readiness: lifts=8 load=100.0% dec=100.0% mae=5.0lb
 
 --------------------------------------------------------------------------------
-MISMATCH SAMPLES: 7 total (set V8_VERBOSE=1 for details)
+MISMATCH SAMPLES: 28 total (set V8_VERBOSE=1 for details)

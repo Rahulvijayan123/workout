@@ -1,0 +1,36 @@
+{
+  "version": "9.0.0",
+  "created": "2026-01-26",
+  "total_cases": 116,
+  "files": [
+    {
+      "path": "scenarios/beginner_conservative_lp.jsonl",
+      "count": 30
+    },
+    {
+      "path": "scenarios/intermediate_compound_vs_isolation_conservative.jsonl",
+      "count": 32
+    },
+    {
+      "path": "scenarios/intermediate_cut_maintenance_conservative.jsonl",
+      "count": 24
+    },
+    {
+      "path": "scenarios/advanced_bench_specialization_microloading.jsonl",
+      "count": 16
+    },
+    {
+      "path": "scenarios/edge_cases_conservative.jsonl",
+      "count": 14
+    }
+  ],
+  "tags": [
+    "conservative",
+    "exercise_aware",
+    "isolation_rep_first",
+    "microloading",
+    "experience_scaling",
+    "cut_mode",
+    "edge_cases"
+  ]
+}

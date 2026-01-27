@@ -1,0 +1,29 @@
+{
+  "version": "v9",
+  "record_fields": [
+    "dataset_version",
+    "user_id",
+    "date",
+    "session_type",
+    "test_id",
+    "test_category",
+    "description",
+    "input",
+    "expected_output",
+    "assertions"
+  ],
+  "input_required": [
+    "user_profile",
+    "equipment",
+    "equipment_config",
+    "today_metrics",
+    "today_session_template",
+    "recent_lift_history",
+    "lift_state",
+    "days_since_last_session",
+    "days_since_lift_exposure",
+    "event_flags",
+    "config_overrides"
+  ],
+  "notes": "v9 is intentionally conservative. Compounds increase only on easy success margins; isolation uses rep-first double progression and requires two clean top-rep hits before load increases. Cut mode blocks increases unless high readiness."
+}

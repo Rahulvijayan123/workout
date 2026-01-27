@@ -364,6 +364,14 @@ public struct LiftSignals: Sendable {
     /// Reps achieved in last session (working sets).
     public let lastSessionReps: [Int]
     
+    /// Recent session average RIRs (most recent first, bounded to last ~5 sessions).
+    /// Used for "two easy sessions" gating in advanced lifter progressions.
+    public let recentSessionRIRs: [Double]
+    
+    /// Count of recent "easy" sessions (RIR at or above target + margin).
+    /// An easy session indicates the lifter had capacity to spare.
+    public let recentEasySessionCount: Int
+    
     // MARK: - Readiness signals
     
     /// Today's readiness score.
@@ -441,6 +449,25 @@ public struct LiftSignals: Sendable {
         return days >= 14
     }
     
+    /// Whether this is an isolation movement.
+    public var isIsolation: Bool {
+        !movementPattern.isCompound
+    }
+    
+    /// Whether the lifter has had at least two recent "easy" sessions (high RIR).
+    /// Used to gate increases for advanced upper-body presses (conservative progression).
+    public var hasTwoEasySessionsRecently: Bool {
+        recentEasySessionCount >= 2
+    }
+    
+    /// Whether the last session was "easy" (RIR at or above target + margin).
+    public var lastSessionWasEasy: Bool {
+        guard let avgRIR = lastSessionAvgRIR else { return false }
+        let targetRIR = Double(prescription.targetRIR)
+        // Session is "easy" if observed RIR is at least 0.5 above target
+        return avgRIR >= targetRIR + 0.5
+    }
+    
     public init(
         exerciseId: String,
         movementPattern: MovementPattern,
@@ -458,6 +485,8 @@ public struct LiftSignals: Sendable {
         lastSessionWasGrinder: Bool,
         lastSessionAvgRIR: Double?,
         lastSessionReps: [Int],
+        recentSessionRIRs: [Double] = [],
+        recentEasySessionCount: Int = 0,
         todayReadiness: Int,
         recentReadinessScores: [Int],
         prescription: SetPrescription,
@@ -485,6 +514,8 @@ public struct LiftSignals: Sendable {
         self.lastSessionWasGrinder = lastSessionWasGrinder
         self.lastSessionAvgRIR = lastSessionAvgRIR
         self.lastSessionReps = lastSessionReps
+        self.recentSessionRIRs = recentSessionRIRs
+        self.recentEasySessionCount = recentEasySessionCount
         self.todayReadiness = todayReadiness
         self.recentReadinessScores = recentReadinessScores
         self.prescription = prescription
@@ -745,8 +776,13 @@ public enum DirectionPolicy {
             // - Only decrease if severely low; otherwise hold to establish baseline
             
             let shouldDecrease: Bool = {
-                // Always decrease for severe low readiness
-                if isSevereLowReadiness { return true }
+                // V10 tie-breaker: low readiness primarily blocks increases and reduces volume.
+                // Only decrease load for acute low readiness when corroborated by a fatigue/performance signal.
+                if isSevereLowReadiness { return hasCorroboratingFatigueSignal }
+                
+                // V10: Isolations should not get readiness-based load cuts unless severe
+                // Isolations use rep-first progression; load should stay stable
+                if signals.isIsolation { return false }
                 
                 // Beginners: only decrease for severe low, otherwise hold
                 if signals.experienceLevel == .beginner { return false }
@@ -754,10 +790,19 @@ public enum DirectionPolicy {
                 // Cold starts without history: only decrease if clearly low
                 if isColdStart { return isClearlyLowReadiness }
                 
-                // Intermediate+ with history:
-                // - Clearly low: decrease
-                // - Borderline: only if corroborated
-                if isClearlyLowReadiness { return true }
+                // V10 CONSERVATIVE HOLD FIX: For intermediate+, require corroboration even
+                // for "clearly low" readiness (not just borderline). This prevents single
+                // bad readiness days from triggering cuts when there's no other signal.
+                //
+                // The prior logic would decrease for any readiness ≤60, but the V9 dataset
+                // showed this was too aggressive: "Hold → Decrease small: 32 cases"
+                //
+                // New rule: readiness-only decreases require corroboration (trend/grinder/miss)
+                // UNLESS readiness is "clearly low" (≤60) AND there's a recent miss or grinder.
+                // Borderline (61-65) already required corroboration.
+                //
+                // This makes "hold" the default unless there's clear evidence of fatigue.
+                if isClearlyLowReadiness && hasCorroboratingFatigueSignal { return true }
                 if isBorderlineReadiness && hasCorroboratingFatigueSignal { return true }
                 
                 return false
@@ -819,6 +864,16 @@ public enum DirectionPolicy {
                 ), checks)
             }
             
+            // V10: Isolations should not get load cuts for grinders unless repeated
+            // Isolations use rep-first progression, so single hard sessions → hold, not decrease
+            if signals.isIsolation && signals.highRpeStreak < 2 {
+                return (DirectionDecision(
+                    direction: .hold,
+                    primaryReason: .grinderSuccess,
+                    explanation: "Isolation grinder: hold weight. Use rep adjustment if needed."
+                ), checks)
+            }
+            
             // Intermediate+: V6 rulebook says single grinder should yield ~2.5% decrease
             // Only exception: light intent sessions can hold on first grinder
             if signals.sessionIntent == .light && signals.highRpeStreak < 2 {
@@ -849,6 +904,16 @@ public enum DirectionPolicy {
         checks.append(recentMissCheck)
         
         if isRecentMiss {
+            // V10: Isolations should not get load cuts for single misses
+            // Isolations use rep-first progression, so single miss → hold, decrease only on streak
+            if signals.isIsolation {
+                return (DirectionDecision(
+                    direction: .hold,
+                    primaryReason: .recentMiss,
+                    explanation: "Isolation miss: hold weight and retry. Only decrease on repeated failure."
+                ), checks)
+            }
+            
             if signals.experienceLevel != .beginner {
                 return (DirectionDecision(
                     direction: .decreaseSlightly,
@@ -891,23 +956,38 @@ public enum DirectionPolicy {
             case .advanced, .elite: return 3
             }
         }()
-        // Cut/maintenance phase gate - bias toward hold unless clear surplus
-        // When goal is fat_loss, we prioritize strength maintenance over progression
+        // Cut/maintenance phase gate - bias toward hold unless clear surplus AND high readiness
+        // When goal is fat_loss, we prioritize strength maintenance over progression.
+        //
+        // V10 UPDATE: During cuts, require BOTH (a) easy session AND (b) high readiness
+        // before allowing an increase. This is more conservative than general progression.
         let isCutOrMaintenancePhase = signals.primaryGoal == .fatLoss
+        let highReadinessThreshold = 75  // Require above-average readiness during cuts
+        let hasHighReadiness = signals.todayReadiness >= highReadinessThreshold
+        
+        // During cut: block increase unless BOTH easy session AND high readiness
+        let cutBlocksIncrease = isCutOrMaintenancePhase && allInRange && (!sessionWasEasyByRIR || !hasHighReadiness)
+        
         let cutMaintenanceCheck = PolicyCheckResult(
             checkName: "cut_maintenance_gate",
-            triggered: isCutOrMaintenancePhase && allInRange && !sessionWasEasyByRIR,
-            condition: "primaryGoal == fatLoss AND allInRange AND NOT easyByRIR",
-            observed: "goal=\(signals.primaryGoal?.rawValue ?? "nil") allInRange=\(allInRange) easyByRIR=\(sessionWasEasyByRIR)",
+            triggered: cutBlocksIncrease,
+            condition: "primaryGoal == fatLoss AND allInRange AND (NOT easyByRIR OR readiness < \(highReadinessThreshold))",
+            observed: "goal=\(signals.primaryGoal?.rawValue ?? "nil") allInRange=\(allInRange) easyByRIR=\(sessionWasEasyByRIR) readiness=\(signals.todayReadiness)",
             wouldProduce: .hold
         )
         checks.append(cutMaintenanceCheck)
         
-        if isCutOrMaintenancePhase && allInRange && !sessionWasEasyByRIR {
+        if cutBlocksIncrease {
+            var explanation = "Cut/maintenance phase: holding to preserve strength."
+            if !sessionWasEasyByRIR {
+                explanation += " Increase requires clear RIR surplus."
+            } else if !hasHighReadiness {
+                explanation += " Increase requires high readiness (\(highReadinessThreshold)+) during cut."
+            }
             return (DirectionDecision(
                 direction: .hold,
                 primaryReason: .consolidating,
-                explanation: "Cut/maintenance phase: holding to preserve strength. Increase requires clear RIR surplus."
+                explanation: explanation
             ), checks)
         }
         
@@ -983,6 +1063,65 @@ public enum DirectionPolicy {
             ), checks)
         }
         
+        // V10: Two Easy Sessions Gate for Advanced Upper-Body Presses (bench, OHP)
+        //
+        // For advanced/elite lifters on upper body presses (where microloading matters most),
+        // require TWO recent easy sessions before allowing an increase. This prevents premature
+        // load jumps when a single session feels easy but overall trend is unclear.
+        //
+        // This aligns with the V9 RULEBOOK: "advanced uses microloading and strict 'two easy
+        // sessions' gating for bench"
+        let isAdvancedUpperBodyPress = signals.isUpperBodyPress && 
+                                        (signals.experienceLevel == .advanced || signals.experienceLevel == .elite)
+        let needsTwoEasySessions = isAdvancedUpperBodyPress && !signals.hasTwoEasySessionsRecently
+        
+        let twoEasySessionsCheck = PolicyCheckResult(
+            checkName: "two_easy_sessions_gate",
+            triggered: needsTwoEasySessions && sessionWasEasyByRIR && allInRange,
+            condition: "isAdvancedUpperBodyPress AND easyByRIR AND NOT hasTwoEasySessionsRecently",
+            observed: "isUpperBodyPress=\(signals.isUpperBodyPress) exp=\(signals.experienceLevel.rawValue) easyCount=\(signals.recentEasySessionCount)",
+            wouldProduce: .hold
+        )
+        checks.append(twoEasySessionsCheck)
+        
+        if needsTwoEasySessions && sessionWasEasyByRIR && allInRange {
+            return (DirectionDecision(
+                direction: .hold,
+                primaryReason: .consolidating,
+                explanation: "Advanced upper-body press requires two easy sessions before increasing. Only \(signals.recentEasySessionCount) easy session(s) recently. Hold to confirm trend."
+            ), checks)
+        }
+        
+        // V10: Isolation-Specific Progression Rules
+        //
+        // Isolations use "rep-first double progression": hold load while reps are below ceiling,
+        // increase load only when reps hit top of range with target effort.
+        //
+        // This differs from compounds where RIR-based increases are common.
+        // For isolations:
+        // - Block generic "easyByRIR → increase" (effort feeling doesn't justify load jumps)
+        // - Only increase when reps are at ceiling AND session was easy
+        // - Hold is the default unless rep ceiling is clearly reached
+        let isIsolation = signals.isIsolation
+        
+        let isolationBlocksEasyRIRIncrease = isIsolation && sessionWasEasyByRIR && !allAtTop && allInRange
+        let isolationRIRGateCheck = PolicyCheckResult(
+            checkName: "isolation_rir_gate",
+            triggered: isolationBlocksEasyRIRIncrease,
+            condition: "isIsolation AND easyByRIR AND NOT allAtTop",
+            observed: "isIsolation=\(isIsolation) easyByRIR=\(sessionWasEasyByRIR) allAtTop=\(allAtTop)",
+            wouldProduce: .hold
+        )
+        checks.append(isolationRIRGateCheck)
+        
+        if isolationBlocksEasyRIRIncrease {
+            return (DirectionDecision(
+                direction: .hold,
+                primaryReason: .consolidating,
+                explanation: "Isolation exercise: hold load until reps reach ceiling (\(repRange.upperBound)). Use rep progression first."
+            ), checks)
+        }
+        
         // All reps at top (variable rep range)
         let allAtTopCheck = PolicyCheckResult(
             checkName: "all_at_top",
@@ -1008,17 +1147,18 @@ public enum DirectionPolicy {
             ), checks)
         }
         
-        // All in range - check for progression
+        // All in range - check for progression (compounds only, not isolations)
         let easyByRIRCheck = PolicyCheckResult(
             checkName: "easy_by_rir",
-            triggered: sessionWasEasyByRIR && allInRange,
-            condition: "observedRIR >= targetRIR + \(rirMargin) AND allInRange",
-            observed: "observedRIR=\(observedRIR.map { String(format: "%.1f", $0) } ?? "nil") target=\(targetRIR)",
+            triggered: sessionWasEasyByRIR && allInRange && !isIsolation,
+            condition: "observedRIR >= targetRIR + \(rirMargin) AND allInRange AND NOT isIsolation",
+            observed: "observedRIR=\(observedRIR.map { String(format: "%.1f", $0) } ?? "nil") target=\(targetRIR) isIsolation=\(isIsolation)",
             wouldProduce: .increase
         )
         checks.append(easyByRIRCheck)
         
-        if allInRange && sessionWasEasyByRIR {
+        // Only apply easy-by-RIR increase for compounds, not isolations
+        if allInRange && sessionWasEasyByRIR && !isIsolation {
             return (DirectionDecision(
                 direction: .increase,
                 primaryReason: .successfulProgression,
@@ -1029,14 +1169,15 @@ public enum DirectionPolicy {
         // Fixed-rep with success streak (no RIR data)
         // Use conservative threshold: at least 2 sessions required when no RIR data
         // This prevents premature increases based on a single session without effort data
-        let conservativeStreakThreshold = max(2, successStreakThreshold)
+        // For isolations, require even more sessions (3+) since rep progression is preferred
+        let conservativeStreakThreshold = isIsolation ? max(3, successStreakThreshold) : max(2, successStreakThreshold)
         let hasConservativeSuccessStreak = signals.successStreak >= conservativeStreakThreshold
         
         let successStreakCheck = PolicyCheckResult(
             checkName: "success_streak_gate",
             triggered: isFixedRepRange && hasConservativeSuccessStreak && !hasRIRData && allInRange,
             condition: "fixedRep AND successStreak >= \(conservativeStreakThreshold) AND noRIR",
-            observed: "fixed=\(isFixedRepRange) streak=\(signals.successStreak) hasRIR=\(hasRIRData)",
+            observed: "fixed=\(isFixedRepRange) streak=\(signals.successStreak) hasRIR=\(hasRIRData) isIsolation=\(isIsolation)",
             wouldProduce: .increase
         )
         checks.append(successStreakCheck)
@@ -1046,15 +1187,6 @@ public enum DirectionPolicy {
                 direction: .increase,
                 primaryReason: .successfulProgression,
                 explanation: "Fixed-rep prescription with \(signals.successStreak) clean sessions (no RIR data). Ready to progress."
-            ), checks)
-        }
-        
-        // Variable rep at top without concerning RIR
-        if allAtTop && !sessionWasHarderThanTarget && allInRange {
-            return (DirectionDecision(
-                direction: .increase,
-                primaryReason: .allRepsAtTop,
-                explanation: "All sets at top of rep range (\(repRange.upperBound)+ reps). Ready to increase load."
             ), checks)
         }
         
@@ -1263,9 +1395,18 @@ public enum MagnitudePolicy {
             )
             
         case .hold:
+            // V10: Low-readiness tie-breaker prefers holding load but reducing volume ("readiness cut").
+            // This keeps decision category as HOLD while still responding to readiness.
+            let isReadinessHold = (direction.primaryReason == .acuteLowReadinessSingleDay)
+            let volumeAdj = (isReadinessHold && config.acuteReadinessVolumeReduction) ? -1 : 0
+            let explanation = isReadinessHold
+                ? "Hold weight, reduce volume for low readiness"
+                : "Hold at current weight"
+            
             return MagnitudeParams(
+                volumeAdjustment: volumeAdj,
                 roundingPolicy: roundingPolicy,
-                explanation: "Hold at current weight"
+                explanation: explanation
             )
             
         case .decreaseSlightly:
@@ -1384,29 +1525,106 @@ public enum MagnitudePolicy {
             }
         }
         
+        // Scale by movement pattern (isolation exercises progress slower than compounds)
+        // Small upper-body isolations (lateral raises, curls, extensions) need smallest increments
+        // Other isolations (leg extensions, leg curls, hip machines) use moderate scaling
+        // Compounds use full increments
+        let movementScale: Double = movementIncrementScale(for: signals.movementPattern)
+        
         // Compute final increment
-        var increment = baseIncrement * experienceScale * strengthScale
+        var increment = baseIncrement * experienceScale * strengthScale * movementScale
         
         // Clamp to minimum meaningful increment
         let minIncrement = roundingPolicy.increment
         increment = max(minIncrement, increment)
         
+        // V10: Clamp upper-body press microloading to the rounding increment
+        //
+        // For advanced/elite lifters on bench/OHP with microloading enabled (1.25 lb increment),
+        // we should NOT produce 2.5 lb jumps just because the base increment was 5 lb.
+        // The microloading increment IS the intended step size.
+        //
+        // This ensures "1.25 lb precision" is actually used for bench progression.
+        let isMicroloadingUpperPress = signals.isUpperBodyPress && 
+                                        config.enableMicroloading &&
+                                        (signals.experienceLevel == .advanced || signals.experienceLevel == .elite)
+        let microloadThreshold = unit == .pounds ? 1.25 : 0.5  // Microloading thresholds
+        
+        if isMicroloadingUpperPress && minIncrement <= microloadThreshold {
+            // Clamp to microloading increment - this is the intended precision
+            increment = min(increment, minIncrement)
+        }
+        
         // Round to nearest valid increment
         increment = (increment / minIncrement).rounded() * minIncrement
         
-        // Apply movement-specific caps
-        let maxIncrement: Double = {
-            if signals.isUpperBodyPress {
-                return unit == .pounds ? 5.0 : 2.5
-            } else if signals.movementPattern == .squat || signals.movementPattern == .hipHinge {
-                return unit == .pounds ? 10.0 : 5.0
-            }
-            return unit == .pounds ? 5.0 : 2.5
-        }()
+        // Apply movement-specific caps (isolation exercises have tighter caps)
+        let maxIncrement: Double = movementIncrementCap(for: signals.movementPattern, unit: unit)
         
         increment = min(maxIncrement, increment)
         
         return Load(value: increment, unit: unit)
+    }
+    
+    /// Returns the increment scale factor for a movement pattern.
+    /// Isolation exercises progress slower than compounds.
+    private static func movementIncrementScale(for pattern: MovementPattern) -> Double {
+        switch pattern {
+        // Small upper-body isolations - hardest to progress
+        case .shoulderAbduction,  // Lateral raises
+             .shoulderFlexion,    // Front raises
+             .elbowFlexion,       // Bicep curls
+             .elbowExtension:     // Tricep extensions
+            return 0.5
+            
+        // Other isolations - moderate scaling
+        case .kneeExtension,      // Leg extensions
+             .kneeFlexion,        // Leg curls
+             .hipAbduction,       // Hip abductor machine
+             .hipAdduction,       // Hip adductor machine
+             .coreFlexion,        // Crunches
+             .coreRotation,       // Russian twists
+             .coreStability:      // Planks
+            return 0.7
+            
+        // Compounds and other patterns - full increments
+        default:
+            return 1.0
+        }
+    }
+    
+    /// Returns the maximum increment cap for a movement pattern.
+    private static func movementIncrementCap(for pattern: MovementPattern, unit: LoadUnit) -> Double {
+        switch pattern {
+        // Small upper-body isolations - tightest cap (2.5 lb / 1.25 kg)
+        case .shoulderAbduction,
+             .shoulderFlexion,
+             .elbowFlexion,
+             .elbowExtension:
+            return unit == .pounds ? 2.5 : 1.25
+            
+        // Other isolations - moderate cap (5 lb / 2.5 kg)
+        case .kneeExtension,
+             .kneeFlexion,
+             .hipAbduction,
+             .hipAdduction,
+             .coreFlexion,
+             .coreRotation,
+             .coreStability:
+            return unit == .pounds ? 5.0 : 2.5
+            
+        // Upper body presses - 5 lb / 2.5 kg
+        case .horizontalPush, .verticalPush:
+            return unit == .pounds ? 5.0 : 2.5
+            
+        // Squat and hip hinge - largest cap (10 lb / 5 kg)
+        case .squat, .hipHinge:
+            return unit == .pounds ? 10.0 : 5.0
+            
+        // All other patterns (pulls, lunges, carries, etc.) - 5 lb / 2.5 kg
+        default:
+            return unit == .pounds ? 5.0 : 2.5
+        }
     }
     
     /// Computes deload reduction based on severity.

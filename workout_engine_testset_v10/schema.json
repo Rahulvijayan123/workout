@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Workout Engine V10 Test Case",
+  "type": "object",
+  "required": [
+    "dataset_version",
+    "user_id",
+    "date",
+    "session_type",
+    "input",
+    "expected_output"
+  ],
+  "properties": {
+    "dataset_version": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "session_type": {
+      "type": "string"
+    },
+    "test_id": {
+      "type": "string"
+    },
+    "test_category": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "input": {
+      "type": "object"
+    },
+    "expected_output": {
+      "type": "object"
+    },
+    "expected": {
+      "type": "object"
+    },
+    "assertions": {
+      "type": "array"
+    },
+    "eval_metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

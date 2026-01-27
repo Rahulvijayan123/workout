@@ -43,8 +43,9 @@ public enum ProgressionPolicyType: Codable, Sendable, Hashable {
             }
         }
         
-        // Isolation movements → double progression
-        return .doubleProgression(config: .hypertrophy)
+        // Isolation movements → double progression with smaller increments
+        // Isolation exercises are harder to progress (smaller muscle groups, less total load)
+        return .doubleProgression(config: .smallIncrement)
     }
     
     // MARK: - Policy Logic

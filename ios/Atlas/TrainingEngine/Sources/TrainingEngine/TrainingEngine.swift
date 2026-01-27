@@ -461,15 +461,35 @@ public enum Engine {
                         .rounded(using: plan.loadRoundingPolicy)
                 }
                 
-                // 2) For %e1RM with nil percentage OR rpeAutoregulated: derive % from reps+RIR
+                // 2) For %e1RM with nil percentage OR rpeAutoregulated:
+                // CRITICAL FIX (V10): Anchor to lastWorkingWeight when available to prevent
+                // baseline drift from %e1RM math. Only use derivedPercentageFromRepsRIR for
+                // cold starts or material prescription changes.
+                //
+                // Prior bug: For advanced bench (235 lb working, ~266 e1RM, 4 reps @ RIR 2),
+                // the derived percent computed ~229 instead of anchoring at 235.
                 if (prescription.loadStrategy == .percentageE1RM && prescription.targetPercentage == nil) ||
-                   prescription.loadStrategy == .rpeAutoregulated,
-                   liftState.rollingE1RM > 0,
-                   hasValidStateDate {
-                    let targetReps = prescription.targetRepsRange.lowerBound
-                    let derivedPct = derivedPercentageFromRepsRIR(reps: targetReps, rir: prescription.targetRIR)
-                    return Load(value: liftState.rollingE1RM * derivedPct, unit: unit)
-                        .rounded(using: plan.loadRoundingPolicy)
+                   prescription.loadStrategy == .rpeAutoregulated {
+                    
+                    // Prefer anchoring to lastWorkingWeight (prevents baseline drift)
+                    if liftState.lastWorkingWeight.value > 0 && hasValidStateDate {
+                        // Check if prescription context changed materially - if so, rebase from e1RM
+                        let lastResult = history.exerciseResults(forExercise: effectiveExerciseId, limit: 1).first
+                        let prescriptionChanged = lastResult.map { isMaterialPrescriptionChange(from: $0.prescription, to: prescription) } ?? false
+                        
+                        if !prescriptionChanged {
+                            // Anchor baseline to last working weight
+                            return liftState.lastWorkingWeight
+                        }
+                    }
+                    
+                    // Cold start or material prescription change: derive from e1RM
+                    if liftState.rollingE1RM > 0 && hasValidStateDate {
+                        let targetReps = prescription.targetRepsRange.lowerBound
+                        let derivedPct = derivedPercentageFromRepsRIR(reps: targetReps, rir: prescription.targetRIR)
+                        return Load(value: liftState.rollingE1RM * derivedPct, unit: unit)
+                            .rounded(using: plan.loadRoundingPolicy)
+                    }
                 }
                 
                 // 3) If prescription context changed materially, rebase from e1RM.
@@ -636,7 +656,15 @@ public enum Engine {
                     return .readinessCut
                 case .resetAfterBreak:
                     return .breakReset
-                case .increase, .hold:
+                case .increase:
+                    return SessionAdjustmentKind.none
+                case .hold:
+                    // V10: Allow "hold load + readiness cut (volume reduction)" as a first-class outcome.
+                    // If we held specifically due to acute low readiness AND magnitude applied a volume reduction,
+                    // persist as a readinessCut even though the load direction is HOLD.
+                    if directionDecision.primaryReason == .acuteLowReadinessSingleDay && volumeAdjustment < 0 {
+                        return .readinessCut
+                    }
                     return SessionAdjustmentKind.none
                 }
             }()
@@ -742,6 +770,38 @@ public enum Engine {
         // Average observed RIR
         let avgRIR: Double? = observedRIRs.isEmpty ? nil : Double(observedRIRs.reduce(0, +)) / Double(observedRIRs.count)
         
+        // Compute recent session RIRs for "two easy sessions" gate (V10 conservative progression).
+        // Look at last 5 sessions and compute average RIR for each.
+        let recentResults = history.exerciseResults(forExercise: exerciseId, limit: 5)
+        let recentSessionRIRs: [Double] = recentResults.compactMap { result in
+            let workingRIRs = result.workingSets.compactMap(\.rirObserved)
+            guard !workingRIRs.isEmpty else { return nil }
+            return Double(workingRIRs.reduce(0, +)) / Double(workingRIRs.count)
+        }
+        
+        // Count consecutive "easy" sessions (most recent first).
+        //
+        // V10: For advanced/elite upper-body presses, the "two easy sessions" gate is meant to be
+        // STRICT and confirmation-based: we require consecutive easy sessions, not just 2-of-last-5.
+        // This reduces premature hold→increase flips in microloading regimes.
+        let easyMargin: Double = {
+            let isUpperBodyPress = exercise.movementPattern == .horizontalPush || exercise.movementPattern == .verticalPush
+            if isUpperBodyPress && (userProfile.experience == .advanced || userProfile.experience == .elite) {
+                return 1.0
+            }
+            return 0.5
+        }()
+        let easyRirThreshold = Double(targetRIR) + easyMargin
+        
+        var recentEasySessionCount = 0
+        for sessionAvgRIR in recentSessionRIRs {
+            if sessionAvgRIR >= easyRirThreshold {
+                recentEasySessionCount += 1
+            } else {
+                break
+            }
+        }
+        
         // Days since last exposure
         let daysSinceLastExposure = liftState.daysSinceLastSession(from: date, calendar: calendar)
         
@@ -768,6 +828,8 @@ public enum Engine {
             lastSessionWasGrinder: lastSessionWasGrinder,
             lastSessionAvgRIR: avgRIR,
             lastSessionReps: workingSets.map(\.reps),
+            recentSessionRIRs: recentSessionRIRs,
+            recentEasySessionCount: recentEasySessionCount,
             todayReadiness: todayReadiness,
             recentReadinessScores: liftState.recentReadinessScores,
             prescription: prescription,

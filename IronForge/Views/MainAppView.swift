@@ -1185,26 +1185,819 @@ struct WeekProgressCard: View {
 
 
 struct ProgressTrackingView: View {
+    @EnvironmentObject var workoutStore: WorkoutStore
+    
+    enum ChartType: String, CaseIterable {
+        case volume = "Volume"
+        case weight = "Weight"
+        case strength = "Strength"
+    }
+    
+    @State private var selectedChartType: ChartType = .volume
+    @State private var selectedExercise: ExerciseRef?
+    
+    private let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
+    private let neonCyan = Color(red: 0.0, green: 0.9, blue: 1.0)
+    
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                Spacer()
+            ZStack {
+                // Background
+                Color.ironBackground.ignoresSafeArea()
                 
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.system(size: 48))
-                    .foregroundColor(.ironPurple)
-                
-                Text("Coming Soon")
-                    .font(.system(size: 20, weight: .semibold))
-                
-                Text("Track your progress over time")
-                    .font(.system(size: 15))
-                    .foregroundColor(.secondary)
-                
-                Spacer()
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        // Summary Stats Cards
+                        summaryCards
+                        
+                        // Chart Type Selector
+                        chartTypeSelector
+                        
+                        // Main Chart
+                        mainChart
+                        
+                        // Exercise List
+                        exerciseListSection
+                        
+                        Spacer(minLength: 140)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                }
             }
             .navigationTitle("Progress")
+            .navigationBarTitleDisplayMode(.large)
+            .sheet(item: $selectedExercise) { exercise in
+                ExerciseProgressDetailView(
+                    exercise: exercise,
+                    workoutStore: workoutStore
+                )
+            }
         }
+    }
+    
+    // MARK: - Summary Cards
+    private var summaryCards: some View {
+        HStack(spacing: 12) {
+            SummaryStatCard(
+                title: "WORKOUTS",
+                value: "\(completedSessionsCount)",
+                subtitle: "Total",
+                icon: "figure.strengthtraining.traditional",
+                color: neonPurple
+            )
+            
+            SummaryStatCard(
+                title: "THIS WEEK",
+                value: "\(thisWeekSessionCount)",
+                subtitle: "Sessions",
+                icon: "calendar",
+                color: neonCyan
+            )
+            
+            SummaryStatCard(
+                title: "STREAK",
+                value: "\(currentStreak)",
+                subtitle: "Days",
+                icon: "flame.fill",
+                color: .orange
+            )
+        }
+    }
+    
+    // MARK: - Chart Type Selector
+    private var chartTypeSelector: some View {
+        HStack(spacing: 0) {
+            ForEach(ChartType.allCases, id: \.self) { type in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedChartType = type
+                    }
+                } label: {
+                    Text(type.rawValue)
+                        .font(.system(size: 14, weight: selectedChartType == type ? .semibold : .regular))
+                        .foregroundColor(selectedChartType == type ? .white : .white.opacity(0.5))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            selectedChartType == type ?
+                            neonPurple.opacity(0.3) : Color.clear
+                        )
+                        .overlay(
+                            Rectangle()
+                                .fill(selectedChartType == type ? neonPurple : Color.clear)
+                                .frame(height: 2)
+                                .offset(y: 16)
+                        )
+                }
+            }
+        }
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(8)
+    }
+    
+    // MARK: - Main Chart
+    private var mainChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(chartTitle)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+                .textCase(.uppercase)
+                .tracking(1)
+            
+            if chartData.isEmpty {
+                emptyChartPlaceholder
+            } else {
+                ProgressChartView(
+                    data: chartData,
+                    chartType: selectedChartType,
+                    color: neonPurple
+                )
+                .frame(height: 200)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+        )
+    }
+    
+    private var emptyChartPlaceholder: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 32))
+                .foregroundColor(.white.opacity(0.3))
+            
+            Text("Complete more workouts to see your progress")
+                .font(.system(size: 14))
+                .foregroundColor(.white.opacity(0.5))
+                .multilineTextAlignment(.center)
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var chartTitle: String {
+        switch selectedChartType {
+        case .volume: return "Total Volume (Sets × Reps × Weight)"
+        case .weight: return "Average Working Weight"
+        case .strength: return "Estimated 1RM Progress"
+        }
+    }
+    
+    // MARK: - Exercise List Section
+    private var exerciseListSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("EXERCISES")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+                .textCase(.uppercase)
+                .tracking(1)
+            
+            if uniqueExercises.isEmpty {
+                Text("No exercises logged yet")
+                    .font(.system(size: 15))
+                    .foregroundColor(.white.opacity(0.4))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(uniqueExercises, id: \.id) { exercise in
+                        ExerciseProgressRow(
+                            exercise: exercise,
+                            workoutStore: workoutStore,
+                            onTap: {
+                                selectedExercise = exercise
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var completedSessionsCount: Int {
+        workoutStore.sessions.filter { $0.endedAt != nil }.count
+    }
+    
+    private var thisWeekSessionCount: Int {
+        let calendar = Calendar.current
+        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date()))!
+        return workoutStore.sessions.filter { $0.startedAt >= startOfWeek && $0.endedAt != nil }.count
+    }
+    
+    private var currentStreak: Int {
+        let calendar = Calendar.current
+        var streak = 0
+        var checkDate = Date()
+        
+        let sessionDates = Set(workoutStore.sessions.compactMap { session -> Date? in
+            guard session.endedAt != nil else { return nil }
+            return calendar.startOfDay(for: session.startedAt)
+        })
+        
+        while true {
+            let dayStart = calendar.startOfDay(for: checkDate)
+            if sessionDates.contains(dayStart) {
+                streak += 1
+                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+            } else if streak == 0 && calendar.isDateInToday(checkDate) {
+                // Allow today to not have a workout yet
+                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+            } else {
+                break
+            }
+        }
+        return streak
+    }
+    
+    private var uniqueExercises: [ExerciseRef] {
+        var seen = Set<String>()
+        var exercises: [ExerciseRef] = []
+        
+        for session in workoutStore.sessions {
+            for performance in session.exercises {
+                if !seen.contains(performance.exercise.id) {
+                    seen.insert(performance.exercise.id)
+                    exercises.append(performance.exercise)
+                }
+            }
+        }
+        return exercises
+    }
+    
+    private var chartData: [ProgressDataPoint] {
+        let calendar = Calendar.current
+        var dataByDate: [Date: (volume: Double, weight: Double, e1rm: Double, count: Int)] = [:]
+        
+        for session in workoutStore.sessions.reversed() {
+            guard session.endedAt != nil else { continue }
+            let dayStart = calendar.startOfDay(for: session.startedAt)
+            
+            var sessionVolume: Double = 0
+            var sessionWeight: Double = 0
+            var sessionE1RM: Double = 0
+            var setCount: Int = 0
+            
+            for performance in session.exercises {
+                let completedSets = performance.sets.filter { $0.isCompleted && $0.weight > 0 }
+                for set in completedSets {
+                    sessionVolume += Double(set.reps) * set.weight
+                    sessionWeight += set.weight
+                    // Brzycki formula for e1RM
+                    if set.reps > 0 && set.reps < 37 {
+                        let e1rm = set.weight * (36.0 / (37.0 - Double(set.reps)))
+                        sessionE1RM += e1rm
+                    }
+                    setCount += 1
+                }
+            }
+            
+            if setCount > 0 {
+                let existing = dataByDate[dayStart] ?? (0, 0, 0, 0)
+                dataByDate[dayStart] = (
+                    existing.volume + sessionVolume,
+                    existing.weight + sessionWeight,
+                    existing.e1rm + sessionE1RM,
+                    existing.count + setCount
+                )
+            }
+        }
+        
+        return dataByDate.map { date, values in
+            let avgWeight = values.count > 0 ? values.weight / Double(values.count) : 0
+            let avgE1RM = values.count > 0 ? values.e1rm / Double(values.count) : 0
+            return ProgressDataPoint(
+                date: date,
+                volume: values.volume,
+                avgWeight: avgWeight,
+                avgE1RM: avgE1RM
+            )
+        }.sorted { $0.date < $1.date }
+    }
+}
+
+// MARK: - Progress Data Point
+struct ProgressDataPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let volume: Double
+    let avgWeight: Double
+    let avgE1RM: Double
+}
+
+// MARK: - Summary Stat Card
+private struct SummaryStatCard: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(color)
+                Spacer()
+            }
+            
+            Text(value)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+            
+            Text(subtitle)
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.5))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+}
+
+// MARK: - Progress Chart View
+private struct ProgressChartView: View {
+    let data: [ProgressDataPoint]
+    let chartType: ProgressTrackingView.ChartType
+    let color: Color
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let maxValue = data.map { valueFor($0) }.max() ?? 1
+            let minValue = data.map { valueFor($0) }.min() ?? 0
+            let range = max(maxValue - minValue, 1)
+            
+            ZStack {
+                // Grid lines
+                VStack(spacing: 0) {
+                    ForEach(0..<4) { i in
+                        Divider()
+                            .background(Color.white.opacity(0.1))
+                        if i < 3 { Spacer() }
+                    }
+                }
+                
+                // Chart line
+                if data.count > 1 {
+                    Path { path in
+                        for (index, point) in data.enumerated() {
+                            let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
+                            let normalizedY = (valueFor(point) - minValue) / range
+                            let y = geometry.size.height * (1 - CGFloat(normalizedY))
+                            
+                            if index == 0 {
+                                path.move(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
+                    }
+                    .stroke(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.6)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                    )
+                    
+                    // Gradient fill under line
+                    Path { path in
+                        path.move(to: CGPoint(x: 0, y: geometry.size.height))
+                        
+                        for (index, point) in data.enumerated() {
+                            let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
+                            let normalizedY = (valueFor(point) - minValue) / range
+                            let y = geometry.size.height * (1 - CGFloat(normalizedY))
+                            
+                            if index == 0 {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
+                        
+                        path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
+                        path.closeSubpath()
+                    }
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.3), color.opacity(0.0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    
+                    // Data points
+                    ForEach(Array(data.enumerated()), id: \.offset) { index, point in
+                        let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
+                        let normalizedY = (valueFor(point) - minValue) / range
+                        let y = geometry.size.height * (1 - CGFloat(normalizedY))
+                        
+                        Circle()
+                            .fill(color)
+                            .frame(width: 8, height: 8)
+                            .position(x: x, y: y)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func valueFor(_ point: ProgressDataPoint) -> Double {
+        switch chartType {
+        case .volume: return point.volume
+        case .weight: return point.avgWeight
+        case .strength: return point.avgE1RM
+        }
+    }
+}
+
+// MARK: - Exercise Progress Row
+private struct ExerciseProgressRow: View {
+    let exercise: ExerciseRef
+    let workoutStore: WorkoutStore
+    let onTap: () -> Void
+    
+    private var history: [ExercisePerformance] {
+        workoutStore.performanceHistory(for: exercise.id, limit: 50)
+    }
+    
+    private var latestWeight: Double? {
+        history.first?.sets.filter { $0.isCompleted && $0.weight > 0 }.map(\.weight).max()
+    }
+    
+    private var progressPercent: Double? {
+        guard history.count >= 2 else { return nil }
+        let recent = history[0].sets.filter { $0.isCompleted && $0.weight > 0 }.map(\.weight).max() ?? 0
+        let older = history[min(4, history.count - 1)].sets.filter { $0.isCompleted && $0.weight > 0 }.map(\.weight).max() ?? 0
+        guard older > 0 else { return nil }
+        return ((recent - older) / older) * 100
+    }
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Exercise icon
+                Circle()
+                    .fill(Color.ironPurple.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Image(systemName: "dumbbell.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.ironPurple)
+                    )
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.displayName)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.white)
+                    
+                    Text("\(history.count) sessions logged")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let weight = latestWeight {
+                        Text("\(Int(weight)) lb")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    
+                    if let progress = progressPercent {
+                        HStack(spacing: 2) {
+                            Image(systemName: progress >= 0 ? "arrow.up.right" : "arrow.down.right")
+                                .font(.system(size: 10))
+                            Text(String(format: "%.1f%%", abs(progress)))
+                                .font(.system(size: 11))
+                        }
+                        .foregroundColor(progress >= 0 ? .green : .red)
+                    }
+                }
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.3))
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white.opacity(0.03))
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Exercise Progress Detail View
+struct ExerciseProgressDetailView: View {
+    let exercise: ExerciseRef
+    let workoutStore: WorkoutStore
+    @Environment(\.dismiss) private var dismiss
+    
+    private let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
+    
+    private var history: [ExercisePerformance] {
+        workoutStore.performanceHistory(for: exercise.id, limit: 100)
+    }
+    
+    private var exerciseState: ExerciseState? {
+        workoutStore.exerciseStates[exercise.id]
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.ironBackground.ignoresSafeArea()
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        // Header Stats
+                        headerStats
+                        
+                        // Weight Progress Chart
+                        weightProgressChart
+                        
+                        // Session History
+                        sessionHistory
+                        
+                        Spacer(minLength: 40)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                }
+            }
+            .navigationTitle(exercise.displayName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(neonPurple)
+                }
+            }
+        }
+    }
+    
+    private var headerStats: some View {
+        HStack(spacing: 12) {
+            StatBox(
+                title: "Current",
+                value: exerciseState.map { "\(Int($0.currentWorkingWeight))" } ?? "--",
+                unit: "lb"
+            )
+            
+            StatBox(
+                title: "Est. 1RM",
+                value: exerciseState?.rollingE1RM.map { "\(Int($0))" } ?? "--",
+                unit: "lb"
+            )
+            
+            StatBox(
+                title: "Sessions",
+                value: "\(history.count)",
+                unit: "total"
+            )
+        }
+    }
+    
+    private var weightProgressChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("WEIGHT PROGRESSION")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+                .textCase(.uppercase)
+                .tracking(1)
+            
+            if history.count < 2 {
+                Text("Log more sessions to see progress chart")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.4))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 40)
+            } else {
+                ExerciseWeightChartView(history: history, color: neonPurple)
+                    .frame(height: 180)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+        )
+    }
+    
+    private var sessionHistory: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("SESSION HISTORY")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+                .textCase(.uppercase)
+                .tracking(1)
+            
+            if history.isEmpty {
+                Text("No sessions logged yet")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.4))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(Array(history.enumerated()), id: \.offset) { index, performance in
+                        SessionHistoryRow(performance: performance, index: index)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Stat Box
+private struct StatBox: View {
+    let title: String
+    let value: String
+    let unit: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.5))
+            
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                
+                Text(unit)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.4))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.03))
+        )
+    }
+}
+
+// MARK: - Exercise Weight Chart View
+private struct ExerciseWeightChartView: View {
+    let history: [ExercisePerformance]
+    let color: Color
+    
+    private var chartData: [(date: Date, weight: Double)] {
+        history.reversed().compactMap { performance in
+            let maxWeight = performance.sets
+                .filter { $0.isCompleted && $0.weight > 0 }
+                .map(\.weight)
+                .max()
+            guard let weight = maxWeight else { return nil }
+            return (date: Date(), weight: weight) // We don't have exact date, use index
+        }
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let weights = history.reversed().compactMap { p -> Double? in
+                p.sets.filter { $0.isCompleted && $0.weight > 0 }.map(\.weight).max()
+            }
+            
+            if weights.count > 1 {
+                let maxValue = weights.max() ?? 1
+                let minValue = weights.min() ?? 0
+                let range = max(maxValue - minValue, 1)
+                
+                ZStack {
+                    // Grid lines
+                    VStack(spacing: 0) {
+                        ForEach(0..<4) { i in
+                            Divider()
+                                .background(Color.white.opacity(0.1))
+                            if i < 3 { Spacer() }
+                        }
+                    }
+                    
+                    // Chart line
+                    Path { path in
+                        for (index, weight) in weights.enumerated() {
+                            let x = geometry.size.width * CGFloat(index) / CGFloat(weights.count - 1)
+                            let normalizedY = (weight - minValue) / range
+                            let y = geometry.size.height * (1 - CGFloat(normalizedY))
+                            
+                            if index == 0 {
+                                path.move(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
+                    }
+                    .stroke(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.6)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                    )
+                    
+                    // Data points
+                    ForEach(Array(weights.enumerated()), id: \.offset) { index, weight in
+                        let x = geometry.size.width * CGFloat(index) / CGFloat(weights.count - 1)
+                        let normalizedY = (weight - minValue) / range
+                        let y = geometry.size.height * (1 - CGFloat(normalizedY))
+                        
+                        Circle()
+                            .fill(color)
+                            .frame(width: 6, height: 6)
+                            .position(x: x, y: y)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Session History Row
+private struct SessionHistoryRow: View {
+    let performance: ExercisePerformance
+    let index: Int
+    
+    private var completedSets: [WorkoutSet] {
+        performance.sets.filter { $0.isCompleted }
+    }
+    
+    private var maxWeight: Double {
+        completedSets.map(\.weight).max() ?? 0
+    }
+    
+    private var totalReps: Int {
+        completedSets.map(\.reps).reduce(0, +)
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Session number
+            Text("#\(index + 1)")
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                .foregroundColor(.white.opacity(0.4))
+                .frame(width: 32)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(Int(maxWeight)) lb × \(totalReps) reps")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white)
+                
+                Text("\(completedSets.count) sets completed")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            
+            Spacer()
+            
+            // Volume
+            VStack(alignment: .trailing) {
+                let volume = completedSets.map { Double($0.reps) * $0.weight }.reduce(0, +)
+                Text("\(Int(volume))")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.8))
+                
+                Text("vol")
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.4))
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.02))
+        )
     }
 }
 
@@ -1303,6 +2096,13 @@ struct ProfileView: View {
                     }
                 } footer: {
                     Text("This will restart the onboarding flow but keep your account.")
+                }
+                
+                // Bottom spacer for floating tab bar
+                Section {
+                    Color.clear
+                        .frame(height: 80)
+                        .listRowBackground(Color.clear)
                 }
             }
             .navigationTitle("Profile")

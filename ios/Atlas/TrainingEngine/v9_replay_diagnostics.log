@@ -1,0 +1,68 @@
+================================================================================
+V9 FULL E2E REPLAY DIAGNOSTICS (conservative, exercise-aware) @ 2026-01-27T21:54:46Z
+================================================================================
+
+OVERALL SUMMARY:
+  Total test cases: 116
+  Total prescriptions scored: 220
+
+  📊 Load Agreement: 158/220 = 71.8%
+  🎯 Decision Agreement: 182/220 = 82.7%
+  📏 Mean Absolute Error: 3.98 lb
+  ✅ Assertions Passed: 155/218 = 71.1%
+
+--------------------------------------------------------------------------------
+DECISION CONFUSION MATRIX (rows=expected, cols=predicted):
+      exp\pred        deload          hold      increasedecrease_small
+        deload            12             0             0             0
+          hold             2           161             8            12
+      increase             0             5             2             0
+decrease_small             0            11             0             7
+
+--------------------------------------------------------------------------------
+PER-EXPERIENCE BREAKDOWN:
+  advanced:
+    lifts=32 load=12.5% dec=81.2% mae=5.8lb
+  beginner:
+    lifts=64 load=79.7% dec=84.4% mae=3.8lb
+  intermediate:
+    lifts=124 load=83.1% dec=82.3% mae=3.6lb
+
+--------------------------------------------------------------------------------
+PER-MOVEMENT-TYPE BREAKDOWN (compound vs isolation):
+  compound:
+    lifts=161 load=66.5% dec=85.7% mae=4.3lb
+  isolation:
+    lifts=59 load=86.4% dec=74.6% mae=3.2lb
+
+--------------------------------------------------------------------------------
+PER-SEX BREAKDOWN:
+  female:
+    lifts=71 load=88.7% dec=84.5% mae=3.2lb
+  male:
+    lifts=147 load=63.3% dec=81.6% mae=4.4lb
+  other:
+    lifts=2 load=100.0% dec=100.0% mae=0.0lb
+
+--------------------------------------------------------------------------------
+PER-SCENARIO BREAKDOWN:
+  advanced_bench_specialization_microloading:
+    lifts=32 load=12.5% dec=81.2% mae=5.8lb
+  beginner_conservative_lp:
+    lifts=60 load=81.7% dec=86.7% mae=3.2lb
+  edge_cases_conservative:
+    lifts=16 load=50.0% dec=62.5% mae=5.6lb
+  intermediate_compound_vs_isolation_conservative:
+    lifts=64 load=93.8% dec=85.9% mae=2.7lb
+  intermediate_cut_maintenance_conservative:
+    lifts=48 load=77.1% dec=81.2% mae=4.8lb
+
+--------------------------------------------------------------------------------
+PER-CATEGORY BREAKDOWN:
+  break_reset: lifts=4 load=0.0% dec=75.0% mae=7.5lb
+  deload: lifts=1 load=0.0% dec=100.0% mae=5.0lb
+  edge_case: lifts=11 load=72.7% dec=54.5% mae=5.0lb
+  progression: lifts=204 load=73.5% dec=84.3% mae=3.9lb
+
+--------------------------------------------------------------------------------
+MISMATCH SAMPLES: 38 total (set V9_VERBOSE=1 for details)

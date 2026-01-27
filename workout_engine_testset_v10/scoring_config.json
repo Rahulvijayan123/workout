@@ -1,0 +1,16 @@
+{
+  "version": "v10",
+  "emphasis": {
+    "constraint_compliance": "must_be_perfect",
+    "oscillation_rate": "minimize",
+    "deload_frequency_bounds": "enforce_per_scenario",
+    "time_to_recover_after_miss": "minimize",
+    "increase_requires_surplus": "enforce_in_cut_scenarios"
+  },
+  "global_constraints": [
+    "prescribed_weight_multiple_of_load_step",
+    "no_increase_when_readiness_low",
+    "ignore_future_date_and_unit_mix_history",
+    "dedupe_same_day_by_logged_at"
+  ]
+}
