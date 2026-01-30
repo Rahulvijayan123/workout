@@ -1,3 +1,24 @@
+-- =============================================================================
+-- DEPRECATED - DO NOT USE
+-- =============================================================================
+--
+-- This schema is DEPRECATED and should NOT be deployed.
+--
+-- The tables in this file (ml_decision_records, ml_outcome_records) conflict
+-- with the canonical ML data pipeline which uses:
+-- - recommendation_events (for engine decisions)
+-- - planned_sets (for prescriptions)
+-- - session_sets (with outcome labels for actual performance)
+--
+-- The canonical pipeline is defined in supabase_schema_v2_additions.sql.
+--
+-- This file is kept only for historical reference and should be archived
+-- or removed in a future cleanup.
+--
+-- =============================================================================
+-- ORIGINAL CONTENT BELOW (DO NOT DEPLOY)
+-- =============================================================================
+--
 -- IronForge / Atlas Supabase Schema - ML TRAINING DATA COLLECTION
 -- Extended schema for comprehensive ML training data with data quality controls
 -- Run this AFTER supabase_schema_pilot.sql

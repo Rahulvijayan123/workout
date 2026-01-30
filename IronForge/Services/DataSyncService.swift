@@ -699,13 +699,14 @@ final class DataSyncService: ObservableObject {
         
         let _: DBWorkoutSession? = try await supabase.upsert(into: "workout_sessions", values: dbSession)
         
-        // NOTE: We use upsert for session_exercises instead of delete-then-insert
-        // to avoid breaking foreign key relationships with recommendation_events and planned_sets.
-        // Orphaned session_exercises (from removed exercises) should be cleaned up
-        // by a separate maintenance job if needed.
+        // Track synced IDs for ghost row cleanup
+        var syncedExerciseIds: [String] = []
+        var syncedSetIdsByExercise: [String: [String]] = [:]
         
         // Insert exercises and sets
         for (idx, ex) in session.exercises.enumerated() {
+            // Track this exercise ID for ghost row cleanup
+            syncedExerciseIds.append(ex.id.uuidString)
             // ML CRITICAL: Only use real recommendationEventId if present.
             // Do NOT fabricate join keys for manual/ad-hoc exercises.
             
@@ -860,6 +861,10 @@ final class DataSyncService: ObservableObject {
                 )
             }
             
+            // Track set IDs for ghost row cleanup
+            let setIds = ex.sets.map { $0.id.uuidString }
+            syncedSetIdsByExercise[ex.id.uuidString] = setIds
+            
             if !dbSets.isEmpty {
                 // Use upsert to make sync idempotent (safe on resync) and to allow
                 // incremental set logging (weight/reps/RIR edits) without duplicates.
@@ -868,6 +873,15 @@ final class DataSyncService: ObservableObject {
                     values: dbSets,
                     onConflict: "id",
                     resolution: .mergeDuplicates
+                )
+                
+                // Clean up ghost rows: delete sets that were removed from this exercise
+                try await supabase.deleteNotIn(
+                    from: "session_sets",
+                    scopeColumn: "session_exercise_id",
+                    scopeValue: ex.id.uuidString,
+                    idColumn: "id",
+                    idsToKeep: setIds
                 )
             }
             
@@ -897,17 +911,50 @@ final class DataSyncService: ObservableObject {
                         templateVersion: ex.stateSnapshot?.templateVersion
                     )
                     
-                    // Determine action type from planned values
-                    let actionType: RecommendationEvent.RecommendationActionType = {
-                        if session.wasDeload { return .deload }
-                        return .holdLoad  // Default - could be refined based on direction
-                    }()
+                    // ML CRITICAL: Skip recommendation events if core prescription fields are missing.
+                    // Emitting events with recommendedWeight=0 poisons training data.
+                    guard let recommendedWeightLbs = ex.plannedTopSetWeightLbs,
+                          recommendedWeightLbs > 0 else {
+                        // Skip this exercise - lacks proper prescription data
+                        continue
+                    }
                     
-                    // Use planned values only - no fallback to performed values for ML data integrity.
-                    // If plannedTopSet* are nil, the exercise lacks proper prescription data.
-                    let recommendedWeightLbs = ex.plannedTopSetWeightLbs ?? 0
                     let recommendedReps = ex.plannedTopSetReps ?? ex.repRangeMin
                     let recommendedRIR = ex.plannedTargetRIR ?? ex.targetRIR
+                    
+                    // Derive action type from engine's direction decision (not hardcoded)
+                    let actionType: RecommendationEvent.RecommendationActionType = {
+                        // Use the engine's direction decision if available
+                        if let direction = ex.progressionDirection {
+                            switch direction {
+                            case "increase":
+                                return .increaseLoad
+                            case "hold":
+                                return .holdLoad
+                            case "decrease_slightly":
+                                return .decreaseLoad
+                            case "deload":
+                                return .deload
+                            case "reset_after_break":
+                                return .reset
+                            default:
+                                break
+                            }
+                        }
+                        
+                        // Fallback: derive from session/state context
+                        if session.wasDeload { return .deload }
+                        
+                        // If we have state snapshot, derive from weight delta
+                        if let lastWeight = ex.stateSnapshot?.lastWeightLbs,
+                           lastWeight > 0 {
+                            let delta = recommendedWeightLbs - lastWeight
+                            if delta > 0.5 { return .increaseLoad }
+                            if delta < -0.5 { return .decreaseLoad }
+                        }
+                        
+                        return .holdLoad
+                    }()
                     
                     var recommendationEvent = RecommendationEvent(
                         id: recEventId,
@@ -969,6 +1016,18 @@ final class DataSyncService: ObservableObject {
                     try await syncPlannedSets(plannedSets)
                 }
             }
+        }
+        
+        // Clean up ghost rows: delete session_exercises that were removed from this session.
+        // This prevents orphaned rows from accumulating when users remove exercises.
+        if !syncedExerciseIds.isEmpty {
+            try await supabase.deleteNotIn(
+                from: "session_exercises",
+                scopeColumn: "session_id",
+                scopeValue: session.id.uuidString,
+                idColumn: "id",
+                idsToKeep: syncedExerciseIds
+            )
         }
     }
     

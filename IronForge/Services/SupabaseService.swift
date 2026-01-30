@@ -506,6 +506,50 @@ final class SupabaseService: ObservableObject {
         }
     }
     
+    /// Delete rows from a table where a column equals a value AND another column is NOT in a set of values.
+    /// This is useful for cleaning up orphaned rows (ghost rows) when syncing.
+    ///
+    /// Example: Delete session_sets where session_exercise_id = X AND id NOT IN (a, b, c)
+    func deleteNotIn(
+        from table: String,
+        scopeColumn: String,
+        scopeValue: String,
+        idColumn: String,
+        idsToKeep: [String]
+    ) async throws {
+        // Skip if no IDs to keep - this would delete everything, which is probably not intended
+        // If you really want to delete all rows for a scope, use the regular delete method
+        guard !idsToKeep.isEmpty else { return }
+        
+        var components = URLComponents(url: baseURL.appendingPathComponent("rest/v1/\(table)"), resolvingAgainstBaseURL: false)!
+        
+        // PostgREST filter syntax: column=not.in.(val1,val2,val3)
+        let idsJoined = idsToKeep.joined(separator: ",")
+        components.queryItems = [
+            URLQueryItem(name: scopeColumn, value: "eq.\(scopeValue)"),
+            URLQueryItem(name: idColumn, value: "not.in.(\(idsJoined))")
+        ]
+        
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "DELETE"
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        if httpResponse.statusCode >= 400 {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw SupabaseError.apiError(errorText)
+        }
+    }
+    
     // MARK: - Batch Operations
     
     /// Insert multiple rows

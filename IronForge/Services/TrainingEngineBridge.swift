@@ -1004,16 +1004,13 @@ enum TrainingEngineBridge {
             perf.stateSnapshot = stateSnapshot
             perf.exposureRole = exposureRole
             
-            // ML CRITICAL: Populate policy selection snapshot for bandit/shadow mode tracking
-            if let policySelection = exercisePlan.policySelection {
-                perf.policySelectionSnapshot = PolicySelectionSnapshot(
-                    executedPolicyId: policySelection.executedPolicyId,
-                    executedActionProbability: policySelection.executedActionProbability,
-                    explorationMode: policySelection.explorationMode,
-                    shadowPolicyId: policySelection.shadowPolicyId,
-                    shadowActionProbability: policySelection.shadowActionProbability
-                )
-            }
+            // ML CRITICAL: Capture engine's direction decision for actionType derivation
+            perf.progressionDirection = exercisePlan.direction?.rawValue
+            perf.progressionDirectionReason = exercisePlan.directionReason?.rawValue
+            
+            // Note: Policy selection is logged in TrainingEngine's TrainingDataLogger
+            // and is not exposed on ExercisePlan. The policySelectionSnapshot on
+            // ExercisePerformance remains nil here but can be populated from logs if needed.
             
             return perf
         }
@@ -1157,7 +1154,7 @@ enum TrainingEngineBridge {
         
         // Build policy selection provider closure
         let policySelectionProvider: TrainingEngine.PolicySelectionProvider? = policySelector.map { selector in
-            { signals, variationContext in
+            { @Sendable signals, variationContext in
                 selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
             }
         }
@@ -1219,7 +1216,7 @@ enum TrainingEngineBridge {
         
         // Build policy selection provider closure
         let policySelectionProvider: TrainingEngine.PolicySelectionProvider? = policySelector.map { selector in
-            { signals, variationContext in
+            { @Sendable signals, variationContext in
                 selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
             }
         }

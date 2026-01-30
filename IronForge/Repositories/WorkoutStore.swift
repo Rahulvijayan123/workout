@@ -18,7 +18,9 @@ final class WorkoutStore: ObservableObject {
     /// Shared shadow mode policy selector for ML data collection.
     /// Uses UserDefaults-backed bandit state store. Shadow mode executes baseline
     /// but logs what the bandit would have chosen for offline evaluation.
-    nonisolated(unsafe) static let sharedPolicySelector: ProgressionPolicySelector = ShadowModePolicySelector(
+    /// Note: nonisolated(unsafe) is required because this static property must be accessible
+    /// from non-main-actor contexts (e.g., TrainingEngine callbacks) while WorkoutStore is @MainActor.
+    nonisolated(unsafe) static let sharedPolicySelector: any ProgressionPolicySelector = ShadowModePolicySelector(
         stateStore: UserDefaultsBanditStateStore.shared
     )
     
@@ -370,36 +372,6 @@ final class WorkoutStore: ObservableObject {
         case .increaseWeight, .deload, .hold:
             return lb
         }
-    }
-    
-    /// Compute execution context for an exercise based on pain data.
-    ///
-    /// Returns `.injuryDiscomfort` if:
-    /// - `stoppedDueToPain == true`, OR
-    /// - Any `painEntry.severity >= 5`, OR
-    /// - `overallPainLevel >= 5`
-    ///
-    /// Otherwise returns `.normal`.
-    private func computeExecutionContext(for performance: ExercisePerformance) -> TrainingEngine.ExecutionContext {
-        let painThreshold = 5
-        
-        // Check if stopped due to pain
-        if performance.stoppedDueToPain {
-            return .injuryDiscomfort
-        }
-        
-        // Check if any pain entry has severity >= threshold
-        if let painEntries = performance.painEntries,
-           painEntries.contains(where: { $0.severity >= painThreshold }) {
-            return .injuryDiscomfort
-        }
-        
-        // Check if overall pain level >= threshold
-        if let overallPain = performance.overallPainLevel, overallPain >= painThreshold {
-            return .injuryDiscomfort
-        }
-        
-        return .normal
     }
     
     func cancelActiveSession() {

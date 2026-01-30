@@ -937,6 +937,15 @@ struct ExercisePerformance: Codable, Identifiable, Hashable {
     /// ID of the recommendation event that prescribed this exercise
     var recommendationEventId: UUID? = nil
     
+    // MARK: - Engine Direction Decision (ML Critical)
+    
+    /// The progression direction decision from TrainingEngine.
+    /// Values: "increase", "hold", "decrease_slightly", "deload", "reset_after_break"
+    var progressionDirection: String? = nil
+    
+    /// Reason code for the direction decision (for debugging/tracing)
+    var progressionDirectionReason: String? = nil
+    
     // MARK: - Policy Selection Snapshot (ML Critical)
     
     /// Snapshot of policy selection metadata at recommendation time.

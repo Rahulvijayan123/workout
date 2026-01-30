@@ -184,8 +184,8 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
             return .baselineControl()
         }
         
-        // Get family key for state lookup
-        let familyKey = variationContext.familyReferenceKey ?? signals.exerciseId
+        // Get family key for state lookup (familyReferenceKey is always non-nil)
+        let familyKey = variationContext.familyReferenceKey
         
         // Get current priors
         let priors = stateStore.getPriors(userId: userId, familyKey: familyKey, armIds: arms.map(\.id))
@@ -233,8 +233,8 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
         // Only update for explore mode (not shadow/control)
         guard entry.explorationMode == "explore" else { return }
         
-        // Get family key
-        let familyKey = entry.variationContext.familyReferenceKey ?? entry.exerciseId
+        // Get family key (familyReferenceKey is always non-nil)
+        let familyKey = entry.variationContext.familyReferenceKey
         
         // Compute reward
         let reward = computeReward(outcome: outcome)
