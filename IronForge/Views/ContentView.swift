@@ -65,13 +65,8 @@ struct ConfigurationErrorView: View {
                     .foregroundColor(.white)
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    if let error = SupabaseConfig.loadError {
+                    if let error = SupabaseConfig.validationError {
                         Text(error)
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.8))
-                            .multilineTextAlignment(.center)
-                    } else if SupabaseConfig.anonKey.contains("PASTE_") {
-                        Text("Secrets.plist contains placeholder values.\n\nPlease update with your actual Supabase credentials.")
                             .font(.system(size: 14))
                             .foregroundColor(.white.opacity(0.8))
                             .multilineTextAlignment(.center)
@@ -92,7 +87,7 @@ struct ConfigurationErrorView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("1. Add Secrets.plist to Xcode project")
                     Text("2. Ensure it's in 'Copy Bundle Resources'")
-                    Text("3. Add valid Supabase URL and keys")
+                    Text("3. Add SUPABASE_URL + SUPABASE_ANON_KEY (never a service role key)")
                 }
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundColor(.white.opacity(0.6))

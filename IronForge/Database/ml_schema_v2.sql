@@ -125,6 +125,40 @@ CREATE INDEX IF NOT EXISTS idx_planned_sets_exercise ON planned_sets(session_exe
 COMMENT ON TABLE planned_sets IS 'What was prescribed at session start. Immutable once created.';
 
 -- ============================================
+-- 2.5 POLICY DECISION LOGS (Policy selection attribution)
+-- Captures decision-time policy choice + propensity, and later outcome markers.
+-- ============================================
+CREATE TABLE IF NOT EXISTS policy_decision_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    stable_user_id TEXT NOT NULL,
+    session_id UUID NOT NULL,
+    exercise_id TEXT NOT NULL,
+    family_reference_key TEXT,
+    
+    executed_policy_id TEXT NOT NULL,
+    executed_action_probability DECIMAL(6,5) NOT NULL,
+    exploration_mode TEXT,
+    shadow_policy_id TEXT,
+    shadow_action_probability DECIMAL(6,5),
+    
+    decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    outcome_was_success BOOLEAN,
+    outcome_was_grinder BOOLEAN,
+    outcome_execution_context TEXT,
+    outcome_recorded_at TIMESTAMPTZ,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_user_time ON policy_decision_logs(user_id, decided_at DESC);
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_session ON policy_decision_logs(session_id);
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_exercise ON policy_decision_logs(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_policy ON policy_decision_logs(executed_policy_id);
+
+-- ============================================
 -- 3. UPDATE SESSION_SETS for performed data + user edits
 -- ============================================
 ALTER TABLE session_sets
@@ -231,6 +265,7 @@ ADD COLUMN IF NOT EXISTS modification_reason_code TEXT,
 ADD COLUMN IF NOT EXISTS stopped_due_to_pain BOOLEAN DEFAULT FALSE;
 
 -- Ensure workout_sessions has the columns referenced by the view
+ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS planned_at TIMESTAMPTZ;
 ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS pre_workout_readiness INT;
 ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS session_rpe INT;
 ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS was_deload BOOLEAN DEFAULT FALSE;

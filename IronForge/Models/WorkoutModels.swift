@@ -290,6 +290,47 @@ struct TechniqueLimitations: Codable, Hashable {
 
 // MARK: - Policy Selection Snapshot (ML Critical)
 
+/// Canonical exploration modes for policy selection.
+///
+/// IMPORTANT: Keep raw values aligned with `TrainingEngine.ExplorationMode`:
+/// - "control"
+/// - "shadow"
+/// - "explore"
+enum PolicyExplorationMode: String, Codable, Hashable, CaseIterable {
+    case control = "control"
+    case shadow = "shadow"
+    case explore = "explore"
+    
+    /// Tolerant mapping to prevent silent data fragmentation from legacy or malformed values.
+    init(normalizing raw: String) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+        
+        switch lower {
+        case "control", "baseline", "baseline_control", "none":
+            self = .control
+        case "shadow", "shadow_mode":
+            self = .shadow
+        case "explore", "exploration":
+            self = .explore
+        default:
+            // Default to control to avoid introducing new categories silently.
+            self = .control
+        }
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        let raw = (try? c.decode(String.self)) ?? ""
+        self = PolicyExplorationMode(normalizing: raw)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(rawValue)
+    }
+}
+
 /// Snapshot of policy selection metadata at recommendation time.
 /// Used to persist bandit/shadow policy data into the canonical ML stream.
 struct PolicySelectionSnapshot: Codable, Hashable {
@@ -299,8 +340,8 @@ struct PolicySelectionSnapshot: Codable, Hashable {
     /// Probability of selecting the executed action given the policy state
     var executedActionProbability: Double?
     
-    /// Exploration mode: "baseline", "explore", "shadow"
-    var explorationMode: String
+    /// Exploration mode: "control", "shadow", "explore"
+    var explorationMode: PolicyExplorationMode
     
     /// ID of the shadow policy (if shadow mode)
     var shadowPolicyId: String?
@@ -311,7 +352,7 @@ struct PolicySelectionSnapshot: Codable, Hashable {
     init(
         executedPolicyId: String,
         executedActionProbability: Double? = nil,
-        explorationMode: String,
+        explorationMode: PolicyExplorationMode = .control,
         shadowPolicyId: String? = nil,
         shadowActionProbability: Double? = nil
     ) {
@@ -510,10 +551,29 @@ struct WorkoutTemplateExercise: Codable, Identifiable, Hashable {
 
 // MARK: - Workout Sessions (Logging)
 
+/// Reasons why a workout session was abandoned (started but not finished).
+///
+/// Raw values are aligned with the `public.ml_session_abandonments.abandonment_reason` CHECK constraint.
+enum SessionAbandonmentReason: String, Codable, Hashable, CaseIterable {
+    case userCancelled = "user_cancelled"
+    case appCrash = "app_crash"
+    case timeout = "timeout"
+    case equipmentIssue = "equipment_issue"
+    case injury = "injury"
+    case emergency = "emergency"
+    case unknown = "unknown"
+}
+
 struct WorkoutSession: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var templateId: UUID?
     var name: String
+    
+    /// When the plan/recommendation was generated (plan materialization time).
+    ///
+    /// For TrainingEngine sessions this is the timestamp associated with the `SessionPlan`.
+    /// For ad-hoc/manual sessions this defaults to `startedAt`.
+    var plannedAt: Date = Date()
     var startedAt: Date = Date()
     var endedAt: Date?
     
@@ -612,7 +672,9 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         templateId = try container.decodeIfPresent(UUID.self, forKey: .templateId)
         name = try container.decode(String.self, forKey: .name)
-        startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt) ?? Date()
+        let decodedStartedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt) ?? Date()
+        startedAt = decodedStartedAt
+        plannedAt = try container.decodeIfPresent(Date.self, forKey: .plannedAt) ?? decodedStartedAt
         endedAt = try container.decodeIfPresent(Date.self, forKey: .endedAt)
         wasDeload = try container.decodeIfPresent(Bool.self, forKey: .wasDeload) ?? false
         deloadReason = try container.decodeIfPresent(String.self, forKey: .deloadReason)
@@ -659,6 +721,7 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
         try container.encode(id, forKey: .id)
         try container.encodeIfPresent(templateId, forKey: .templateId)
         try container.encode(name, forKey: .name)
+        try container.encode(plannedAt, forKey: .plannedAt)
         try container.encode(startedAt, forKey: .startedAt)
         try container.encodeIfPresent(endedAt, forKey: .endedAt)
         try container.encode(wasDeload, forKey: .wasDeload)
@@ -694,7 +757,7 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
     }
     
     private enum CodingKeys: String, CodingKey {
-        case id, templateId, name, startedAt, endedAt, wasDeload, deloadReason, exercises
+        case id, templateId, name, plannedAt, startedAt, endedAt, wasDeload, deloadReason, exercises
         case computedReadinessScore
         case preWorkoutReadiness, preWorkoutSoreness, preWorkoutEnergy, preWorkoutMotivation
         case sessionRPE, postWorkoutFeeling, harderThanExpected, sessionNotes
@@ -706,6 +769,7 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
         id: UUID = UUID(),
         templateId: UUID? = nil,
         name: String,
+        plannedAt: Date? = nil,
         startedAt: Date = Date(),
         endedAt: Date? = nil,
         wasDeload: Bool = false,
@@ -732,6 +796,7 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
         self.id = id
         self.templateId = templateId
         self.name = name
+        self.plannedAt = plannedAt ?? startedAt
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.wasDeload = wasDeload

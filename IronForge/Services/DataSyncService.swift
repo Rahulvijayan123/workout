@@ -93,6 +93,8 @@ final class DataSyncService: ObservableObject {
         var templateId: String?
         var templateName: String?
         var name: String
+        /// When the plan/recommendation was generated (may differ from startedAt if user delays).
+        var plannedAt: Date?
         var startedAt: Date
         var endedAt: Date?
         var durationSeconds: Int?
@@ -483,6 +485,41 @@ final class DataSyncService: ObservableObject {
         var generatedAt: Date?
     }
     
+    /// Policy-selection decision log (per-exercise, per-session).
+    ///
+    /// This captures **decision-time** attribution (chosen policy + propensity + exploration mode),
+    /// and is updated later with an outcome marker when available.
+    struct DBPolicyDecisionLog: Codable {
+        var id: String?
+        var userId: String
+        
+        /// Stable engine user id (local UUID pre-login, Supabase auth id post-login).
+        var stableUserId: String
+        
+        var sessionId: String
+        var exerciseId: String
+        var familyReferenceKey: String?
+        
+        // Policy selection (action + propensity)
+        var executedPolicyId: String
+        var executedActionProbability: Double
+        var explorationMode: String?
+        var shadowPolicyId: String?
+        var shadowActionProbability: Double?
+        
+        // Timing
+        var decidedAt: Date?
+        
+        // Outcome (populated later)
+        var outcomeWasSuccess: Bool?
+        var outcomeWasGrinder: Bool?
+        var outcomeExecutionContext: String?
+        var outcomeRecordedAt: Date?
+        
+        var createdAt: Date?
+        var updatedAt: Date?
+    }
+    
     struct DBPlannedSet: Codable {
         var id: String?
         var sessionExerciseId: String
@@ -518,6 +555,26 @@ final class DataSyncService: ObservableObject {
         var notes: String?
         
         var reportedAt: Date?
+    }
+
+    struct DBSessionAbandonment: Codable {
+        var id: String?
+        var userId: String
+        var sessionId: String?
+        
+        var abandonedAt: Date?
+        var sessionDate: String  // YYYY-MM-DD
+        
+        var abandonmentReason: String
+        
+        var exercisesPlanned: Int?
+        var exercisesCompleted: Int?
+        var completionPercentage: Double?
+        
+        var pendingDecisionIds: [String]?
+        
+        var notes: String?
+        var createdAt: Date?
     }
     
     struct DBUserSensitiveContext: Codable {
@@ -656,6 +713,7 @@ final class DataSyncService: ObservableObject {
             templateId: session.templateId?.uuidString,
             templateName: session.name,
             name: session.name,
+            plannedAt: session.plannedAt,
             startedAt: session.startedAt,
             endedAt: session.endedAt,
             durationSeconds: durationSeconds,
@@ -969,14 +1027,14 @@ final class DataSyncService: ObservableObject {
                         policyType: .deterministic,
                         actionType: actionType,
                         stateSnapshot: recStateSnapshot,
-                        generatedAt: session.startedAt
+                        generatedAt: session.plannedAt
                     )
                     
                     // Populate policy selection metadata from snapshot (bandit/shadow mode)
                     if let policySnapshot = ex.policySelectionSnapshot {
                         recommendationEvent.executedPolicyId = policySnapshot.executedPolicyId
                         recommendationEvent.executedActionProbability = policySnapshot.executedActionProbability
-                        recommendationEvent.explorationModeTag = policySnapshot.explorationMode
+                        recommendationEvent.explorationModeTag = policySnapshot.explorationMode.rawValue
                         recommendationEvent.shadowPolicyId = policySnapshot.shadowPolicyId
                         recommendationEvent.shadowActionProbability = policySnapshot.shadowActionProbability
                     }
@@ -1008,7 +1066,7 @@ final class DataSyncService: ObservableObject {
                         targetRestSeconds: ex.restSeconds,
                         targetTempo: ex.tempo,
                         isWarmup: set.isWarmup,
-                        createdAt: session.startedAt
+                        createdAt: session.plannedAt
                     )
                 }
                 
@@ -1029,6 +1087,52 @@ final class DataSyncService: ObservableObject {
                 idsToKeep: syncedExerciseIds
             )
         }
+    }
+
+    /// Record a session abandonment event for ML/data-quality tracking.
+    ///
+    /// This is intentionally separate from `workout_sessions` so we don't need to mutate
+    /// immutable ML attribution rows, and so we can analyze abandonment rates explicitly.
+    func recordSessionAbandonment(
+        session: WorkoutSession,
+        reason: SessionAbandonmentReason,
+        notes: String? = nil
+    ) async throws {
+        guard supabase.isAuthenticated, let userId = supabase.currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let planned = session.exercises.count
+        let completed = session.exercises.filter { perf in
+            perf.sets.contains(where: { $0.isCompleted && !$0.isWarmup })
+        }.count
+        
+        let completionPct: Double? = planned > 0 ? (Double(completed) / Double(planned)) * 100.0 : nil
+        let pendingDecisionIds = session.exercises.compactMap { $0.recommendationEventId?.uuidString }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        let record = DBSessionAbandonment(
+            id: nil,
+            userId: userId,
+            sessionId: session.id.uuidString,
+            abandonedAt: Date(),
+            sessionDate: dateFormatter.string(from: session.startedAt),
+            abandonmentReason: reason.rawValue,
+            exercisesPlanned: planned,
+            exercisesCompleted: completed,
+            completionPercentage: completionPct,
+            pendingDecisionIds: pendingDecisionIds.isEmpty ? nil : pendingDecisionIds,
+            notes: notes,
+            createdAt: nil
+        )
+        
+        let _: DBSessionAbandonment? = try await supabase.insert(
+            into: "ml_session_abandonments",
+            values: record,
+            returning: false
+        )
     }
     
     /// Sync lift states to Supabase
@@ -1248,6 +1352,26 @@ final class DataSyncService: ObservableObject {
             onConflict: "id",
             returning: false,
             resolution: .ignoreDuplicates
+        )
+    }
+    
+    /// Sync a policy decision log entry (idempotent).
+    ///
+    /// We upsert on `id` so the initial decision row can later be updated with outcome fields.
+    func syncPolicyDecisionLog(_ log: DBPolicyDecisionLog) async throws {
+        guard supabase.isAuthenticated, let userId = supabase.currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        var row = log
+        row.userId = userId
+        
+        let _: DBPolicyDecisionLog? = try await supabase.upsert(
+            into: "policy_decision_logs",
+            values: row,
+            onConflict: "id",
+            returning: false,
+            resolution: .mergeDuplicates
         )
     }
     
@@ -1737,6 +1861,7 @@ final class DataSyncService: ObservableObject {
             id: UUID(uuidString: db.id ?? UUID().uuidString) ?? UUID(),
             templateId: db.templateId.flatMap { UUID(uuidString: $0) },
             name: db.name,
+            plannedAt: db.plannedAt,
             startedAt: db.startedAt,
             endedAt: db.endedAt,
             wasDeload: db.wasDeload ?? false,

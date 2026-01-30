@@ -93,6 +93,9 @@ public struct BanditArm: Sendable, Hashable {
 /// progression policies. Uses Thompson sampling with Beta priors for exploration.
 public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelector, @unchecked Sendable {
     
+    /// Bump this when persisted bandit state becomes incompatible (e.g., arm definitions change).
+    private static let persistedSchemaVersion: Int = 1
+    
     /// State store for persisting bandit priors.
     private let stateStore: BanditStateStore
     
@@ -119,6 +122,9 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
     
     /// IDs of decisions we've already updated priors for (to prevent double-counting).
     private var updatedDecisionIds = Set<UUID>()
+    /// FIFO order for deterministic eviction (avoid `Set.popFirst()` randomness).
+    private var updatedDecisionIdOrder: [UUID] = []
+    private let updatedDecisionIdLimit: Int = 1000
     
     /// Creates a Thompson sampling bandit policy selector.
     ///
@@ -148,6 +154,11 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
         
         // Default arms: baseline + counterfactual policies from TrainingDataLogger
         self.arms = arms ?? Self.defaultArms()
+        
+        // Schema/version guard for UserDefaults-backed priors.
+        if let ud = stateStore as? UserDefaultsBanditStateStore {
+            ud.ensureSchema(version: Self.persistedSchemaVersion, armIds: self.arms.map(\.id))
+        }
     }
     
     /// Returns the default set of bandit arms.
@@ -174,13 +185,44 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
         variationContext: VariationContext,
         userId: String
     ) -> PolicySelection {
+        selectPolicyInternal(
+            for: signals,
+            variationContext: variationContext,
+            userId: userId,
+            enforceGate: true
+        )
+    }
+    
+    /// Select a policy while **bypassing** the exploration gate.
+    ///
+    /// This is intended for **shadow mode** counterfactual logging: we want to compute and log the
+    /// counterfactual choice even when exploration would be gated for execution.
+    public func selectPolicyIgnoringGate(
+        for signals: LiftSignalsSnapshot,
+        variationContext: VariationContext,
+        userId: String
+    ) -> PolicySelection {
+        selectPolicyInternal(
+            for: signals,
+            variationContext: variationContext,
+            userId: userId,
+            enforceGate: false
+        )
+    }
+    
+    private func selectPolicyInternal(
+        for signals: LiftSignalsSnapshot,
+        variationContext: VariationContext,
+        userId: String,
+        enforceGate: Bool
+    ) -> PolicySelection {
         // If disabled, always return baseline
         guard isEnabled else {
             return .baselineControl()
         }
         
         // Check exploration gate
-        guard passesExplorationGate(signals: signals) else {
+        if enforceGate, !passesExplorationGate(signals: signals) {
             return .baselineControl()
         }
         
@@ -224,14 +266,22 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
             return
         }
         updatedDecisionIds.insert(entry.id)
-        // Trim old IDs to prevent unbounded growth (keep last 1000)
-        if updatedDecisionIds.count > 1000 {
-            _ = updatedDecisionIds.popFirst()
+        updatedDecisionIdOrder.append(entry.id)
+        // Trim old IDs to prevent unbounded growth (keep FIFO)
+        if updatedDecisionIdOrder.count > updatedDecisionIdLimit {
+            let overflow = updatedDecisionIdOrder.count - updatedDecisionIdLimit
+            if overflow > 0 {
+                for _ in 0..<overflow {
+                    let oldest = updatedDecisionIdOrder.removeFirst()
+                    updatedDecisionIds.remove(oldest)
+                }
+            }
         }
         lock.unlock()
         
-        // Only update for explore mode (not shadow/control)
-        guard entry.explorationMode == "explore" else { return }
+        // Only update for explore mode (not shadow/control).
+        // Normalize to prevent silent data fragmentation from string variants.
+        guard PolicyExplorationMode(normalizing: entry.explorationMode) == .explore else { return }
         
         // Get family key (familyReferenceKey is always non-nil)
         let familyKey = entry.variationContext.familyReferenceKey

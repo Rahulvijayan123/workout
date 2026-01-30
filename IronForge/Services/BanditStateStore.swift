@@ -162,6 +162,86 @@ public final class UserDefaultsBanditStateStore: BanditStateStore, @unchecked Se
             defaults.removeObject(forKey: key)
         }
     }
+
+    // MARK: - Schema / Versioning
+    
+    /// Ensures persisted priors are compatible with the current bandit schema.
+    ///
+    /// If the schema version or arm signature changes, all priors are reset to avoid silently
+    /// mixing incompatible arm definitions (which would corrupt learning).
+    public func ensureSchema(version: Int, armIds: [String]) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        let versionKey = "\(keyPrefix).schema_version"
+        let signatureKey = "\(keyPrefix).arms_signature"
+        
+        let currentSignature = armIds.sorted().joined(separator: "|")
+        let existingVersion = defaults.integer(forKey: versionKey)
+        let existingSignature = defaults.string(forKey: signatureKey)
+        
+        guard existingVersion == version, existingSignature == currentSignature else {
+            // Reset ALL priors (all users) because arm identities changed.
+            let priorPrefix = "\(keyPrefix)_"
+            for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(priorPrefix) {
+                defaults.removeObject(forKey: key)
+            }
+            
+            defaults.set(version, forKey: versionKey)
+            defaults.set(currentSignature, forKey: signatureKey)
+            return
+        }
+    }
+    
+    // MARK: - Identity Migration (local → auth)
+    
+    /// Migrate bandit priors from one userId namespace to another.
+    ///
+    /// This is used when a user logs in: we move/merge priors accrued under the
+    /// offline local user id into the Supabase auth user id, so learning continues
+    /// seamlessly after authentication.
+    ///
+    /// - Parameters:
+    ///   - from: Source user id (typically local UUID).
+    ///   - to: Target user id (typically Supabase auth id).
+    ///   - deleteSource: If true, remove source priors after migration to avoid double-counting on future merges.
+    public func migrateUserId(from: String, to: String, deleteSource: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        let sourcePrefix = "\(keyPrefix)_\(sanitize(from))_"
+        let targetPrefix = "\(keyPrefix)_\(sanitize(to))_"
+        
+        let keys = defaults.dictionaryRepresentation().keys.filter { $0.hasPrefix(sourcePrefix) }
+        guard !keys.isEmpty else { return }
+        
+        for key in keys {
+            let suffix = String(key.dropFirst(sourcePrefix.count))
+            let targetKey = targetPrefix + suffix
+            
+            let sourcePrior = loadPriorUnsafe(key: key)
+            let existingTargetPrior: BetaPrior? = defaults.data(forKey: targetKey).flatMap { data in
+                try? JSONDecoder().decode(BetaPrior.self, from: data)
+            }
+            
+            let merged: BetaPrior = {
+                guard let existingTargetPrior else { return sourcePrior }
+                
+                // Combine posteriors without double-counting the (1,1) prior:
+                // Beta(a1,b1) ⊕ Beta(a2,b2) = Beta(a1+a2-1, b1+b2-1)
+                return BetaPrior(
+                    alpha: max(1.0, sourcePrior.alpha + existingTargetPrior.alpha - 1.0),
+                    beta: max(1.0, sourcePrior.beta + existingTargetPrior.beta - 1.0)
+                )
+            }()
+            
+            savePriorUnsafe(key: targetKey, prior: merged)
+            
+            if deleteSource {
+                defaults.removeObject(forKey: key)
+            }
+        }
+    }
     
     // MARK: - Helpers
     

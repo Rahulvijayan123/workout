@@ -59,6 +59,10 @@
 		AAA0000000000046 /* ShadowModePolicySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000046 /* ShadowModePolicySelector.swift */; };
 		AAA0000000000047 /* ThompsonSamplingBanditPolicySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000047 /* ThompsonSamplingBanditPolicySelector.swift */; };
 		AAA0000000000048 /* BanditStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000048 /* BanditStateStore.swift */; };
+		AAA0000000000050 /* PolicySelectorFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000050 /* PolicySelectorFactory.swift */; };
+		AAA0000000000051 /* TrainingEngineTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000051 /* TrainingEngineTelemetry.swift */; };
+		AAA0000000000052 /* PolicySelectionSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000052 /* PolicySelectionSnapshotStore.swift */; };
+		AAA0000000000053 /* ExecutionContextEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000053 /* ExecutionContextEvaluator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -114,6 +118,10 @@
 		BBB0000000000047 /* ThompsonSamplingBanditPolicySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThompsonSamplingBanditPolicySelector.swift; sourceTree = "<group>"; };
 		BBB0000000000048 /* BanditStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BanditStateStore.swift; sourceTree = "<group>"; };
 		BBB0000000000049 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
+		BBB0000000000050 /* PolicySelectorFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolicySelectorFactory.swift; sourceTree = "<group>"; };
+		BBB0000000000051 /* TrainingEngineTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingEngineTelemetry.swift; sourceTree = "<group>"; };
+		BBB0000000000052 /* PolicySelectionSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolicySelectionSnapshotStore.swift; sourceTree = "<group>"; };
+		BBB0000000000053 /* ExecutionContextEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionContextEvaluator.swift; sourceTree = "<group>"; };
 		CCC0000000000001 /* IronForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IronForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -264,6 +272,10 @@
 			isa = PBXGroup;
 			children = (
 				BBB0000000000034 /* TrainingEngineBridge.swift */,
+				BBB0000000000051 /* TrainingEngineTelemetry.swift */,
+				BBB0000000000052 /* PolicySelectionSnapshotStore.swift */,
+				BBB0000000000050 /* PolicySelectorFactory.swift */,
+				BBB0000000000053 /* ExecutionContextEvaluator.swift */,
 				BBB0000000000036 /* SupabaseService.swift */,
 				BBB0000000000037 /* DataSyncService.swift */,
 				BBB0000000000048 /* BanditStateStore.swift */,
@@ -395,6 +407,10 @@
 				AAA0000000000031 /* WorkoutStore.swift in Sources */,
 				AAA0000000000032 /* WorkoutsRootView.swift in Sources */,
 				AAA0000000000034 /* TrainingEngineBridge.swift in Sources */,
+				AAA0000000000051 /* TrainingEngineTelemetry.swift in Sources */,
+				AAA0000000000052 /* PolicySelectionSnapshotStore.swift in Sources */,
+				AAA0000000000050 /* PolicySelectorFactory.swift in Sources */,
+				AAA0000000000053 /* ExecutionContextEvaluator.swift in Sources */,
 				AAA0000000000035 /* SupabaseConfig.swift in Sources */,
 				AAA0000000000036 /* SupabaseService.swift in Sources */,
 				AAA0000000000037 /* DataSyncService.swift in Sources */,

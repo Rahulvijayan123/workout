@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS public.workout_sessions (
     name TEXT NOT NULL,
     
     -- Timing
+    planned_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     ended_at TIMESTAMPTZ,
     duration_seconds INTEGER,

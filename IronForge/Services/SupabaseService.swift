@@ -24,7 +24,7 @@ final class SupabaseService: ObservableObject {
     private init() {
         // Handle missing/invalid config gracefully
         let urlString = SupabaseConfig.url
-        self.baseURL = URL(string: urlString.isEmpty ? "https://placeholder.supabase.co" : urlString)!
+        self.baseURL = URL(string: urlString) ?? URL(string: "https://placeholder.supabase.co")!
         self.anonKey = SupabaseConfig.anonKey
         
         self.encoder = JSONEncoder()

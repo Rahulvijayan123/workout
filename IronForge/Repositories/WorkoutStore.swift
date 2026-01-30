@@ -34,6 +34,11 @@ final class WorkoutStore: ObservableObject {
     private let sessionsKey = "ironforge.workoutSessions.v2"
     private let exerciseStatesKey = "ironforge.liftStates.v2"
     private let activeSessionKey = "ironforge.activeSession.v2"
+    private let activeSessionLastSavedAtKey = "ironforge.activeSession.lastSavedAt.v1"
+    
+    /// If an active session hasn't been updated for this long, treat it as stale and abandon.
+    /// This reconciles sessions that were left open due to crashes/terminations/navigation bugs.
+    private let activeSessionStaleAfterHours: Double = 8
     
     init(
         exerciseRepository: ExerciseRepository = WorkoutStore.makeDefaultExerciseRepository(),
@@ -109,7 +114,7 @@ final class WorkoutStore: ObservableObject {
         
         // If TrainingEngine returns exercises, use them; otherwise fallback to template-based seeding
         if !sessionPlan.exercises.isEmpty {
-            activeSession = TrainingEngineBridge.convertSessionPlanToUIModel(
+            var session = TrainingEngineBridge.convertSessionPlanToUIModel(
                 sessionPlan,
                 templateId: template.id,
                 templateName: template.name,
@@ -117,6 +122,12 @@ final class WorkoutStore: ObservableObject {
                 exerciseStates: exerciseStates,
                 sessions: sessions
             )
+            // CRITICAL: Real start time is when the user begins the workout.
+            session.startedAt = Date()
+            if session.timeOfDay == nil {
+                session.timeOfDay = TimeOfDay.from(date: session.startedAt)
+            }
+            activeSession = session
         } else {
             // Fallback: seed from template directly (for edge cases)
             let seededExercises: [ExercisePerformance] = template.exercises.map { te in
@@ -138,6 +149,11 @@ final class WorkoutStore: ObservableObject {
         
         // Persist active session so user can continue after closing the app
         saveActiveSession()
+        
+        // ML CRITICAL: Sync plan-time attribution (recommendations/planned sets) at session start.
+        if let session = activeSession {
+            syncSessionStartIfNeeded(session)
+        }
     }
     
     /// Start a recommended session using TrainingEngine's scheduler
@@ -173,7 +189,7 @@ final class WorkoutStore: ObservableObject {
         }
         
         if !sessionPlan.exercises.isEmpty {
-            activeSession = TrainingEngineBridge.convertSessionPlanToUIModel(
+            var session = TrainingEngineBridge.convertSessionPlanToUIModel(
                 sessionPlan,
                 templateId: sessionPlan.templateId,
                 templateName: templateName,
@@ -181,8 +197,19 @@ final class WorkoutStore: ObservableObject {
                 exerciseStates: exerciseStates,
                 sessions: sessions
             )
+            // CRITICAL: Real start time is when the user begins the workout.
+            session.startedAt = Date()
+            if session.timeOfDay == nil {
+                session.timeOfDay = TimeOfDay.from(date: session.startedAt)
+            }
+            activeSession = session
             // Persist active session so user can continue after closing the app
             saveActiveSession()
+            
+            // ML CRITICAL: Sync plan-time attribution at session start.
+            if let session = activeSession {
+                syncSessionStartIfNeeded(session)
+            }
         } else {
             // Fallback: start from first template (startSession will call saveActiveSession)
             if let template = templates.first {
@@ -210,6 +237,36 @@ final class WorkoutStore: ObservableObject {
         )
         // Persist active session so user can continue after closing the app
         saveActiveSession()
+    }
+    
+    /// Begin a session that was pre-created (e.g. for pre-workout check-in).
+    ///
+    /// This centralizes the "session start" semantics:
+    /// - `session.startedAt` must already be the real start time (user tapped Start Workout)
+    /// - plan-time attribution rows are synced best-effort so abandonment still has joins
+    func beginSession(_ session: WorkoutSession) {
+        activeSession = session
+        saveActiveSession()
+        
+        // ML CRITICAL: Sync plan-time attribution at session start (best-effort).
+        syncSessionStartIfNeeded(session)
+    }
+
+    /// Sync plan-time attribution at session start (best-effort).
+    ///
+    /// This ensures we still have immutable recommendation/planned-set rows even if the user abandons.
+    private func syncSessionStartIfNeeded(_ session: WorkoutSession) {
+        guard SupabaseService.shared.isAuthenticated else { return }
+        guard session.exercises.contains(where: { $0.recommendationEventId != nil }) else { return }
+        
+        Task { @MainActor in
+            do {
+                try await DataSyncService.shared.syncWorkoutSession(session)
+            } catch {
+                print("[WorkoutStore] Failed to sync session start: \(error)")
+                DataSyncService.shared.syncError = error
+            }
+        }
     }
     
     func addExerciseToActiveSession(_ exercise: ExerciseRef) {
@@ -253,6 +310,20 @@ final class WorkoutStore: ObservableObject {
                 // ML CRITICAL: Compute set outcomes (metRepTarget, metEffortTarget, setOutcome)
                 for setIdx in performance.sets.indices {
                     var set = performance.sets[setIdx]
+                    
+                    // ML CRITICAL: Recompute modification flag from the final performed values.
+                    // UI-driven flags can undercount if the user edits after completing/toggling a set.
+                    if let origW = set.originalPrescribedWeight,
+                       let origR = set.originalPrescribedReps {
+                        let weightChanged = abs(set.weight - origW) > 1e-6
+                        let repsChanged = set.reps != origR
+                        let modified = weightChanged || repsChanged
+                        set.isUserModified = modified
+                        if !modified {
+                            set.modificationReason = nil
+                        }
+                    }
+                    
                     if set.isCompleted && !set.isWarmup {
                         let targetReps = set.recommendedReps ?? performance.repRangeMin
                         let targetRIR = set.targetRIR ?? performance.targetRIR
@@ -318,6 +389,7 @@ final class WorkoutStore: ObservableObject {
         
         // Clear the persisted active session since workout is complete
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
+        UserDefaults.standard.removeObject(forKey: activeSessionLastSavedAtKey)
         
         // ML CRITICAL: Record outcomes for each exercise to trigger bandit learning.
         // Convert session to engine format and call recordOutcome for each exercise.
@@ -327,9 +399,10 @@ final class WorkoutStore: ObservableObject {
             previousLiftStates: priorStates
         )
         
-        // Build a lookup of exerciseId -> ExercisePerformance for execution context derivation
-        let exerciseLookup = Dictionary(
-            session.exercises.map { ($0.exercise.id, $0) },
+        // Build a lookup of sessionExerciseId -> ExercisePerformance for execution context derivation.
+        // IMPORTANT: Joining by exerciseId is unsafe if the same exercise appears multiple times in a session.
+        let performanceById = Dictionary(
+            session.exercises.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
         )
         
@@ -338,21 +411,12 @@ final class WorkoutStore: ObservableObject {
             let completedWorkingSets = exerciseResult.sets.filter { !$0.isWarmup && $0.completed }
             guard !completedWorkingSets.isEmpty else { continue }
             
-            // Derive execution context by joining on exerciseId (not array index)
+            // Derive execution context by joining on sessionExerciseId (not array index)
             let executionContext: TrainingEngine.ExecutionContext = {
-                guard let perf = exerciseLookup[exerciseResult.exerciseId] else {
+                guard let perf = performanceById[exerciseResult.id] else {
                     return .normal
                 }
-                
-                // Check for injury/pain-related context
-                if perf.stoppedDueToPain == true {
-                    return .injuryDiscomfort
-                }
-                if let painLevel = perf.overallPainLevel, painLevel >= 5 {
-                    return .injuryDiscomfort
-                }
-                
-                return .normal
+                return ExecutionContextEvaluator.compute(for: perf)
             }()
             
             // Record outcome - this triggers the log handler which calls policySelector.recordOutcome
@@ -459,9 +523,52 @@ final class WorkoutStore: ObservableObject {
     }
     
     func cancelActiveSession() {
+        if let session = activeSession {
+            Task { @MainActor in
+                await abandonSession(session, reason: .userCancelled, notes: nil)
+            }
+        }
+        
         activeSession = nil
+        
         // Clear the persisted active session
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
+        UserDefaults.standard.removeObject(forKey: activeSessionLastSavedAtKey)
+    }
+
+    /// Best-effort reconciliation for sessions that end without completion.
+    ///
+    /// This prevents dangling ML attribution rows (recommendations/planned sets) from living forever
+    /// without an explicit abandonment marker.
+    private func abandonSession(
+        _ session: WorkoutSession,
+        reason: SessionAbandonmentReason,
+        notes: String?
+    ) async {
+        // Always clean up local in-memory snapshot cache.
+        PolicySelectionSnapshotStore.shared.removeSession(session.id)
+        
+        guard SupabaseService.shared.isAuthenticated else { return }
+        
+        do {
+            var abandoned = session
+            if abandoned.endedAt == nil {
+                abandoned.endedAt = Date()
+            }
+            
+            // Ensure the session (and any engine-planned attribution rows) exist server-side.
+            try await DataSyncService.shared.syncWorkoutSession(abandoned)
+            
+            // Record the abandonment event.
+            try await DataSyncService.shared.recordSessionAbandonment(
+                session: abandoned,
+                reason: reason,
+                notes: notes
+            )
+        } catch {
+            print("[WorkoutStore] Failed to record session abandonment: \(error)")
+            DataSyncService.shared.syncError = error
+        }
     }
     
     func lastSession(for exerciseId: String) -> WorkoutSession? {
@@ -719,9 +826,11 @@ final class WorkoutStore: ObservableObject {
         if let session = activeSession,
            let data = try? JSONEncoder().encode(session) {
             UserDefaults.standard.set(data, forKey: activeSessionKey)
+            UserDefaults.standard.set(Date(), forKey: activeSessionLastSavedAtKey)
         } else {
             // Clear active session if nil
             UserDefaults.standard.removeObject(forKey: activeSessionKey)
+            UserDefaults.standard.removeObject(forKey: activeSessionLastSavedAtKey)
         }
     }
     
@@ -761,10 +870,33 @@ final class WorkoutStore: ObservableObject {
            let decoded = try? JSONDecoder().decode(WorkoutSession.self, from: data) {
             // Only restore if the session doesn't have an end time (still in progress)
             if decoded.endedAt == nil {
-                activeSession = decoded
+                // Reconcile stale sessions (left open for too long).
+                let now = Date()
+                guard let lastSavedAt = UserDefaults.standard.object(forKey: activeSessionLastSavedAtKey) as? Date else {
+                    // Backward compatibility: older builds didn't track last-saved timestamps.
+                    // Preserve the "resume workout" feature rather than auto-abandoning.
+                    activeSession = decoded
+                    return
+                }
+                
+                let inactiveHours = now.timeIntervalSince(lastSavedAt) / 3600.0
+                
+                if inactiveHours >= activeSessionStaleAfterHours {
+                    // Clear local state immediately.
+                    UserDefaults.standard.removeObject(forKey: activeSessionKey)
+                    UserDefaults.standard.removeObject(forKey: activeSessionLastSavedAtKey)
+                    
+                    // Record abandonment asynchronously (best-effort).
+                    Task { @MainActor in
+                        await abandonSession(decoded, reason: .timeout, notes: "Auto-abandoned stale active session on app launch")
+                    }
+                } else {
+                    activeSession = decoded
+                }
             } else {
                 // Session was ended but not saved properly, clear it
                 UserDefaults.standard.removeObject(forKey: activeSessionKey)
+                UserDefaults.standard.removeObject(forKey: activeSessionLastSavedAtKey)
             }
         }
     }

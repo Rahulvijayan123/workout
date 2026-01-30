@@ -47,6 +47,13 @@ CREATE TABLE IF NOT EXISTS recommendation_events (
     action_type TEXT NOT NULL,
     reason_codes TEXT[] NOT NULL DEFAULT '{}',
     
+    -- ML CRITICAL: Policy selection metadata (bandit/shadow mode)
+    executed_policy_id TEXT,
+    executed_action_probability DECIMAL(6,5),
+    exploration_mode TEXT,
+    shadow_policy_id TEXT,
+    shadow_action_probability DECIMAL(6,5),
+    
     -- Prediction & confidence
     predicted_p_success DECIMAL(4,3),
     model_confidence DECIMAL(4,3),
@@ -94,6 +101,11 @@ ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS deterministic_weight_
 ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS deterministic_reps INT;
 ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS deterministic_p_success DECIMAL(4,3);
 ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS state_at_recommendation JSONB DEFAULT '{}';
+ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS executed_policy_id TEXT;
+ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS executed_action_probability DECIMAL(6,5);
+ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS exploration_mode TEXT;
+ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS shadow_policy_id TEXT;
+ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS shadow_action_probability DECIMAL(6,5);
 ALTER TABLE recommendation_events ADD COLUMN IF NOT EXISTS generated_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_rec_events_user_exercise ON recommendation_events(user_id, exercise_id);
@@ -128,6 +140,49 @@ CREATE TABLE IF NOT EXISTS planned_sets (
 
 CREATE INDEX IF NOT EXISTS idx_planned_sets_exercise ON planned_sets(session_exercise_id);
 CREATE INDEX IF NOT EXISTS idx_planned_sets_recommendation ON planned_sets(recommendation_event_id);
+
+-- 1.3 POLICY DECISION LOGS (Policy selection attribution)
+-- Captures decision-time policy choice + propensity, and later outcome markers.
+CREATE TABLE IF NOT EXISTS policy_decision_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    stable_user_id TEXT NOT NULL,
+    session_id UUID NOT NULL,
+    exercise_id TEXT NOT NULL,
+    family_reference_key TEXT,
+    
+    executed_policy_id TEXT NOT NULL,
+    executed_action_probability DECIMAL(6,5) NOT NULL,
+    exploration_mode TEXT,
+    shadow_policy_id TEXT,
+    shadow_action_probability DECIMAL(6,5),
+    
+    decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    outcome_was_success BOOLEAN,
+    outcome_was_grinder BOOLEAN,
+    outcome_execution_context TEXT,
+    outcome_recorded_at TIMESTAMPTZ,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_user_time ON policy_decision_logs(user_id, decided_at DESC);
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_session ON policy_decision_logs(session_id);
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_exercise ON policy_decision_logs(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_policy_decisions_policy ON policy_decision_logs(executed_policy_id);
+
+-- RLS (match the rest of the user-owned tables)
+ALTER TABLE policy_decision_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS policy_decision_logs_select ON policy_decision_logs;
+DROP POLICY IF EXISTS policy_decision_logs_insert ON policy_decision_logs;
+DROP POLICY IF EXISTS policy_decision_logs_update ON policy_decision_logs;
+DROP POLICY IF EXISTS policy_decision_logs_delete ON policy_decision_logs;
+CREATE POLICY policy_decision_logs_select ON policy_decision_logs FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY policy_decision_logs_insert ON policy_decision_logs FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY policy_decision_logs_update ON policy_decision_logs FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY policy_decision_logs_delete ON policy_decision_logs FOR DELETE USING (auth.uid() = user_id);
 
 -- 1.3 PAIN EVENTS (Normalized)
 CREATE TABLE IF NOT EXISTS pain_events (
@@ -314,6 +369,8 @@ CREATE INDEX IF NOT EXISTS idx_session_exercises_recommendation ON session_exerc
 
 -- 2.3 WORKOUT_SESSIONS - Add ML fields
 ALTER TABLE workout_sessions
+-- Plan timing
+ADD COLUMN IF NOT EXISTS planned_at TIMESTAMPTZ,
 -- Pre-session signals
 ADD COLUMN IF NOT EXISTS pre_workout_readiness INT,
 ADD COLUMN IF NOT EXISTS pre_workout_soreness INT,
@@ -379,19 +436,34 @@ ADD COLUMN IF NOT EXISTS stress_notes TEXT;
 
 DO $$
 BEGIN
+    -- Enforce joinability: do NOT silently null out attribution if a referenced row is deleted.
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_exercises_recommendation_event_id_fkey')
+       AND (SELECT confdeltype FROM pg_constraint WHERE conname = 'session_exercises_recommendation_event_id_fkey' LIMIT 1) <> 'r' THEN
+        ALTER TABLE session_exercises
+        DROP CONSTRAINT session_exercises_recommendation_event_id_fkey;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_exercises_recommendation_event_id_fkey') THEN
         ALTER TABLE session_exercises
         ADD CONSTRAINT session_exercises_recommendation_event_id_fkey
-        FOREIGN KEY (recommendation_event_id) REFERENCES recommendation_events(id) ON DELETE SET NULL;
+        FOREIGN KEY (recommendation_event_id) REFERENCES recommendation_events(id) ON DELETE RESTRICT;
     END IF;
 END $$;
 
 DO $$
 BEGIN
+    -- If a planned_set is deleted (e.g., exercise removed), delete dependent performed rows too.
+    -- This avoids "orphaned but valid" session_sets that break attribution.
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_sets_planned_set_id_fkey')
+       AND (SELECT confdeltype FROM pg_constraint WHERE conname = 'session_sets_planned_set_id_fkey' LIMIT 1) <> 'c' THEN
+        ALTER TABLE session_sets
+        DROP CONSTRAINT session_sets_planned_set_id_fkey;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_sets_planned_set_id_fkey') THEN
         ALTER TABLE session_sets
         ADD CONSTRAINT session_sets_planned_set_id_fkey
-        FOREIGN KEY (planned_set_id) REFERENCES planned_sets(id) ON DELETE SET NULL;
+        FOREIGN KEY (planned_set_id) REFERENCES planned_sets(id) ON DELETE CASCADE;
     END IF;
 END $$;
 
@@ -406,10 +478,47 @@ END $$;
 
 DO $$
 BEGIN
+    -- Enforce joinability for immutable attribution rows.
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planned_sets_recommendation_event_id_fkey')
+       AND (SELECT confdeltype FROM pg_constraint WHERE conname = 'planned_sets_recommendation_event_id_fkey' LIMIT 1) <> 'r' THEN
+        ALTER TABLE planned_sets
+        DROP CONSTRAINT planned_sets_recommendation_event_id_fkey;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planned_sets_recommendation_event_id_fkey') THEN
         ALTER TABLE planned_sets
         ADD CONSTRAINT planned_sets_recommendation_event_id_fkey
-        FOREIGN KEY (recommendation_event_id) REFERENCES recommendation_events(id) ON DELETE SET NULL;
+        FOREIGN KEY (recommendation_event_id) REFERENCES recommendation_events(id) ON DELETE RESTRICT;
+    END IF;
+END $$;
+
+-- Post-migration validation: fail fast if we didn't reach the expected final schema.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_exercises_recommendation_event_id_fkey') THEN
+        RAISE EXCEPTION 'Missing constraint: session_exercises_recommendation_event_id_fkey';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_sets_planned_set_id_fkey') THEN
+        RAISE EXCEPTION 'Missing constraint: session_sets_planned_set_id_fkey';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planned_sets_session_exercise_id_fkey') THEN
+        RAISE EXCEPTION 'Missing constraint: planned_sets_session_exercise_id_fkey';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planned_sets_recommendation_event_id_fkey') THEN
+        RAISE EXCEPTION 'Missing constraint: planned_sets_recommendation_event_id_fkey';
+    END IF;
+
+    IF (SELECT confdeltype FROM pg_constraint WHERE conname = 'session_exercises_recommendation_event_id_fkey' LIMIT 1) <> 'r' THEN
+        RAISE EXCEPTION 'Constraint session_exercises_recommendation_event_id_fkey must be ON DELETE RESTRICT';
+    END IF;
+    IF (SELECT confdeltype FROM pg_constraint WHERE conname = 'session_sets_planned_set_id_fkey' LIMIT 1) <> 'c' THEN
+        RAISE EXCEPTION 'Constraint session_sets_planned_set_id_fkey must be ON DELETE CASCADE';
+    END IF;
+    IF (SELECT confdeltype FROM pg_constraint WHERE conname = 'planned_sets_session_exercise_id_fkey' LIMIT 1) <> 'c' THEN
+        RAISE EXCEPTION 'Constraint planned_sets_session_exercise_id_fkey must be ON DELETE CASCADE';
+    END IF;
+    IF (SELECT confdeltype FROM pg_constraint WHERE conname = 'planned_sets_recommendation_event_id_fkey' LIMIT 1) <> 'r' THEN
+        RAISE EXCEPTION 'Constraint planned_sets_recommendation_event_id_fkey must be ON DELETE RESTRICT';
     END IF;
 END $$;
 

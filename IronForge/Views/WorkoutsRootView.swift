@@ -247,8 +247,7 @@ private struct WorkoutsDashboardView: View {
                     neonPurple: .ironPurple,
                     onStart: {
                         // Apply check-in data and start session
-                        workoutStore.activeSession = session
-                        workoutStore.saveActiveSession()
+                        workoutStore.beginSession(session)
                         showingPreWorkoutCheckIn = false
                         pendingTemplate = nil
                         pendingSession = nil
@@ -2822,6 +2821,12 @@ struct PreWorkoutCheckInSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Start Workout") {
                         applyToSession()
+                        // CRITICAL: `startedAt` must reflect the real workout start (after check-in),
+                        // not the plan materialization time.
+                        session.startedAt = Date()
+                        if session.timeOfDay == nil {
+                            session.timeOfDay = TimeOfDay.from(date: session.startedAt)
+                        }
                         onStart()
                     }
                     .fontWeight(.semibold)

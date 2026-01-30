@@ -76,7 +76,7 @@ public final class ShadowModePolicySelector: ProgressionPolicySelector, @uncheck
         // Get what the bandit would have chosen (for shadow logging)
         // Note: shadowBandit is configured to bypass gating and exclude baseline,
         // so this will always return a non-baseline alternative policy.
-        let shadowSelection = shadowBandit.selectPolicy(
+        let shadowSelection = shadowBandit.selectPolicyIgnoringGate(
             for: signals,
             variationContext: variationContext,
             userId: userId

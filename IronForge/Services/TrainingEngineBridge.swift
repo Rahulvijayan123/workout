@@ -396,19 +396,74 @@ enum TrainingEngineBridge {
     }
     
     /// Get a stable user ID for engine calls.
-    /// Uses a persisted local UUID (does NOT change across auth transitions).
+    /// Uses Supabase `auth.users.id` when authenticated, otherwise a persisted local UUID.
+    ///
+    /// When the user logs in, we persist an alias mapping (local → auth) and migrate
+    /// user-keyed on-device ML state (e.g., bandit priors) to avoid fragmenting learning.
     static func getStableUserId() -> String {
-        // Persisted local UUID for offline/anonymous users.
-        // CRITICAL: Never swap this to an auth ID later; otherwise one human splits into two IDs.
+        // If authenticated, prefer auth user id (stable across devices).
+        if let authUserId = currentAuthenticatedSupabaseUserId() {
+            let localUserId = getOrCreateLocalUserId()
+            if localUserId != authUserId {
+                persistUserIdAlias(localUserId: localUserId, authUserId: authUserId)
+                migrateBanditStateIfNeeded(localUserId: localUserId, authUserId: authUserId)
+            }
+            return authUserId
+        }
+        
+        // Offline/anonymous: use persisted local UUID.
+        return getOrCreateLocalUserId()
+    }
+    
+    private static func currentAuthenticatedSupabaseUserId() -> String? {
+        // Read from the same persisted keys used by `SupabaseService`.
+        // This avoids @MainActor crossing from nonisolated contexts.
+        let defaults = UserDefaults.standard
+        let userId = defaults.string(forKey: "supabase.userId")?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let token = defaults.string(forKey: "supabase.authToken")?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let userId, !userId.isEmpty, let token, !token.isEmpty else { return nil }
+        return userId
+    }
+    
+    private static func getOrCreateLocalUserId() -> String {
         let localUserIdKey = "ironforge.engine.localUserId"
         if let existingId = UserDefaults.standard.string(forKey: localUserIdKey) {
             return existingId
         }
         
-        // Generate and persist a new local UUID (only once)
         let newId = UUID().uuidString
         UserDefaults.standard.set(newId, forKey: localUserIdKey)
         return newId
+    }
+    
+    private static func persistUserIdAlias(localUserId: String, authUserId: String) {
+        // Keep a local alias map so offline-generated ML artifacts can be unified after login.
+        let defaults = UserDefaults.standard
+        let key = "ironforge.engine.userIdAliases.v1"
+        
+        var map: [String: String] = [:]
+        if let data = defaults.data(forKey: key),
+           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+            map = decoded
+        }
+        
+        // Only write if changed (avoid churn).
+        if map[localUserId] == authUserId { return }
+        map[localUserId] = authUserId
+        
+        if let data = try? JSONEncoder().encode(map) {
+            defaults.set(data, forKey: key)
+        }
+    }
+    
+    private static func migrateBanditStateIfNeeded(localUserId: String, authUserId: String) {
+        let defaults = UserDefaults.standard
+        let migrationKey = "ironforge.engine.didMigrateBanditState.\(localUserId).to.\(authUserId)"
+        guard !defaults.bool(forKey: migrationKey) else { return }
+        
+        // Merge/migrate on-device bandit priors so login doesn't reset learning.
+        UserDefaultsBanditStateStore.shared.migrateUserId(from: localUserId, to: authUserId, deleteSource: true)
+        defaults.set(true, forKey: migrationKey)
     }
     
     // MARK: - Template Conversion
@@ -850,7 +905,7 @@ enum TrainingEngineBridge {
     ///
     /// CRITICAL: This method now:
     /// 1. Uses `sessionPlan.sessionId` as the session ID (stable join key)
-    /// 2. Uses `sessionPlan.date` as the session start time
+    /// 2. Uses `sessionPlan.date` as the plan generation timestamp (`WorkoutSession.plannedAt`)
     /// 3. Populates ML-critical fields on each set (recommendedWeight, recommendedReps, targetRIR, plannedSetId)
     /// 4. Populates ML-critical fields on each exercise (recommendationEventId, plannedTopSet*, stateSnapshot)
     static func convertSessionPlanToUIModel(
@@ -1017,6 +1072,24 @@ enum TrainingEngineBridge {
                 exerciseId: exercisePlan.exercise.id
             ) {
                 perf.policySelectionSnapshot = snapshot
+            } else if exercisePlan.exercise.equipment == .bodyweight {
+                // TrainingEngine skips policy selection + decision logging for bodyweight exercises.
+                // We still attach a control snapshot so downstream ML rows remain well-formed.
+                perf.policySelectionSnapshot = PolicySelectionSnapshot(
+                    executedPolicyId: "baseline",
+                    executedActionProbability: 1.0,
+                    explorationMode: .control
+                )
+            } else {
+                // This should be effectively impossible when policy selection is wired correctly.
+                // Fail loudly in debug so we don't silently ship empty attribution fields.
+                let msg = "[TrainingEngineBridge] Missing policySelectionSnapshot (sessionId=\(sessionPlan.sessionId), exerciseId=\(exercisePlan.exercise.id))."
+                print(msg)
+                #if DEBUG
+                if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
+                    assertionFailure(msg)
+                }
+                #endif
             }
             
             return perf
@@ -1027,6 +1100,7 @@ enum TrainingEngineBridge {
             id: sessionPlan.sessionId,
             templateId: templateId,
             name: templateName,
+            plannedAt: sessionPlan.date,
             startedAt: sessionPlan.date,
             endedAt: nil,
             wasDeload: sessionPlan.isDeload,
@@ -1162,7 +1236,16 @@ enum TrainingEngineBridge {
         // Build policy selection provider closure
         let policySelectionProvider: TrainingEngine.PolicySelectionProvider? = policySelector.map { selector in
             { @Sendable signals, variationContext in
-                selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
+                let selection = selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
+                
+                // ML CRITICAL: Store policy selection snapshot at decision time so it can't be skipped.
+                PolicySelectionSnapshotStore.shared.upsert(
+                    sessionId: planningContext.sessionId,
+                    exerciseId: signals.exerciseId,
+                    policySelection: selection
+                )
+                
+                return selection
             }
         }
         
@@ -1224,7 +1307,16 @@ enum TrainingEngineBridge {
         // Build policy selection provider closure
         let policySelectionProvider: TrainingEngine.PolicySelectionProvider? = policySelector.map { selector in
             { @Sendable signals, variationContext in
-                selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
+                let selection = selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
+                
+                // ML CRITICAL: Store policy selection snapshot at decision time so it can't be skipped.
+                PolicySelectionSnapshotStore.shared.upsert(
+                    sessionId: planningContext.sessionId,
+                    exerciseId: signals.exerciseId,
+                    policySelection: selection
+                )
+                
+                return selection
             }
         }
         

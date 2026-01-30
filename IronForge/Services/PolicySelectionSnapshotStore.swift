@@ -11,10 +11,10 @@ import TrainingEngine
 /// The TrainingEngine logs decisions as they're computed, but the UI model is constructed
 /// separately. This store bridges the two by caching policy selection data so it can be
 /// attached to `ExercisePerformance.policySelectionSnapshot` during `convertSessionPlanToUIModel`.
-public final class PolicySelectionSnapshotStore: @unchecked Sendable {
+final class PolicySelectionSnapshotStore: @unchecked Sendable {
     
     /// Shared singleton instance.
-    public static let shared = PolicySelectionSnapshotStore()
+    static let shared = PolicySelectionSnapshotStore()
     
     /// Composite key for snapshot lookup.
     private struct SnapshotKey: Hashable {
@@ -35,15 +35,35 @@ public final class PolicySelectionSnapshotStore: @unchecked Sendable {
     /// Upserts a policy selection snapshot from a DecisionLogEntry.
     ///
     /// - Parameter entry: The decision log entry containing policy selection data.
-    public func upsert(entry: DecisionLogEntry) {
+    func upsert(entry: DecisionLogEntry) {
         let key = SnapshotKey(sessionId: entry.sessionId, exerciseId: entry.exerciseId)
         
         let snapshot = PolicySelectionSnapshot(
             executedPolicyId: entry.executedPolicyId,
             executedActionProbability: entry.executedActionProbability,
-            explorationMode: entry.explorationMode,
+            explorationMode: PolicyExplorationMode(normalizing: entry.explorationMode),
             shadowPolicyId: entry.shadowPolicyId,
             shadowActionProbability: entry.shadowActionProbability
+        )
+        
+        lock.lock()
+        defer { lock.unlock() }
+        snapshots[key] = snapshot
+    }
+
+    /// Upserts a policy selection snapshot at policy-selection time.
+    ///
+    /// This makes snapshot creation difficult to skip because it is wired directly into the
+    /// policySelectionProvider closure used during session planning.
+    func upsert(sessionId: UUID, exerciseId: String, policySelection: PolicySelection) {
+        let key = SnapshotKey(sessionId: sessionId, exerciseId: exerciseId)
+        
+        let snapshot = PolicySelectionSnapshot(
+            executedPolicyId: policySelection.executedPolicyId,
+            executedActionProbability: policySelection.executedActionProbability,
+            explorationMode: PolicyExplorationMode(normalizing: policySelection.explorationMode.rawValue),
+            shadowPolicyId: policySelection.shadowPolicyId,
+            shadowActionProbability: policySelection.shadowActionProbability
         )
         
         lock.lock()
@@ -57,7 +77,7 @@ public final class PolicySelectionSnapshotStore: @unchecked Sendable {
     ///   - sessionId: The session ID.
     ///   - exerciseId: The exercise ID.
     /// - Returns: The cached snapshot, or nil if not found.
-    public func snapshot(sessionId: UUID, exerciseId: String) -> PolicySelectionSnapshot? {
+    func snapshot(sessionId: UUID, exerciseId: String) -> PolicySelectionSnapshot? {
         let key = SnapshotKey(sessionId: sessionId, exerciseId: exerciseId)
         
         lock.lock()
@@ -70,7 +90,7 @@ public final class PolicySelectionSnapshotStore: @unchecked Sendable {
     /// Call this after the session is synced to Supabase to prevent memory growth.
     ///
     /// - Parameter sessionId: The session ID to remove.
-    public func removeSession(_ sessionId: UUID) {
+    func removeSession(_ sessionId: UUID) {
         lock.lock()
         defer { lock.unlock() }
         
@@ -83,14 +103,14 @@ public final class PolicySelectionSnapshotStore: @unchecked Sendable {
     /// Clears all cached snapshots.
     ///
     /// Useful for testing or when resetting app state.
-    public func clear() {
+    func clear() {
         lock.lock()
         defer { lock.unlock() }
         snapshots.removeAll()
     }
     
     /// Returns the number of cached snapshots (for debugging/testing).
-    public var count: Int {
+    var count: Int {
         lock.lock()
         defer { lock.unlock() }
         return snapshots.count

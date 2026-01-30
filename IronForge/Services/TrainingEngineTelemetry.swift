@@ -60,9 +60,64 @@ public enum TrainingEngineTelemetry {
         // Always store the policy selection snapshot for UI model construction
         PolicySelectionSnapshotStore.shared.upsert(entry: entry)
         
+        // Persist decision-level log (features/action/propensity/context) for offline evaluation.
+        // This is intentionally decoupled from session sync so we don't have to reconstruct
+        // attribution later from inferred state.
+        Task { @MainActor in
+            guard SupabaseService.shared.isAuthenticated,
+                  let authUserId = SupabaseService.shared.currentUserId else {
+                return
+            }
+            
+            let decidedAt: Date? = entry.outcome == nil ? Date() : nil
+            let outcomeRecordedAt: Date? = entry.outcome != nil ? Date() : nil
+            
+            let outcomeContextTag: String? = entry.outcome.map { outcome in
+                executionContextTag(outcome.executionContext)
+            }
+            
+            let row = DataSyncService.DBPolicyDecisionLog(
+                id: entry.id.uuidString,
+                userId: authUserId,
+                stableUserId: entry.userId,
+                sessionId: entry.sessionId.uuidString,
+                exerciseId: entry.exerciseId,
+                familyReferenceKey: entry.variationContext.familyReferenceKey,
+                executedPolicyId: entry.executedPolicyId,
+                executedActionProbability: entry.executedActionProbability,
+                explorationMode: entry.explorationMode,
+                shadowPolicyId: entry.shadowPolicyId,
+                shadowActionProbability: entry.shadowActionProbability,
+                decidedAt: decidedAt,
+                outcomeWasSuccess: entry.outcome?.wasSuccess,
+                outcomeWasGrinder: entry.outcome?.wasGrinder,
+                outcomeExecutionContext: outcomeContextTag,
+                outcomeRecordedAt: outcomeRecordedAt
+            )
+            
+            do {
+                try await DataSyncService.shared.syncPolicyDecisionLog(row)
+            } catch {
+                // Best-effort: do not block planning/execution on telemetry failures.
+                print("[TrainingEngineTelemetry] Failed to sync policy decision log: \(error)")
+                DataSyncService.shared.syncError = error
+            }
+        }
+        
         // If outcome is present, this is an outcome update - trigger bandit learning
         if entry.outcome != nil {
             policySelector?.recordOutcome(entry, userId: entry.userId)
+        }
+    }
+    
+    private static func executionContextTag(_ ctx: TrainingEngine.ExecutionContext) -> String {
+        switch ctx {
+        case .normal:
+            return "normal"
+        case .injuryDiscomfort:
+            return "injury_discomfort"
+        @unknown default:
+            return String(describing: ctx)
         }
     }
     
