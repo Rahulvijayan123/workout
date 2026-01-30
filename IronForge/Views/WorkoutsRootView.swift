@@ -194,7 +194,8 @@ private struct WorkoutsDashboardView: View {
                                 sessions: workoutStore.sessions,
                                 liftStates: workoutStore.exerciseStates,
                                 readiness: readiness,
-                                dailyBiometrics: recentBiometrics
+                                dailyBiometrics: recentBiometrics,
+                                policySelector: WorkoutStore.sharedPolicySelector
                             )
                             pendingSession = TrainingEngineBridge.convertSessionPlanToUIModel(
                                 sessionPlan,

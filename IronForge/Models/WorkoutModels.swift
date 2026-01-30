@@ -288,6 +288,41 @@ struct TechniqueLimitations: Codable, Hashable {
     }
 }
 
+// MARK: - Policy Selection Snapshot (ML Critical)
+
+/// Snapshot of policy selection metadata at recommendation time.
+/// Used to persist bandit/shadow policy data into the canonical ML stream.
+struct PolicySelectionSnapshot: Codable, Hashable {
+    /// ID of the executed policy (e.g., "baseline", "conservative", "aggressive")
+    var executedPolicyId: String
+    
+    /// Probability of selecting the executed action given the policy state
+    var executedActionProbability: Double?
+    
+    /// Exploration mode: "baseline", "explore", "shadow"
+    var explorationMode: String
+    
+    /// ID of the shadow policy (if shadow mode)
+    var shadowPolicyId: String?
+    
+    /// Probability of the shadow action
+    var shadowActionProbability: Double?
+    
+    init(
+        executedPolicyId: String,
+        executedActionProbability: Double? = nil,
+        explorationMode: String,
+        shadowPolicyId: String? = nil,
+        shadowActionProbability: Double? = nil
+    ) {
+        self.executedPolicyId = executedPolicyId
+        self.executedActionProbability = executedActionProbability
+        self.explorationMode = explorationMode
+        self.shadowPolicyId = shadowPolicyId
+        self.shadowActionProbability = shadowActionProbability
+    }
+}
+
 // MARK: - Tempo (UI model)
 
 /// Tempo prescription (eccentric-pause-concentric-pause), expressed in seconds.
@@ -902,6 +937,12 @@ struct ExercisePerformance: Codable, Identifiable, Hashable {
     /// ID of the recommendation event that prescribed this exercise
     var recommendationEventId: UUID? = nil
     
+    // MARK: - Policy Selection Snapshot (ML Critical)
+    
+    /// Snapshot of policy selection metadata at recommendation time.
+    /// Enables offline evaluation of bandit/shadow policies.
+    var policySelectionSnapshot: PolicySelectionSnapshot? = nil
+    
     /// Computed rep range for convenience
     var repRange: ClosedRange<Int> {
         repRangeMin...repRangeMax
@@ -1096,6 +1137,9 @@ struct ExercisePerformance: Codable, Identifiable, Hashable {
         modificationDetails = try container.decodeIfPresent(ModificationDetails.self, forKey: .modificationDetails)
         recommendationEventId = try container.decodeIfPresent(UUID.self, forKey: .recommendationEventId)
         
+        // Policy selection (ML critical)
+        policySelectionSnapshot = try container.decodeIfPresent(PolicySelectionSnapshot.self, forKey: .policySelectionSnapshot)
+        
         // Legacy field support
         if let legacyPlannedSets = try? container.decode(Int.self, forKey: .legacyPlannedSets) {
             setsTarget = legacyPlannedSets
@@ -1165,6 +1209,9 @@ struct ExercisePerformance: Codable, Identifiable, Hashable {
         try container.encodeIfPresent(nearFailureSignals, forKey: .nearFailureSignals)
         try container.encodeIfPresent(modificationDetails, forKey: .modificationDetails)
         try container.encodeIfPresent(recommendationEventId, forKey: .recommendationEventId)
+        
+        // Policy selection (ML critical)
+        try container.encodeIfPresent(policySelectionSnapshot, forKey: .policySelectionSnapshot)
     }
     
     private enum CodingKeys: String, CodingKey {
@@ -1183,6 +1230,8 @@ struct ExercisePerformance: Codable, Identifiable, Hashable {
         // Near-failure and modification
         case nearFailureSignals, modificationDetails
         case recommendationEventId
+        // Policy selection (ML critical)
+        case policySelectionSnapshot
         case legacyPlannedSets = "plannedSets"
         case legacyRepRange = "repRange"
     }

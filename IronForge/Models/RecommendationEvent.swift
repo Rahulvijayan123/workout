@@ -71,6 +71,23 @@ struct RecommendationEvent: Codable, Identifiable {
     // State snapshot at recommendation time (prevents leakage)
     var stateSnapshot: LiftStateSnapshot
     
+    // MARK: - Policy Selection (Bandit/Shadow Mode)
+    
+    /// ID of the executed policy (e.g., "baseline", "conservative", "aggressive")
+    var executedPolicyId: String?
+    
+    /// Probability of selecting the executed action given the policy state
+    var executedActionProbability: Double?
+    
+    /// Exploration mode: "baseline", "explore", "shadow"
+    var explorationModeTag: String?
+    
+    /// ID of the shadow policy (if shadow mode)
+    var shadowPolicyId: String?
+    
+    /// Probability of the shadow action
+    var shadowActionProbability: Double?
+    
     var generatedAt: Date = Date()
     
     // MARK: - Candidate Action

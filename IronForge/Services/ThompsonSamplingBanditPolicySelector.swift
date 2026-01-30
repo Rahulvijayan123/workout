@@ -53,7 +53,7 @@ public struct BanditGateConfig: Codable, Sendable {
 }
 
 /// Bandit arm definition.
-public struct BanditArm: Codable, Sendable, Hashable {
+public struct BanditArm: Sendable, Hashable {
     /// Unique identifier for the arm.
     public let id: String
     
@@ -71,6 +71,16 @@ public struct BanditArm: Codable, Sendable, Hashable {
         self.id = id
         self.directionConfig = directionConfig
         self.magnitudeConfig = magnitudeConfig
+    }
+    
+    // Hash/equality are defined on `id` only.
+    // Configs are not hashable/codable and should not affect arm identity.
+    public static func == (lhs: BanditArm, rhs: BanditArm) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
     
     /// The baseline arm (default configs).
@@ -216,7 +226,7 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
         updatedDecisionIds.insert(entry.id)
         // Trim old IDs to prevent unbounded growth (keep last 1000)
         if updatedDecisionIds.count > 1000 {
-            updatedDecisionIds.removeFirst()
+            _ = updatedDecisionIds.popFirst()
         }
         lock.unlock()
         
@@ -310,8 +320,10 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
         }
         
         let propensity = Double(winCounts[best.arm.id, default: 0]) / Double(propensitySamples)
-        
-        return (best.arm, max(0.01, propensity)) // Floor at 1% to avoid division issues
+        // IMPORTANT: This should represent P(executed_action | executed_policy, state_at_decision_time).
+        // We only clamp to a tiny epsilon to avoid exactly-zero probabilities from Monte Carlo variance.
+        let clamped = max(1e-6, min(1.0, propensity))
+        return (best.arm, clamped)
     }
     
     /// Samples from a Beta distribution using the Gamma method.

@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import TrainingEngine
 
 // MARK: - TrainingEngine Type Aliases
@@ -35,6 +36,33 @@ typealias TEReadinessRecord = TrainingEngine.ReadinessRecord
 /// Bridges IronForge UI models to TrainingEngine domain models.
 /// This keeps `import TrainingEngine` contained and handles all type conversions.
 enum TrainingEngineBridge {
+    
+    // MARK: - Deterministic IDs (ML join keys)
+    
+    /// Generates a deterministic UUID from a namespace UUID + name string.
+    ///
+    /// Used for ML join keys that must be stable if the same plan is materialized
+    /// multiple times (e.g. UI rebuilds, retries).
+    private static func deterministicUUID(namespace: UUID, name: String) -> UUID {
+        var data = Data()
+        var ns = namespace.uuid
+        withUnsafeBytes(of: &ns) { data.append(contentsOf: $0) }
+        data.append(contentsOf: name.utf8)
+        
+        let digest = SHA256.hash(data: data)
+        var bytes = Array(digest.prefix(16))
+        
+        // Set RFC 4122 variant + a "name-based" version nibble (v5-style).
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
     
     // MARK: - Equipment Mapping
     
@@ -347,9 +375,9 @@ enum TrainingEngineBridge {
     static func convertUserProfile(_ profile: UserProfile, stableUserId: String? = nil) -> TEUserProfile {
         let goals = profile.goals.map { convertGoal($0) }
         
-        // Use provided stable ID, or fall back to the profile's ID if available.
+        // Use provided stable ID.
         // CRITICAL: Never generate a new random UUID here - that breaks user-level learning.
-        let userId = stableUserId ?? profile.id?.uuidString ?? "anonymous"
+        let userId = stableUserId ?? "anonymous"
         
         return TEUserProfile(
             id: userId,
@@ -368,14 +396,10 @@ enum TrainingEngineBridge {
     }
     
     /// Get a stable user ID for engine calls.
-    /// Prefers Supabase auth user ID when authenticated, otherwise uses a persisted local UUID.
+    /// Uses a persisted local UUID (does NOT change across auth transitions).
     static func getStableUserId() -> String {
-        // Check if user is authenticated with Supabase
-        if let supabaseUserId = SupabaseService.shared.currentUserId {
-            return supabaseUserId
-        }
-        
-        // Fall back to a persisted local UUID for offline/anonymous users
+        // Persisted local UUID for offline/anonymous users.
+        // CRITICAL: Never swap this to an auth ID later; otherwise one human splits into two IDs.
         let localUserIdKey = "ironforge.engine.localUserId"
         if let existingId = UserDefaults.standard.string(forKey: localUserIdKey) {
             return existingId
@@ -837,7 +861,7 @@ enum TrainingEngineBridge {
         exerciseStates: [String: ExerciseState] = [:],
         sessions: [WorkoutSession] = []
     ) -> WorkoutSession {
-        let exercises = sessionPlan.exercises.map { exercisePlan -> ExercisePerformance in
+        let exercises = sessionPlan.exercises.enumerated().map { exIdx, exercisePlan -> ExercisePerformance in
             let exerciseRef = ExerciseRef(
                 id: exercisePlan.exercise.id,
                 name: exercisePlan.exercise.name,
@@ -846,8 +870,11 @@ enum TrainingEngineBridge {
                 target: exercisePlan.exercise.primaryMuscles.first?.rawValue ?? "unknown"
             )
             
-            // Generate a stable recommendationEventId for this exercise prescription
-            let recommendationEventId = UUID()
+            // ML CRITICAL: Stable recommendation event ID (deterministic for a given planned session).
+            let recommendationEventId = deterministicUUID(
+                namespace: sessionPlan.sessionId,
+                name: "recommendation_event:\(exercisePlan.exercise.id):\(exIdx)"
+            )
             
             // Find the top set (highest target load) for exercise-level planned fields
             let topSetPlan = exercisePlan.sets.filter { !$0.isWarmup }.max { $0.targetLoad.value < $1.targetLoad.value }
@@ -855,13 +882,23 @@ enum TrainingEngineBridge {
             let topSetReps = topSetPlan?.targetReps
             let topSetRIR = topSetPlan?.targetRIR
             
+            // ML CRITICAL: Stable session exercise ID (deterministic for upserts)
+            let sessionExerciseId = deterministicUUID(
+                namespace: sessionPlan.sessionId,
+                name: "session_exercise:\(exIdx)"
+            )
+            
             // Create sets with ML-critical fields populated
             let sets: [WorkoutSet] = exercisePlan.sets.enumerated().map { (index, setPlan) -> WorkoutSet in
                 let weightLbs = setPlan.targetLoad.converted(to: .pounds).value
-                let plannedSetId = UUID()  // Stable ID for this prescribed set
+                let plannedSetId = deterministicUUID(
+                    namespace: recommendationEventId,
+                    name: "planned_set:\(setPlan.setIndex)"
+                )
                 
+                // ML CRITICAL: Use plannedSetId as the set ID for stable joins
                 return WorkoutSet(
-                    id: UUID(),
+                    id: plannedSetId,
                     reps: setPlan.targetReps,
                     weight: weightLbs,
                     isCompleted: false,
@@ -943,7 +980,7 @@ enum TrainingEngineBridge {
             }()
             
             var perf = ExercisePerformance(
-                id: UUID(),
+                id: sessionExerciseId,  // ML CRITICAL: Deterministic for stable upserts
                 exercise: exerciseRef,
                 setsTarget: prescription.setCount,
                 repRangeMin: prescription.targetRepsRange.lowerBound,
@@ -966,6 +1003,17 @@ enum TrainingEngineBridge {
             perf.plannedTargetRIR = topSetRIR
             perf.stateSnapshot = stateSnapshot
             perf.exposureRole = exposureRole
+            
+            // ML CRITICAL: Populate policy selection snapshot for bandit/shadow mode tracking
+            if let policySelection = exercisePlan.policySelection {
+                perf.policySelectionSnapshot = PolicySelectionSnapshot(
+                    executedPolicyId: policySelection.executedPolicyId,
+                    executedActionProbability: policySelection.executedActionProbability,
+                    explorationMode: policySelection.explorationMode,
+                    shadowPolicyId: policySelection.shadowPolicyId,
+                    shadowActionProbability: policySelection.shadowActionProbability
+                )
+            }
             
             return perf
         }

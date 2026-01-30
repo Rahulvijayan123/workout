@@ -224,6 +224,14 @@ final class SupabaseService: ObservableObject {
     
     // MARK: - REST API
     
+    /// PostgREST upsert conflict resolution strategy.
+    enum UpsertResolution: String {
+        /// Insert or update on conflict (Postgres `ON CONFLICT DO UPDATE`).
+        case mergeDuplicates = "merge-duplicates"
+        /// Insert and ignore conflicts (Postgres `ON CONFLICT DO NOTHING`).
+        case ignoreDuplicates = "ignore-duplicates"
+    }
+    
     /// Generic fetch from a table
     func fetch<T: Codable>(
         from table: String,
@@ -378,11 +386,17 @@ final class SupabaseService: ObservableObject {
         into table: String,
         values: T,
         onConflict: String? = nil,
-        returning: Bool = true
+        returning: Bool = true,
+        resolution: UpsertResolution = .mergeDuplicates
     ) async throws -> R? {
-        let url = baseURL.appendingPathComponent("rest/v1/\(table)")
+        var components = URLComponents(url: baseURL.appendingPathComponent("rest/v1/\(table)"), resolvingAgainstBaseURL: false)!
+        if let onConflict, !onConflict.isEmpty {
+            components.queryItems = (components.queryItems ?? []) + [
+                URLQueryItem(name: "on_conflict", value: onConflict)
+            ]
+        }
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: components.url!)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(anonKey, forHTTPHeaderField: "apikey")
@@ -391,7 +405,7 @@ final class SupabaseService: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        var prefer = "resolution=merge-duplicates"
+        var prefer = "resolution=\(resolution.rawValue)"
         if returning {
             prefer += ",return=representation"
         }
@@ -419,6 +433,44 @@ final class SupabaseService: ObservableObject {
         }
         
         return nil
+    }
+    
+    /// Upsert multiple rows into a table (array payload).
+    func upsertBatch<T: Codable>(
+        into table: String,
+        values: [T],
+        onConflict: String? = nil,
+        resolution: UpsertResolution = .mergeDuplicates
+    ) async throws {
+        var components = URLComponents(url: baseURL.appendingPathComponent("rest/v1/\(table)"), resolvingAgainstBaseURL: false)!
+        if let onConflict, !onConflict.isEmpty {
+            components.queryItems = (components.queryItems ?? []) + [
+                URLQueryItem(name: "on_conflict", value: onConflict)
+            ]
+        }
+        
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        request.setValue("resolution=\(resolution.rawValue),return=minimal", forHTTPHeaderField: "Prefer")
+        request.httpBody = try encoder.encode(values)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        if httpResponse.statusCode >= 400 {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw SupabaseError.apiError(errorText)
+        }
     }
     
     /// Delete from a table

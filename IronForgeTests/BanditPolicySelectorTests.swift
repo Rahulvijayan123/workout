@@ -563,3 +563,89 @@ final class BanditPolicySelectorTests: XCTestCase {
         )
     }
 }
+
+final class MLJoinabilityTests: XCTestCase {
+    func testStableUserIdDoesNotChangeAcrossCalls() {
+        let key = "ironforge.engine.localUserId"
+        UserDefaults.standard.removeObject(forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+        
+        let a = TrainingEngineBridge.getStableUserId()
+        let b = TrainingEngineBridge.getStableUserId()
+        XCTAssertEqual(a, b)
+    }
+    
+    func testJoinKeysAreDeterministicWithinSameSessionPlan() {
+        let sessionId = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let date = Date(timeIntervalSince1970: 1_700_000_000) // Stable for deterministic tests
+        
+        let exercise = TrainingEngine.Exercise.barbellSquat
+        let prescription = TrainingEngine.SetPrescription.hypertrophy
+        
+        let setPlans: [TrainingEngine.SetPlan] = [
+            .init(
+                setIndex: 0,
+                targetLoad: .pounds(95),
+                targetReps: 5,
+                targetRIR: 3,
+                restSeconds: 60,
+                isWarmup: true
+            ),
+            .init(
+                setIndex: 1,
+                targetLoad: .pounds(135),
+                targetReps: 8,
+                targetRIR: 2,
+                restSeconds: 120,
+                isWarmup: false
+            )
+        ]
+        
+        let exercisePlan = TrainingEngine.ExercisePlan(
+            exercise: exercise,
+            prescription: prescription,
+            sets: setPlans,
+            progressionPolicy: .none
+        )
+        
+        let plan = TrainingEngine.SessionPlan(
+            sessionId: sessionId,
+            date: date,
+            templateId: nil,
+            exercises: [exercisePlan],
+            isDeload: false,
+            deloadReason: nil
+        )
+        
+        let uiA = TrainingEngineBridge.convertSessionPlanToUIModel(
+            plan,
+            templateId: nil,
+            templateName: "Test Template"
+        )
+        let uiB = TrainingEngineBridge.convertSessionPlanToUIModel(
+            plan,
+            templateId: nil,
+            templateName: "Test Template"
+        )
+        
+        // Session join key is stable.
+        XCTAssertEqual(uiA.id, sessionId)
+        XCTAssertEqual(uiB.id, sessionId)
+        
+        // Exercise join key is stable (recommendation_event_id).
+        XCTAssertEqual(uiA.exercises.count, 1)
+        XCTAssertEqual(uiB.exercises.count, 1)
+        let exA = uiA.exercises[0]
+        let exB = uiB.exercises[0]
+        XCTAssertNotNil(exA.recommendationEventId)
+        XCTAssertEqual(exA.recommendationEventId, exB.recommendationEventId)
+        
+        // Set join keys are stable (planned_set_id) and present for every set.
+        let plannedSetIdsA = exA.sets.compactMap(\.plannedSetId)
+        let plannedSetIdsB = exB.sets.compactMap(\.plannedSetId)
+        XCTAssertEqual(plannedSetIdsA.count, exA.sets.count)
+        XCTAssertEqual(plannedSetIdsB.count, exB.sets.count)
+        XCTAssertEqual(plannedSetIdsA, plannedSetIdsB)
+        XCTAssertEqual(Set(plannedSetIdsA).count, plannedSetIdsA.count, "plannedSetId should be unique per set")
+    }
+}

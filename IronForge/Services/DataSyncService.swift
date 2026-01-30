@@ -14,7 +14,7 @@ final class DataSyncService: ObservableObject {
     
     @Published private(set) var isSyncing = false
     @Published private(set) var lastSyncAt: Date?
-    @Published private(set) var syncError: Error?
+    @Published var syncError: Error?  // Made settable for external error reporting
     
     // MARK: - Supabase Data Models
     
@@ -473,6 +473,13 @@ final class DataSyncService: ObservableObject {
         // State snapshot (JSONB)
         var stateAtRecommendation: String?
         
+        // ML CRITICAL: Policy selection metadata (bandit/shadow mode)
+        var executedPolicyId: String?
+        var executedActionProbability: Double?
+        var explorationMode: String?
+        var shadowPolicyId: String?
+        var shadowActionProbability: Double?
+        
         var generatedAt: Date?
     }
     
@@ -699,6 +706,9 @@ final class DataSyncService: ObservableObject {
         
         // Insert exercises and sets
         for (idx, ex) in session.exercises.enumerated() {
+            // ML CRITICAL: Only use real recommendationEventId if present.
+            // Do NOT fabricate join keys for manual/ad-hoc exercises.
+            
             var exSets = 0
             var exReps = 0
             var exVolume: Double = 0
@@ -774,7 +784,7 @@ final class DataSyncService: ObservableObject {
                 hasBreathingIssue: ex.techniqueLimitations?.breathingIssue,
                 hasTechniqueOther: ex.techniqueLimitations?.other,
                 techniqueLimitationNotes: ex.techniqueLimitations?.notes,
-                // ML CRITICAL: Recommendation event link
+                // ML CRITICAL: Recommendation event link (only set for engine-planned exercises)
                 recommendationEventId: ex.recommendationEventId?.uuidString,
                 // ML CRITICAL: Planned prescription
                 plannedTopSetWeightKg: ex.plannedTopSetWeightLbs.map { $0 * 0.453592 },
@@ -797,8 +807,8 @@ final class DataSyncService: ObservableObject {
             let _: DBSessionExercise? = try await supabase.upsert(into: "session_exercises", values: dbExercise)
             
             // Insert sets with all new fields
-            let dbSets = ex.sets.enumerated().map { setIdx, set in
-                DBSessionSet(
+            let dbSets: [DBSessionSet] = ex.sets.enumerated().map { setIdx, set in
+                return DBSessionSet(
                     id: set.id.uuidString,
                     sessionExerciseId: ex.id.uuidString,
                     setNumber: setIdx + 1,
@@ -823,7 +833,7 @@ final class DataSyncService: ObservableObject {
                     complianceReason: set.complianceReason?.rawValue,
                     recommendedWeightKg: set.recommendedWeight.map { $0 * 0.453592 },
                     recommendedReps: set.recommendedReps,
-                    // ML CRITICAL: Planned set link
+                    // ML CRITICAL: Planned set link (only set for engine-planned sets)
                     plannedSetId: set.plannedSetId?.uuidString,
                     // ML CRITICAL: User modification tracking
                     isUserModified: set.isUserModified,
@@ -851,78 +861,113 @@ final class DataSyncService: ObservableObject {
             }
             
             if !dbSets.isEmpty {
-                try await supabase.insertBatch(into: "session_sets", values: dbSets)
+                // Use upsert to make sync idempotent (safe on resync) and to allow
+                // incremental set logging (weight/reps/RIR edits) without duplicates.
+                try await supabase.upsertBatch(
+                    into: "session_sets",
+                    values: dbSets,
+                    onConflict: "id",
+                    resolution: .mergeDuplicates
+                )
             }
             
-            // ML CRITICAL: Generate and sync RecommendationEvent (immutable)
+            // ML CRITICAL: Only generate recommendation_events and planned_sets for
+            // engine-planned exercises (those with a real recommendationEventId).
+            // Manual/ad-hoc exercises should NOT have fabricated ML data.
             if let recEventId = ex.recommendationEventId {
-                // Build state snapshot for recommendation event
-                let recStateSnapshot = RecommendationEvent.LiftStateSnapshot(
-                    rollingE1rmLbs: ex.stateSnapshot?.rollingE1rmLbs,
-                    rawE1rmLbs: ex.stateSnapshot?.rawE1rmLbs,
-                    consecutiveFailures: ex.stateSnapshot?.consecutiveFailures ?? 0,
-                    consecutiveSuccesses: ex.stateSnapshot?.consecutiveSuccesses ?? 0,
-                    highRPEStreak: ex.stateSnapshot?.highRPEStreak ?? 0,
-                    daysSinceLastExposure: ex.stateSnapshot?.daysSinceLastExposure,
-                    daysSinceLastDeload: ex.stateSnapshot?.daysSinceLastDeload,
-                    lastSessionWeightLbs: ex.stateSnapshot?.lastWeightLbs,
-                    lastSessionReps: ex.stateSnapshot?.lastReps,
-                    lastSessionRIR: ex.stateSnapshot?.lastRIR,
-                    lastSessionOutcome: ex.stateSnapshot?.lastOutcome,
-                    exposuresLast14Days: ex.stateSnapshot?.exposuresLast14Days ?? 0,
-                    volumeLast7DaysLbs: ex.stateSnapshot?.volumeLast7DaysLbs,
-                    successfulSessionsCount: ex.stateSnapshot?.successfulSessionsCount ?? 0,
-                    totalSessionsCount: ex.stateSnapshot?.totalSessionsCount ?? 0,
-                    e1rmTrend: ex.stateSnapshot?.e1rmTrend,
-                    templateVersion: ex.stateSnapshot?.templateVersion
-                )
+                do {
+                    // Build state snapshot for recommendation event
+                    let recStateSnapshot = RecommendationEvent.LiftStateSnapshot(
+                        rollingE1rmLbs: ex.stateSnapshot?.rollingE1rmLbs,
+                        rawE1rmLbs: ex.stateSnapshot?.rawE1rmLbs,
+                        consecutiveFailures: ex.stateSnapshot?.consecutiveFailures ?? 0,
+                        consecutiveSuccesses: ex.stateSnapshot?.consecutiveSuccesses ?? 0,
+                        highRPEStreak: ex.stateSnapshot?.highRPEStreak ?? 0,
+                        daysSinceLastExposure: ex.stateSnapshot?.daysSinceLastExposure,
+                        daysSinceLastDeload: ex.stateSnapshot?.daysSinceLastDeload,
+                        lastSessionWeightLbs: ex.stateSnapshot?.lastWeightLbs,
+                        lastSessionReps: ex.stateSnapshot?.lastReps,
+                        lastSessionRIR: ex.stateSnapshot?.lastRIR,
+                        lastSessionOutcome: ex.stateSnapshot?.lastOutcome,
+                        exposuresLast14Days: ex.stateSnapshot?.exposuresLast14Days ?? 0,
+                        volumeLast7DaysLbs: ex.stateSnapshot?.volumeLast7DaysLbs,
+                        successfulSessionsCount: ex.stateSnapshot?.successfulSessionsCount ?? 0,
+                        totalSessionsCount: ex.stateSnapshot?.totalSessionsCount ?? 0,
+                        e1rmTrend: ex.stateSnapshot?.e1rmTrend,
+                        templateVersion: ex.stateSnapshot?.templateVersion
+                    )
+                    
+                    // Determine action type from planned values
+                    let actionType: RecommendationEvent.RecommendationActionType = {
+                        if session.wasDeload { return .deload }
+                        return .holdLoad  // Default - could be refined based on direction
+                    }()
+                    
+                    // Use planned values only - no fallback to performed values for ML data integrity.
+                    // If plannedTopSet* are nil, the exercise lacks proper prescription data.
+                    let recommendedWeightLbs = ex.plannedTopSetWeightLbs ?? 0
+                    let recommendedReps = ex.plannedTopSetReps ?? ex.repRangeMin
+                    let recommendedRIR = ex.plannedTargetRIR ?? ex.targetRIR
+                    
+                    var recommendationEvent = RecommendationEvent(
+                        id: recEventId,
+                        sessionId: session.id,
+                        sessionExerciseId: ex.id,
+                        exerciseId: ex.exercise.id,
+                        recommendedWeightLbs: recommendedWeightLbs,
+                        recommendedReps: recommendedReps,
+                        recommendedSets: ex.setsTarget,
+                        recommendedRIR: recommendedRIR,
+                        policyVersion: "v1.0",
+                        policyType: .deterministic,
+                        actionType: actionType,
+                        stateSnapshot: recStateSnapshot,
+                        generatedAt: session.startedAt
+                    )
+                    
+                    // Populate policy selection metadata from snapshot (bandit/shadow mode)
+                    if let policySnapshot = ex.policySelectionSnapshot {
+                        recommendationEvent.executedPolicyId = policySnapshot.executedPolicyId
+                        recommendationEvent.executedActionProbability = policySnapshot.executedActionProbability
+                        recommendationEvent.explorationModeTag = policySnapshot.explorationMode
+                        recommendationEvent.shadowPolicyId = policySnapshot.shadowPolicyId
+                        recommendationEvent.shadowActionProbability = policySnapshot.shadowActionProbability
+                    }
+                    
+                    // Persist recommendation event (idempotent; never overwrite existing row).
+                    try await syncRecommendationEvent(recommendationEvent)
+                } catch {
+                    // Bubble up any failure — recommendation_events is ML-critical.
+                    throw error
+                }
                 
-                // Determine action type from planned values
-                let actionType: RecommendationEvent.RecommendationActionType = {
-                    if session.wasDeload { return .deload }
-                    return .holdLoad  // Default - could be refined based on direction
-                }()
+                // ML CRITICAL: Only generate PlannedSet for sets with real plannedSetId and recommendedWeight.
+                // Do NOT fabricate IDs or fall back to performed values.
+                let plannedSets: [PlannedSet] = ex.sets.enumerated().compactMap { setIdx, set in
+                    // Only emit planned sets that have proper prescription data
+                    guard let plannedSetId = set.plannedSetId,
+                          let targetWeight = set.recommendedWeight else {
+                        return nil  // Skip sets without proper planned data
+                    }
+                    
+                    return PlannedSet(
+                        id: plannedSetId,
+                        sessionExerciseId: ex.id,
+                        recommendationEventId: recEventId,
+                        setNumber: setIdx + 1,
+                        targetWeightLbs: targetWeight,
+                        targetReps: set.recommendedReps ?? ex.repRangeMin,
+                        targetRIR: set.targetRIR ?? ex.targetRIR,
+                        targetRestSeconds: ex.restSeconds,
+                        targetTempo: ex.tempo,
+                        isWarmup: set.isWarmup,
+                        createdAt: session.startedAt
+                    )
+                }
                 
-                let recommendationEvent = RecommendationEvent(
-                    id: recEventId,
-                    sessionId: session.id,
-                    sessionExerciseId: ex.id,
-                    exerciseId: ex.exercise.id,
-                    recommendedWeightLbs: ex.plannedTopSetWeightLbs ?? 0,
-                    recommendedReps: ex.plannedTopSetReps ?? ex.repRangeMin,
-                    recommendedSets: ex.setsTarget,
-                    recommendedRIR: ex.plannedTargetRIR ?? ex.targetRIR,
-                    policyVersion: "v1.0",
-                    policyType: .deterministic,
-                    actionType: actionType,
-                    stateSnapshot: recStateSnapshot,
-                    generatedAt: session.startedAt
-                )
-                
-                // Insert recommendation event (immutable - never update)
-                try? await syncRecommendationEvent(recommendationEvent)
-            }
-            
-            // ML CRITICAL: Generate and sync PlannedSet objects (immutable)
-            let plannedSets: [PlannedSet] = ex.sets.enumerated().compactMap { setIdx, set in
-                guard let plannedSetId = set.plannedSetId else { return nil }
-                return PlannedSet(
-                    id: plannedSetId,
-                    sessionExerciseId: ex.id,
-                    recommendationEventId: ex.recommendationEventId,
-                    setNumber: setIdx + 1,
-                    targetWeightLbs: set.recommendedWeight ?? set.weight,
-                    targetReps: set.recommendedReps ?? set.reps,
-                    targetRIR: set.targetRIR ?? ex.targetRIR,
-                    targetRestSeconds: ex.restSeconds,
-                    targetTempo: ex.tempo,
-                    isWarmup: set.isWarmup,
-                    createdAt: session.startedAt
-                )
-            }
-            
-            if !plannedSets.isEmpty {
-                try? await syncPlannedSets(plannedSets)
+                if !plannedSets.isEmpty {
+                    try await syncPlannedSets(plannedSets)
+                }
             }
         }
     }
@@ -971,7 +1016,13 @@ final class DataSyncService: ObservableObject {
                 successfulSessionsCount: state.successfulSessionsCount
             )
             
-            let _: DBLiftState? = try await supabase.upsert(into: "lift_states", values: dbState)
+            // Upsert on the natural key (user_id, exercise_id). This avoids duplicates and
+            // requires the corresponding UNIQUE constraint in Supabase.
+            let _: DBLiftState? = try await supabase.upsert(
+                into: "lift_states",
+                values: dbState,
+                onConflict: "user_id,exercise_id"
+            )
         }
     }
     
@@ -1076,7 +1127,13 @@ final class DataSyncService: ObservableObject {
             fromManualEntry: biometrics.fromManualEntry
         )
         
-        let _: DBDailyBiometrics? = try await supabase.upsert(into: "daily_biometrics", values: dbBiometrics)
+        // Upsert on the natural key (user_id, date). This avoids duplicates and
+        // requires the corresponding UNIQUE constraint in Supabase.
+        let _: DBDailyBiometrics? = try await supabase.upsert(
+            into: "daily_biometrics",
+            values: dbBiometrics,
+            onConflict: "user_id,date"
+        )
     }
     
     // MARK: - ML Training Data Sync
@@ -1116,11 +1173,23 @@ final class DataSyncService: ObservableObject {
             deterministicWeightKg: event.deterministicWeightLbs.map { $0 * 0.453592 },
             deterministicReps: event.deterministicReps,
             stateAtRecommendation: stateJson,
+            // Policy selection metadata (bandit/shadow mode)
+            executedPolicyId: event.executedPolicyId,
+            executedActionProbability: event.executedActionProbability,
+            explorationMode: event.explorationModeTag,
+            shadowPolicyId: event.shadowPolicyId,
+            shadowActionProbability: event.shadowActionProbability,
             generatedAt: event.generatedAt
         )
         
-        // Insert only - never update recommendation events
-        let _: DBRecommendationEvent? = try await supabase.insert(into: "recommendation_events", values: dbEvent)
+        // Immutable log: insert once, ignore duplicates on resync.
+        let _: DBRecommendationEvent? = try await supabase.upsert(
+            into: "recommendation_events",
+            values: dbEvent,
+            onConflict: "id",
+            returning: false,
+            resolution: .ignoreDuplicates
+        )
     }
     
     /// Sync planned sets (immutable - created at session start)
@@ -1149,7 +1218,13 @@ final class DataSyncService: ObservableObject {
         }
         
         if !dbSets.isEmpty {
-            try await supabase.insertBatch(into: "planned_sets", values: dbSets)
+            // Immutable prescription: insert once, ignore duplicates on resync.
+            try await supabase.upsertBatch(
+                into: "planned_sets",
+                values: dbSets,
+                onConflict: "id",
+                resolution: .ignoreDuplicates
+            )
         }
     }
     
@@ -1176,7 +1251,13 @@ final class DataSyncService: ObservableObject {
         }
         
         if !dbEvents.isEmpty {
-            try await supabase.insertBatch(into: "pain_events", values: dbEvents)
+            // Pain events are immutable: insert once, ignore duplicates on resync.
+            try await supabase.upsertBatch(
+                into: "pain_events",
+                values: dbEvents,
+                onConflict: "id",
+                resolution: .ignoreDuplicates
+            )
         }
     }
     
@@ -1203,7 +1284,13 @@ final class DataSyncService: ObservableObject {
             consentTimestamp: context.consentTimestamp
         )
         
-        let _: DBUserSensitiveContext? = try await supabase.upsert(into: "user_sensitive_context", values: dbContext)
+        // Upsert on the natural key (user_id, date). This avoids duplicates and
+        // requires the corresponding UNIQUE constraint in Supabase.
+        let _: DBUserSensitiveContext? = try await supabase.upsert(
+            into: "user_sensitive_context",
+            values: dbContext,
+            onConflict: "user_id,date"
+        )
     }
     
     /// Track app event

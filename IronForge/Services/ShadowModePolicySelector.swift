@@ -32,7 +32,7 @@ public final class ShadowModePolicySelector: ProgressionPolicySelector, @uncheck
     public convenience init(stateStore: BanditStateStore) {
         let bandit = ThompsonSamplingBanditPolicySelector(
             stateStore: stateStore,
-            isEnabled: false // Not used for actual selection, just shadow
+            isEnabled: true // Enabled for shadow selection only (never executed)
         )
         self.init(shadowBandit: bandit)
     }
@@ -59,8 +59,7 @@ public final class ShadowModePolicySelector: ProgressionPolicySelector, @uncheck
     }
     
     public func recordOutcome(_ entry: DecisionLogEntry, userId: String) {
-        // In shadow mode, we still update bandit priors based on baseline outcomes
-        // This allows the bandit to learn even though we're not applying its selections
-        shadowBandit.recordOutcome(entry, userId: userId)
+        // Shadow mode MUST NOT update bandit priors.
+        // We only log counterfactuals; learning updates should only happen for executed actions.
     }
 }

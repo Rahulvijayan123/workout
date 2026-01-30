@@ -367,6 +367,53 @@ ADD COLUMN IF NOT EXISTS has_other_stress BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS stress_notes TEXT;
 
 -- ============================================================================
+-- SECTION 2.5: FOREIGN KEYS (JOINABILITY GUARANTEES)
+-- ============================================================================
+-- These constraints enforce the join keys used for ML training:
+-- - session_exercises.recommendation_event_id -> recommendation_events.id
+-- - session_sets.planned_set_id -> planned_sets.id
+-- - planned_sets.session_exercise_id -> session_exercises.id
+-- - planned_sets.recommendation_event_id -> recommendation_events.id
+--
+-- NOTE: Postgres doesn't support `ADD CONSTRAINT IF NOT EXISTS`, so we guard via pg_constraint.
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_exercises_recommendation_event_id_fkey') THEN
+        ALTER TABLE session_exercises
+        ADD CONSTRAINT session_exercises_recommendation_event_id_fkey
+        FOREIGN KEY (recommendation_event_id) REFERENCES recommendation_events(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_sets_planned_set_id_fkey') THEN
+        ALTER TABLE session_sets
+        ADD CONSTRAINT session_sets_planned_set_id_fkey
+        FOREIGN KEY (planned_set_id) REFERENCES planned_sets(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planned_sets_session_exercise_id_fkey') THEN
+        ALTER TABLE planned_sets
+        ADD CONSTRAINT planned_sets_session_exercise_id_fkey
+        FOREIGN KEY (session_exercise_id) REFERENCES session_exercises(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planned_sets_recommendation_event_id_fkey') THEN
+        ALTER TABLE planned_sets
+        ADD CONSTRAINT planned_sets_recommendation_event_id_fkey
+        FOREIGN KEY (recommendation_event_id) REFERENCES recommendation_events(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- ============================================================================
 -- SECTION 3: FUNCTIONS
 -- ============================================================================
 

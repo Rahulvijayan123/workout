@@ -54,6 +54,10 @@
 		AAA0000000000042 /* RecommendationEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000042 /* RecommendationEvent.swift */; };
 		AAA0000000000043 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000043 /* NotificationService.swift */; };
 		AAA0000000000044 /* NotificationPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000044 /* NotificationPermissionView.swift */; };
+		AAA0000000000045 /* ProgressionPolicySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000045 /* ProgressionPolicySelector.swift */; };
+		AAA0000000000046 /* ShadowModePolicySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000046 /* ShadowModePolicySelector.swift */; };
+		AAA0000000000047 /* ThompsonSamplingBanditPolicySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000047 /* ThompsonSamplingBanditPolicySelector.swift */; };
+		AAA0000000000048 /* BanditStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000048 /* BanditStateStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -104,6 +108,10 @@
 		BBB0000000000042 /* RecommendationEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationEvent.swift; sourceTree = "<group>"; };
 		BBB0000000000043 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		BBB0000000000044 /* NotificationPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionView.swift; sourceTree = "<group>"; };
+		BBB0000000000045 /* ProgressionPolicySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressionPolicySelector.swift; sourceTree = "<group>"; };
+		BBB0000000000046 /* ShadowModePolicySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShadowModePolicySelector.swift; sourceTree = "<group>"; };
+		BBB0000000000047 /* ThompsonSamplingBanditPolicySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThompsonSamplingBanditPolicySelector.swift; sourceTree = "<group>"; };
+		BBB0000000000048 /* BanditStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BanditStateStore.swift; sourceTree = "<group>"; };
 		CCC0000000000001 /* IronForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IronForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -256,6 +264,10 @@
 				BBB0000000000034 /* TrainingEngineBridge.swift */,
 				BBB0000000000036 /* SupabaseService.swift */,
 				BBB0000000000037 /* DataSyncService.swift */,
+				BBB0000000000048 /* BanditStateStore.swift */,
+				BBB0000000000045 /* ProgressionPolicySelector.swift */,
+				BBB0000000000046 /* ShadowModePolicySelector.swift */,
+				BBB0000000000047 /* ThompsonSamplingBanditPolicySelector.swift */,
 				BBB0000000000043 /* NotificationService.swift */,
 			);
 			path = Services;
@@ -387,6 +399,10 @@
 				AAA0000000000040 /* SignUpView.swift in Sources */,
 				AAA0000000000041 /* AuthViewModel.swift in Sources */,
 				AAA0000000000042 /* RecommendationEvent.swift in Sources */,
+				AAA0000000000048 /* BanditStateStore.swift in Sources */,
+				AAA0000000000045 /* ProgressionPolicySelector.swift in Sources */,
+				AAA0000000000046 /* ShadowModePolicySelector.swift in Sources */,
+				AAA0000000000047 /* ThompsonSamplingBanditPolicySelector.swift in Sources */,
 				AAA0000000000043 /* NotificationService.swift in Sources */,
 				AAA0000000000044 /* NotificationPermissionView.swift in Sources */,
 			);

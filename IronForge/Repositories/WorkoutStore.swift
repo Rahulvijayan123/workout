@@ -15,6 +15,13 @@ final class WorkoutStore: ObservableObject {
     /// - optional `ironforge.exerciseDB.rapidAPIHost`
     let exerciseRepository: ExerciseRepository
     
+    /// Shared shadow mode policy selector for ML data collection.
+    /// Uses UserDefaults-backed bandit state store. Shadow mode executes baseline
+    /// but logs what the bandit would have chosen for offline evaluation.
+    nonisolated(unsafe) static let sharedPolicySelector: ProgressionPolicySelector = ShadowModePolicySelector(
+        stateStore: UserDefaultsBanditStateStore.shared
+    )
+    
     // V2 keys to reset old data and use TrainingEngine-powered persistence
     private let templatesKey = "ironforge.workoutTemplates.v2"
     private let sessionsKey = "ironforge.workoutSessions.v2"
@@ -73,7 +80,8 @@ final class WorkoutStore: ObservableObject {
         from template: WorkoutTemplate,
         userProfile: UserProfile? = nil,
         readiness: Int = 75,
-        dailyBiometrics: [DailyBiometrics] = []
+        dailyBiometrics: [DailyBiometrics] = [],
+        policySelector: ProgressionPolicySelector? = nil
     ) {
         // Use TrainingEngine to get recommended session plan
         let sessionPlan = TrainingEngineBridge.recommendSessionForTemplate(
@@ -84,7 +92,8 @@ final class WorkoutStore: ObservableObject {
             sessions: sessions,
             liftStates: exerciseStates,
             readiness: readiness,
-            dailyBiometrics: dailyBiometrics
+            dailyBiometrics: dailyBiometrics,
+            policySelector: policySelector ?? Self.sharedPolicySelector
         )
         
         // If TrainingEngine returns exercises, use them; otherwise fallback to template-based seeding
@@ -124,7 +133,8 @@ final class WorkoutStore: ObservableObject {
     func startRecommendedSession(
         userProfile: UserProfile,
         readiness: Int = 75,
-        dailyBiometrics: [DailyBiometrics] = []
+        dailyBiometrics: [DailyBiometrics] = [],
+        policySelector: ProgressionPolicySelector? = nil
     ) {
         guard !templates.isEmpty else { return }
         
@@ -136,7 +146,8 @@ final class WorkoutStore: ObservableObject {
             sessions: sessions,
             liftStates: exerciseStates,
             readiness: readiness,
-            dailyBiometrics: dailyBiometrics
+            dailyBiometrics: dailyBiometrics,
+            policySelector: policySelector ?? Self.sharedPolicySelector
         )
         
         // Find the template name
@@ -164,7 +175,7 @@ final class WorkoutStore: ObservableObject {
         } else {
             // Fallback: start from first template (startSession will call saveActiveSession)
             if let template = templates.first {
-                startSession(from: template, userProfile: userProfile, readiness: readiness, dailyBiometrics: dailyBiometrics)
+                startSession(from: template, userProfile: userProfile, readiness: readiness, dailyBiometrics: dailyBiometrics, policySelector: policySelector)
             }
         }
     }
@@ -297,32 +308,24 @@ final class WorkoutStore: ObservableObject {
         // Clear the persisted active session since workout is complete
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
         
-        // ML CRITICAL: Log outcomes for completed exercises
-        // This links engine decisions to actual performance, enabling training data collection.
-        let teCompletedSession = TrainingEngineBridge.convertCompletedSession(
-            session,
-            previousLiftStates: priorStates
-        )
-        for (idx, result) in teCompletedSession.exerciseResults.enumerated() where !result.workingSets.isEmpty {
-            // Compute execution context based on pain data
-            let performance = session.exercises[idx]
-            let executionContext = computeExecutionContext(for: performance)
-            
-            TrainingEngine.Engine.recordOutcome(
-                sessionId: session.id,
-                exerciseResult: result,
-                readinessScore: session.computedReadinessScore,
-                executionContext: executionContext
-            )
-        }
-        
         // Sync completed session to Supabase
         let completedSession = session
         let currentLiftStates = exerciseStates
-        Task {
-            if SupabaseService.shared.isAuthenticated {
-                try? await DataSyncService.shared.syncWorkoutSession(completedSession)
-                try? await DataSyncService.shared.syncLiftStates(currentLiftStates)
+        Task { @MainActor in
+            guard SupabaseService.shared.isAuthenticated else { return }
+            
+            do {
+                try await DataSyncService.shared.syncWorkoutSession(completedSession)
+            } catch {
+                print("[WorkoutStore] Failed to sync workout session: \(error)")
+                DataSyncService.shared.syncError = error
+            }
+            
+            do {
+                try await DataSyncService.shared.syncLiftStates(currentLiftStates)
+            } catch {
+                print("[WorkoutStore] Failed to sync lift states: \(error)")
+                DataSyncService.shared.syncError = error
             }
         }
     }
@@ -400,14 +403,6 @@ final class WorkoutStore: ObservableObject {
     }
     
     func cancelActiveSession() {
-        // ML CRITICAL: Mark session as abandoned so pending decisions don't become orphans
-        if let session = activeSession {
-            TrainingEngine.MLDataCollector.shared.markSessionAbandoned(
-                sessionId: session.id,
-                reason: .userCancelled
-            )
-        }
-        
         activeSession = nil
         // Clear the persisted active session
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
@@ -664,7 +659,7 @@ final class WorkoutStore: ObservableObject {
     
     /// Save the active session to persist through app restarts.
     /// This allows users to close the app and continue their workout later.
-    private func saveActiveSession() {
+    func saveActiveSession() {
         if let session = activeSession,
            let data = try? JSONEncoder().encode(session) {
             UserDefaults.standard.set(data, forKey: activeSessionKey)
