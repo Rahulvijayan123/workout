@@ -174,7 +174,7 @@ final class HealthKitService: @unchecked Sendable {
         }
     }
     
-    // MARK: - Quantity aggregates
+    // MARK: - Quantity aggregates (Recovery)
     
     func fetchDailyAvgHRV(lastNDays: Int) async throws -> [Date: Double] {
         try await fetchDailyStatistics(
@@ -195,6 +195,42 @@ final class HealthKitService: @unchecked Sendable {
         )
     }
     
+    /// Respiratory rate in breaths per minute
+    func fetchDailyAvgRespiratoryRate(lastNDays: Int) async throws -> [Date: Double] {
+        let breathsPerMinute = HKUnit.count().unitDivided(by: .minute())
+        return try await fetchDailyStatistics(
+            quantityIdentifier: .respiratoryRate,
+            unit: breathsPerMinute,
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Blood oxygen saturation (SpO2) as percentage (0-100)
+    func fetchDailyAvgOxygenSaturation(lastNDays: Int) async throws -> [Date: Double] {
+        let results = try await fetchDailyStatistics(
+            quantityIdentifier: .oxygenSaturation,
+            unit: .percent(),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+        // Convert from 0-1 to 0-100
+        return results.mapValues { $0 * 100 }
+    }
+    
+    /// VO2 Max in mL/(kg·min)
+    func fetchDailyVO2Max(lastNDays: Int) async throws -> [Date: Double] {
+        let vo2Unit = HKUnit.literUnit(with: .milli).unitDivided(by: HKUnit.gramUnit(with: .kilo).unitMultiplied(by: .minute()))
+        return try await fetchDailyStatistics(
+            quantityIdentifier: .vo2Max,
+            unit: vo2Unit,
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    // MARK: - Quantity aggregates (Activity)
+    
     func fetchDailyActiveEnergy(lastNDays: Int) async throws -> [Date: Double] {
         try await fetchDailyStatistics(
             quantityIdentifier: .activeEnergyBurned,
@@ -211,6 +247,447 @@ final class HealthKitService: @unchecked Sendable {
             options: [.cumulativeSum],
             lastNDays: lastNDays
         )
+    }
+    
+    /// Exercise time in minutes
+    func fetchDailyExerciseTime(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .appleExerciseTime,
+            unit: .minute(),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    // MARK: - Walking Metrics
+    
+    /// Walking heart rate average in BPM
+    func fetchDailyWalkingHeartRateAverage(lastNDays: Int) async throws -> [Date: Double] {
+        let bpmUnit = HKUnit.count().unitDivided(by: .minute())
+        return try await fetchDailyStatistics(
+            quantityIdentifier: .walkingHeartRateAverage,
+            unit: bpmUnit,
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Walking asymmetry as percentage (0-100)
+    func fetchDailyWalkingAsymmetry(lastNDays: Int) async throws -> [Date: Double] {
+        let results = try await fetchDailyStatistics(
+            quantityIdentifier: .walkingAsymmetryPercentage,
+            unit: .percent(),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+        return results.mapValues { $0 * 100 }
+    }
+    
+    /// Walking speed in m/s
+    func fetchDailyWalkingSpeed(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .walkingSpeed,
+            unit: HKUnit.meter().unitDivided(by: .second()),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Walking step length in meters
+    func fetchDailyWalkingStepLength(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .walkingStepLength,
+            unit: .meter(),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Walking double support percentage (0-100)
+    func fetchDailyWalkingDoubleSupport(lastNDays: Int) async throws -> [Date: Double] {
+        let results = try await fetchDailyStatistics(
+            quantityIdentifier: .walkingDoubleSupportPercentage,
+            unit: .percent(),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+        return results.mapValues { $0 * 100 }
+    }
+    
+    /// Stair ascent speed in m/s
+    func fetchDailyStairAscentSpeed(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .stairAscentSpeed,
+            unit: HKUnit.meter().unitDivided(by: .second()),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Stair descent speed in m/s
+    func fetchDailyStairDescentSpeed(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .stairDescentSpeed,
+            unit: HKUnit.meter().unitDivided(by: .second()),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Six minute walk test distance in meters
+    func fetchDailySixMinuteWalkDistance(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .sixMinuteWalkTestDistance,
+            unit: .meter(),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    // MARK: - Sleep & Environment
+    
+    /// Time in daylight in minutes (iOS 17+)
+    @available(iOS 17.0, *)
+    func fetchDailyTimeInDaylight(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .timeInDaylight,
+            unit: .minute(),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Wrist temperature deviation in Celsius (iOS 16+)
+    @available(iOS 16.0, *)
+    func fetchDailyWristTemperature(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .appleSleepingWristTemperature,
+            unit: .degreeCelsius(),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    // MARK: - Body Composition
+    
+    /// Lean body mass in kg
+    func fetchDailyLeanBodyMass(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .leanBodyMass,
+            unit: .gramUnit(with: .kilo),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    // MARK: - Nutrition
+    
+    /// Dietary energy consumed in kcal
+    func fetchDailyDietaryEnergy(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .dietaryEnergyConsumed,
+            unit: .kilocalorie(),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Dietary protein in grams
+    func fetchDailyDietaryProtein(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .dietaryProtein,
+            unit: .gram(),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Dietary carbohydrates in grams
+    func fetchDailyDietaryCarbs(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .dietaryCarbohydrates,
+            unit: .gram(),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Dietary fat in grams
+    func fetchDailyDietaryFat(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .dietaryFatTotal,
+            unit: .gram(),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Water intake in liters
+    func fetchDailyWaterIntake(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .dietaryWater,
+            unit: .liter(),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Caffeine intake in mg
+    func fetchDailyCaffeine(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .dietaryCaffeine,
+            unit: .gramUnit(with: .milli),
+            options: [.cumulativeSum],
+            lastNDays: lastNDays
+        )
+    }
+    
+    // MARK: - Female Health
+    
+    /// Basal body temperature in Celsius
+    func fetchDailyBasalBodyTemperature(lastNDays: Int) async throws -> [Date: Double] {
+        try await fetchDailyStatistics(
+            quantityIdentifier: .basalBodyTemperature,
+            unit: .degreeCelsius(),
+            options: [.discreteAverage],
+            lastNDays: lastNDays
+        )
+    }
+    
+    /// Fetches menstrual flow data
+    func fetchDailyMenstrualFlow(lastNDays: Int) async throws -> [Date: Int] {
+        guard lastNDays > 0 else { return [:] }
+        guard let flowType = HKObjectType.categoryType(forIdentifier: .menstrualFlow) else { return [:] }
+        
+        let range = HealthKitDateHelpers.lastNDaysDateRange(lastNDays: lastNDays, endingAt: Date(), calendar: calendar)
+        let predicate = HKQuery.predicateForSamples(withStart: range.start, end: range.end, options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: flowType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+                    continuation.resume(returning: [:])
+                    return
+                }
+                
+                var flowByDay: [Date: Int] = [:]
+                for sample in categorySamples {
+                    let day = self.calendar.startOfDay(for: sample.startDate)
+                    // Take the max flow value for the day if multiple samples
+                    if let existing = flowByDay[day] {
+                        flowByDay[day] = max(existing, sample.value)
+                    } else {
+                        flowByDay[day] = sample.value
+                    }
+                }
+                
+                continuation.resume(returning: flowByDay)
+            }
+            
+            self.healthStore.execute(query)
+        }
+    }
+    
+    /// Fetches cervical mucus quality data
+    func fetchDailyCervicalMucusQuality(lastNDays: Int) async throws -> [Date: Int] {
+        guard lastNDays > 0 else { return [:] }
+        guard let mucusType = HKObjectType.categoryType(forIdentifier: .cervicalMucusQuality) else { return [:] }
+        
+        let range = HealthKitDateHelpers.lastNDaysDateRange(lastNDays: lastNDays, endingAt: Date(), calendar: calendar)
+        let predicate = HKQuery.predicateForSamples(withStart: range.start, end: range.end, options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: mucusType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+                    continuation.resume(returning: [:])
+                    return
+                }
+                
+                var mucusByDay: [Date: Int] = [:]
+                for sample in categorySamples {
+                    let day = self.calendar.startOfDay(for: sample.startDate)
+                    mucusByDay[day] = sample.value
+                }
+                
+                continuation.resume(returning: mucusByDay)
+            }
+            
+            self.healthStore.execute(query)
+        }
+    }
+    
+    // MARK: - Mindfulness
+    
+    /// Fetches mindful minutes per day
+    func fetchDailyMindfulMinutes(lastNDays: Int) async throws -> [Date: Double] {
+        guard lastNDays > 0 else { return [:] }
+        guard let mindfulType = HKObjectType.categoryType(forIdentifier: .mindfulSession) else { return [:] }
+        
+        let range = HealthKitDateHelpers.lastNDaysDateRange(lastNDays: lastNDays, endingAt: Date(), calendar: calendar)
+        let predicate = HKQuery.predicateForSamples(withStart: range.start, end: range.end, options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: mindfulType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+                    continuation.resume(returning: [:])
+                    return
+                }
+                
+                var minutesByDay: [Date: Double] = [:]
+                for sample in categorySamples {
+                    let day = self.calendar.startOfDay(for: sample.startDate)
+                    let duration = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+                    minutesByDay[day, default: 0] += duration
+                }
+                
+                continuation.resume(returning: minutesByDay)
+            }
+            
+            self.healthStore.execute(query)
+        }
+    }
+    
+    // MARK: - Stand Hours
+    
+    /// Fetches stand hours per day (count of hours with standing activity)
+    func fetchDailyStandHours(lastNDays: Int) async throws -> [Date: Int] {
+        guard lastNDays > 0 else { return [:] }
+        guard let standType = HKObjectType.categoryType(forIdentifier: .appleStandHour) else { return [:] }
+        
+        let range = HealthKitDateHelpers.lastNDaysDateRange(lastNDays: lastNDays, endingAt: Date(), calendar: calendar)
+        let predicate = HKQuery.predicateForSamples(withStart: range.start, end: range.end, options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: standType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+                    continuation.resume(returning: [:])
+                    return
+                }
+                
+                var standByDay: [Date: Int] = [:]
+                for sample in categorySamples {
+                    let day = self.calendar.startOfDay(for: sample.startDate)
+                    // Value of 0 = stood, 1 = idle
+                    if sample.value == HKCategoryValueAppleStandHour.stood.rawValue {
+                        standByDay[day, default: 0] += 1
+                    }
+                }
+                
+                continuation.resume(returning: standByDay)
+            }
+            
+            self.healthStore.execute(query)
+        }
+    }
+    
+    // MARK: - Sleep Stages (iOS 16+)
+    
+    /// Fetches detailed sleep stages breakdown
+    @available(iOS 16.0, *)
+    func fetchDailySleepStages(lastNDays: Int) async throws -> [Date: SleepStagesBreakdown] {
+        guard lastNDays > 0 else { return [:] }
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return [:] }
+        
+        let range = HealthKitDateHelpers.lastNDaysDateRange(lastNDays: lastNDays, endingAt: Date(), calendar: calendar)
+        let predicate = HKQuery.predicateForSamples(withStart: range.start, end: range.end, options: [])
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: sleepType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+                    continuation.resume(returning: [:])
+                    return
+                }
+                
+                var stagesByDay: [Date: SleepStagesBreakdown] = [:]
+                
+                for sample in categorySamples {
+                    // Attribute sleep to the day it ended (wake up day)
+                    let day = self.calendar.startOfDay(for: sample.endDate)
+                    let durationMinutes = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+                    
+                    var breakdown = stagesByDay[day] ?? SleepStagesBreakdown()
+                    
+                    if let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) {
+                        switch value {
+                        case .inBed:
+                            breakdown.inBedMinutes += durationMinutes
+                        case .awake:
+                            breakdown.awakeMinutes += durationMinutes
+                        case .asleepCore:
+                            breakdown.coreMinutes += durationMinutes
+                        case .asleepDeep:
+                            breakdown.deepMinutes += durationMinutes
+                        case .asleepREM:
+                            breakdown.remMinutes += durationMinutes
+                        case .asleepUnspecified, .asleep:
+                            breakdown.unspecifiedMinutes += durationMinutes
+                        @unknown default:
+                            breakdown.unspecifiedMinutes += durationMinutes
+                        }
+                    }
+                    
+                    stagesByDay[day] = breakdown
+                }
+                
+                continuation.resume(returning: stagesByDay)
+            }
+            
+            self.healthStore.execute(query)
+        }
     }
     
     private func fetchDailyStatistics(
@@ -345,6 +822,41 @@ final class HealthKitService: @unchecked Sendable {
             
             self.healthStore.execute(query)
         }
+    }
+}
+
+// MARK: - Supporting Types
+
+/// Breakdown of sleep stages for a single night
+struct SleepStagesBreakdown: Sendable {
+    var inBedMinutes: Double = 0
+    var awakeMinutes: Double = 0
+    var coreMinutes: Double = 0      // Light sleep
+    var deepMinutes: Double = 0
+    var remMinutes: Double = 0
+    var unspecifiedMinutes: Double = 0
+    
+    /// Total asleep time (excluding in-bed and awake)
+    var totalAsleepMinutes: Double {
+        coreMinutes + deepMinutes + remMinutes + unspecifiedMinutes
+    }
+    
+    /// Sleep efficiency = asleep / in-bed
+    var efficiency: Double? {
+        guard inBedMinutes > 0 else { return nil }
+        return totalAsleepMinutes / inBedMinutes
+    }
+    
+    /// Percentage of sleep that was deep
+    var deepPercentage: Double? {
+        guard totalAsleepMinutes > 0 else { return nil }
+        return deepMinutes / totalAsleepMinutes * 100
+    }
+    
+    /// Percentage of sleep that was REM
+    var remPercentage: Double? {
+        guard totalAsleepMinutes > 0 else { return nil }
+        return remMinutes / totalAsleepMinutes * 100
     }
 }
 

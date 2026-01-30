@@ -3,7 +3,6 @@ import SwiftUI
 struct AuthContainerView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = AuthViewModel()
-    @State private var showSignUp = false
     
     let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
     
@@ -55,12 +54,11 @@ struct AuthContainerView: View {
             
             VStack(spacing: 0) {
                 Spacer()
-                    .frame(height: 60)
                 
                 // Logo / App Name
                 VStack(spacing: 12) {
                     Image(systemName: "flame.fill")
-                        .font(.system(size: 60))
+                        .font(.system(size: 70))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [neonPurple, neonPurple.opacity(0.6)],
@@ -71,41 +69,23 @@ struct AuthContainerView: View {
                         .shadow(color: neonPurple.opacity(0.6), radius: 20)
                     
                     Text("IronForge")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                     
                     Text("Intelligent strength training")
-                        .font(.system(size: 15))
+                        .font(.system(size: 16))
                         .foregroundColor(.white.opacity(0.6))
-                }
-                .padding(.bottom, 50)
-                
-                // Auth Form
-                if showSignUp {
-                    SignUpView(viewModel: viewModel, onSwitchToSignIn: {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            showSignUp = false
-                        }
-                    })
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-                } else {
-                    SignInView(viewModel: viewModel, onSwitchToSignUp: {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            showSignUp = true
-                        }
-                    })
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .leading).combined(with: .opacity),
-                        removal: .move(edge: .trailing).combined(with: .opacity)
-                    ))
                 }
                 
                 Spacer()
+                
+                // Auth Form - Apple Sign In only
+                SignInView(viewModel: viewModel, onSwitchToSignUp: {})
+                    .padding(.horizontal, 24)
+                
+                Spacer()
+                    .frame(height: 60)
             }
-            .padding(.horizontal, 24)
         }
         .onChange(of: viewModel.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated {

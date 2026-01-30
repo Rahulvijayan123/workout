@@ -1114,35 +1114,45 @@ struct LiquidStepper: View {
     }
 }
 
-// MARK: - Split Capsule Hero View
+// MARK: - Split Capsule Hero View (System Override Style)
 struct SplitCapsuleHeroView: View {
     let onQuickStart: () -> Void
     let onBuild: () -> Void
     
     var body: some View {
         HStack(spacing: 0) {
-            // Left side - Quick Start with plasma effect (65%)
+            // Left side - Quick Start with hazard stripes
             Button(action: onQuickStart) {
                 ZStack {
-                    // Plasma background
+                    // Base plasma gradient
                     LiquidPlasmaEffect()
                     
-                    // Content
+                    // Hazard diagonal stripes overlay (very subtle)
+                    DiagonalStripesPattern()
+                        .opacity(0.08)
+                    
+                    // Content with lightning bolt
                     HStack(spacing: 8) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 14, weight: .bold))
+                        // Lightning bolt icon
+                        ZStack {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .shadow(color: .white.opacity(0.8), radius: 4)
+                        }
+                        
                         Text("QUICK START")
                             .font(IronFont.bodySemibold(13))
-                            .tracking(1)
+                            .tracking(1.5)
+                            .foregroundColor(.white)
                     }
-                    .foregroundColor(.white)
                 }
             }
             .buttonStyle(PlainButtonStyle())
             .frame(maxWidth: .infinity)
             .layoutPriority(2)
             
-            // Laser divider
+            // Laser divider with energy pulse
             ZStack {
                 Rectangle()
                     .fill(
@@ -1157,52 +1167,98 @@ struct SplitCapsuleHeroView: View {
                 // Glow effect
                 Rectangle()
                     .fill(Color.ironPurple)
-                    .frame(width: 4)
-                    .blur(radius: 3)
-                    .opacity(0.7)
+                    .frame(width: 6)
+                    .blur(radius: 4)
+                    .opacity(0.8)
             }
             .frame(width: 2)
             
-            // Right side - Build with frosted glass
+            // Right side - Build with dashed border glass (Drafting/Construction style)
             Button(action: onBuild) {
                 ZStack {
                     // Frosted glass background
                     Rectangle()
                         .fill(.ultraThinMaterial)
+                        .opacity(0.6)
                     
-                    // Subtle overlay
+                    // Dark tint
                     Rectangle()
-                        .fill(Color.white.opacity(0.04))
+                        .fill(Color(red: 0.08, green: 0.08, blue: 0.1).opacity(0.7))
                     
-                    // Content
+                    // Dashed border pattern inside
+                    Rectangle()
+                        .strokeBorder(
+                            Color.white.opacity(0.15),
+                            style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                        )
+                        .padding(4)
+                    
+                    // Content with drafting plus icon
                     HStack(spacing: 6) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .bold))
+                        // Plus icon in drafting style
+                        ZStack {
+                            // Crosshairs style plus
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        
                         Text("BUILD")
                             .font(IronFont.bodySemibold(13))
-                            .tracking(1)
+                            .tracking(1.5)
+                            .foregroundColor(.white.opacity(0.8))
                     }
-                    .foregroundColor(.ironTextPrimary)
                 }
             }
             .buttonStyle(PlainButtonStyle())
-            .frame(width: 100)
+            .frame(width: 110)
         }
-        .frame(height: 52)
+        .frame(height: 54)
         .clipShape(Capsule())
         .overlay {
             Capsule()
                 .stroke(
                     LinearGradient(
-                        colors: [.white.opacity(0.3), .white.opacity(0.1), .ironPurple.opacity(0.3)],
+                        colors: [.white.opacity(0.35), .white.opacity(0.12), .ironPurple.opacity(0.4)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: 1
+                    lineWidth: 1.5
                 )
         }
-        .shadow(color: Color.ironPurple.opacity(0.3), radius: 16, x: 0, y: 6)
+        .shadow(color: Color.ironPurple.opacity(0.35), radius: 18, x: 0, y: 8)
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Diagonal Stripes Pattern (Hazard/Industrial)
+struct DiagonalStripesPattern: View {
+    var body: some View {
+        GeometryReader { geo in
+            Canvas { context, size in
+                let stripeWidth: CGFloat = 8
+                let spacing: CGFloat = 16
+                let angle: CGFloat = 45 * .pi / 180
+                
+                for x in stride(from: -size.height, through: size.width + size.height, by: spacing) {
+                    var path = Path()
+                    let startX = x
+                    let startY: CGFloat = 0
+                    let endX = x + size.height * tan(angle)
+                    let endY = size.height
+                    
+                    path.move(to: CGPoint(x: startX, y: startY))
+                    path.addLine(to: CGPoint(x: endX, y: endY))
+                    
+                    context.stroke(
+                        path,
+                        with: .color(.white.opacity(0.3)),
+                        lineWidth: stripeWidth
+                    )
+                }
+            }
+        }
+        .clipped()
     }
 }
 

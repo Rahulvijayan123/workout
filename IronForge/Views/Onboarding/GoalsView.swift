@@ -62,25 +62,36 @@ struct GoalsView: View {
             .padding(.horizontal, 20)
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 10) {
-                if !selectedGoals.isEmpty {
-                    Text("\(selectedGoals.count) OBJECTIVE\(selectedGoals.count == 1 ? "" : "S") SELECTED")
-                        .font(IronFont.bodySemibold(10))
-                        .tracking(2)
-                        .foregroundColor(coolGrey)
-                }
+            VStack(spacing: 0) {
+                // Gradient fade from transparent to background
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
                 
-                TactileGlassButton(
-                    title: "NEXT PHASE",
-                    isEnabled: !selectedGoals.isEmpty,
-                    brightViolet: brightViolet,
-                    deepIndigo: deepIndigo
-                ) {
-                    saveAndContinue()
+                VStack(spacing: 10) {
+                    if !selectedGoals.isEmpty {
+                        Text("\(selectedGoals.count) OBJECTIVE\(selectedGoals.count == 1 ? "" : "S") SELECTED")
+                            .font(IronFont.bodySemibold(10))
+                            .tracking(2)
+                            .foregroundColor(coolGrey)
+                    }
+                    
+                    TactileGlassButton(
+                        title: "NEXT PHASE",
+                        isEnabled: !selectedGoals.isEmpty,
+                        brightViolet: brightViolet,
+                        deepIndigo: deepIndigo
+                    ) {
+                        saveAndContinue()
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
         }
     }
     

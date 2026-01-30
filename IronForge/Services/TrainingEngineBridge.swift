@@ -292,8 +292,6 @@ enum TrainingEngineBridge {
             return .male
         case .female:
             return .female
-        case .other:
-            return .other
         }
     }
     
@@ -711,7 +709,7 @@ enum TrainingEngineBridge {
                 endedAt: endedAt,
                 wasDeload: session.wasDeload,
                 previousLiftStates: previousLiftStates,
-                readinessScore: nil,
+                readinessScore: session.computedReadinessScore,
                 notes: nil
             )
         }
@@ -797,7 +795,8 @@ enum TrainingEngineBridge {
     static func convertSessionPlanToUIModel(
         _ sessionPlan: TESessionPlan,
         templateId: UUID?,
-        templateName: String
+        templateName: String,
+        computedReadinessScore: Int? = nil
     ) -> WorkoutSession {
         let exercises = sessionPlan.exercises.map { exercisePlan -> ExercisePerformance in
             let exerciseRef = ExerciseRef(
@@ -860,7 +859,8 @@ enum TrainingEngineBridge {
             endedAt: nil,
             wasDeload: sessionPlan.isDeload,
             deloadReason: sessionPlan.deloadReason?.rawValue,
-            exercises: exercises
+            exercises: exercises,
+            computedReadinessScore: computedReadinessScore
         )
     }
     
@@ -938,7 +938,7 @@ enum TrainingEngineBridge {
             endedAt: session.endedAt ?? Date(),
             wasDeload: session.wasDeload,
             previousLiftStates: prevStates,
-            readinessScore: nil,
+            readinessScore: session.computedReadinessScore,
             notes: nil
         )
     }
@@ -1065,11 +1065,26 @@ enum ReadinessScoreCalculator {
     }
     
     struct DayInputs {
+        // Core metrics (primary drivers)
         let sleepMinutes: Double?
         let hrvMs: Double?
         let restingHrBpm: Double?
         let activeEnergyKcal: Double?
         let steps: Double?
+        
+        // Extended sleep quality metrics
+        let sleepDeepMinutes: Double?
+        let sleepRemMinutes: Double?
+        let timeInBedMinutes: Double?
+        
+        // Recovery stress metrics
+        let respiratoryRate: Double?
+        let oxygenSaturation: Double?
+        let wristTemperatureCelsius: Double?
+        
+        // Circadian/activity context
+        let timeInDaylightMinutes: Double?
+        let exerciseTimeMinutes: Double?
     }
     
     /// Compute readiness scores for up to the last `maxDays` of biometrics (inclusive of `referenceDate` day).
@@ -1111,11 +1126,23 @@ enum ReadinessScoreCalculator {
             }
             
             let inputs = DayInputs(
+                // Core metrics
                 sleepMinutes: current.sleepMinutes,
                 hrvMs: current.hrvSDNN,
                 restingHrBpm: current.restingHR,
                 activeEnergyKcal: current.activeEnergy,
-                steps: current.steps
+                steps: current.steps,
+                // Extended sleep quality
+                sleepDeepMinutes: current.sleepDeepMinutes,
+                sleepRemMinutes: current.sleepRemMinutes,
+                timeInBedMinutes: current.timeInBedMinutes,
+                // Recovery stress
+                respiratoryRate: current.respiratoryRate,
+                oxygenSaturation: current.oxygenSaturation,
+                wristTemperatureCelsius: current.wristTemperatureCelsius,
+                // Circadian/activity
+                timeInDaylightMinutes: current.timeInDaylightMinutes,
+                exerciseTimeMinutes: current.exerciseTimeMinutes
             )
             
             let baselines = baselineAverages(from: priorPool, minSamples: minBaselineSamplesPerMetric)
@@ -1142,11 +1169,26 @@ enum ReadinessScoreCalculator {
     // MARK: - Scoring
     
     private struct Baselines {
+        // Core metrics
         var sleepMinutes: Double?
         var hrvMs: Double?
         var restingHrBpm: Double?
         var activeEnergyKcal: Double?
         var steps: Double?
+        
+        // Extended sleep quality
+        var sleepDeepMinutes: Double?
+        var sleepRemMinutes: Double?
+        var timeInBedMinutes: Double?
+        
+        // Recovery stress
+        var respiratoryRate: Double?
+        var oxygenSaturation: Double?
+        var wristTemperatureCelsius: Double?
+        
+        // Circadian/activity
+        var timeInDaylightMinutes: Double?
+        var exerciseTimeMinutes: Double?
     }
     
     private static func baselineAverages(from prior: [DailyBiometrics], minSamples: Int) -> Baselines {
@@ -1156,11 +1198,23 @@ enum ReadinessScoreCalculator {
         }
         
         return Baselines(
+            // Core metrics
             sleepMinutes: avg(prior.compactMap { $0.sleepMinutes }),
             hrvMs: avg(prior.compactMap { $0.hrvSDNN }),
             restingHrBpm: avg(prior.compactMap { $0.restingHR }),
             activeEnergyKcal: avg(prior.compactMap { $0.activeEnergy }),
-            steps: avg(prior.compactMap { $0.steps })
+            steps: avg(prior.compactMap { $0.steps }),
+            // Extended sleep quality
+            sleepDeepMinutes: avg(prior.compactMap { $0.sleepDeepMinutes }),
+            sleepRemMinutes: avg(prior.compactMap { $0.sleepRemMinutes }),
+            timeInBedMinutes: avg(prior.compactMap { $0.timeInBedMinutes }),
+            // Recovery stress
+            respiratoryRate: avg(prior.compactMap { $0.respiratoryRate }),
+            oxygenSaturation: avg(prior.compactMap { $0.oxygenSaturation }),
+            wristTemperatureCelsius: avg(prior.compactMap { $0.wristTemperatureCelsius }),
+            // Circadian/activity
+            timeInDaylightMinutes: avg(prior.compactMap { $0.timeInDaylightMinutes }),
+            exerciseTimeMinutes: avg(prior.compactMap { $0.exerciseTimeMinutes })
         )
     }
     
@@ -1168,7 +1222,11 @@ enum ReadinessScoreCalculator {
         // Neutral default (good enough to train, not a green light to PR).
         var score = 75
         
-        // Sleep (primary driver)
+        // =======================================================================
+        // PRIMARY DRIVERS (core metrics - significant weight)
+        // =======================================================================
+        
+        // Sleep duration (primary driver, max ±15 pts)
         if let today = inputs.sleepMinutes, let base = baselines.sleepMinutes, base > 0 {
             let ratio = today / base
             // Below baseline hurts quickly.
@@ -1184,7 +1242,7 @@ enum ReadinessScoreCalculator {
             }
         }
         
-        // HRV (primary driver)
+        // HRV (primary driver, max ±15 pts)
         if let today = inputs.hrvMs, let base = baselines.hrvMs, base > 0 {
             let ratio = today / base
             if ratio < 0.90 {
@@ -1198,7 +1256,7 @@ enum ReadinessScoreCalculator {
             }
         }
         
-        // Resting HR (primary driver; higher is worse)
+        // Resting HR (primary driver, max ±10 pts; higher is worse)
         if let today = inputs.restingHrBpm, let base = baselines.restingHrBpm, base > 0 {
             let ratio = today / base
             if ratio > 1.05 {
@@ -1212,8 +1270,131 @@ enum ReadinessScoreCalculator {
             }
         }
         
-        // Activity (minor): very high day-to-day activity can reduce readiness.
-        // Treat "below baseline" as neutral (it could be rest).
+        // =======================================================================
+        // SECONDARY DRIVERS (extended metrics - conservative weights)
+        // These only contribute when both today's value AND baseline exist.
+        // =======================================================================
+        
+        // Sleep quality: deep + REM as % of total sleep (max ±5 pts)
+        // Better sleep quality = better recovery, correlates with anabolic hormone release.
+        if let deepToday = inputs.sleepDeepMinutes,
+           let remToday = inputs.sleepRemMinutes,
+           let sleepToday = inputs.sleepMinutes,
+           let deepBase = baselines.sleepDeepMinutes,
+           let remBase = baselines.sleepRemMinutes,
+           let sleepBase = baselines.sleepMinutes,
+           sleepToday > 0, sleepBase > 0 {
+            let qualityToday = (deepToday + remToday) / sleepToday
+            let qualityBase = (deepBase + remBase) / sleepBase
+            if qualityBase > 0 {
+                let ratio = qualityToday / qualityBase
+                if ratio < 0.80 {
+                    score -= 5
+                } else if ratio < 0.95 {
+                    score -= Int(((0.95 - ratio) / 0.15 * 5.0).rounded())
+                } else if ratio > 1.15 {
+                    score += 3
+                } else if ratio > 1.0 {
+                    score += Int(((ratio - 1.0) / 0.15 * 3.0).rounded())
+                }
+            }
+        }
+        
+        // Sleep efficiency: actual sleep / time in bed (max ±3 pts)
+        if let sleepToday = inputs.sleepMinutes,
+           let inBedToday = inputs.timeInBedMinutes,
+           let sleepBase = baselines.sleepMinutes,
+           let inBedBase = baselines.timeInBedMinutes,
+           inBedToday > 0, inBedBase > 0 {
+            let effToday = sleepToday / inBedToday
+            let effBase = sleepBase / inBedBase
+            if effBase > 0 {
+                let ratio = effToday / effBase
+                // Only penalize significantly poor efficiency
+                if ratio < 0.85 {
+                    score -= 3
+                } else if ratio > 1.05 {
+                    score += 2
+                }
+            }
+        }
+        
+        // Respiratory rate: elevated = possible illness/stress (max ±4 pts)
+        // Higher respiratory rate during sleep indicates stress/illness.
+        if let today = inputs.respiratoryRate, let base = baselines.respiratoryRate, base > 0 {
+            let ratio = today / base
+            if ratio > 1.15 {
+                score -= 4  // Significantly elevated - possible illness
+            } else if ratio > 1.05 {
+                score -= Int(((ratio - 1.05) / 0.10 * 4.0).rounded())
+            } else if ratio < 0.95 {
+                score += 2  // Lower than normal is generally positive
+            }
+        }
+        
+        // Blood oxygen saturation SpO2 (max ±3 pts)
+        // Low SpO2 indicates respiratory stress or altitude acclimatization issues.
+        // Normal is 95-100%, concerning below 94%.
+        if let today = inputs.oxygenSaturation, let base = baselines.oxygenSaturation, base > 0 {
+            // SpO2 has a narrow normal range, so we use absolute thresholds too
+            if today < 94.0 {
+                score -= 3  // Concerning low
+            } else if today < 95.0 {
+                score -= 1
+            }
+            // If today is significantly below personal baseline, also penalize
+            let ratio = today / base
+            if ratio < 0.97 && today < 97.0 {
+                score -= 2  // Below baseline AND below 97%
+            }
+        }
+        
+        // Wrist temperature deviation (max ±3 pts)
+        // Elevated temperature can indicate immune response or hormonal shifts.
+        // This is reported as deviation from baseline by Apple Watch S8+.
+        if let today = inputs.wristTemperatureCelsius, let base = baselines.wristTemperatureCelsius {
+            // Deviation > +0.5°C from personal baseline can indicate stress/illness
+            let deviation = today - base
+            if deviation > 0.7 {
+                score -= 3  // Significant elevation - possible illness
+            } else if deviation > 0.4 {
+                score -= Int((deviation / 0.7 * 3.0).rounded())
+            } else if deviation < -0.3 {
+                score += 1  // Slightly cooler is fine
+            }
+        }
+        
+        // Time in daylight: circadian rhythm support (max ±3 pts)
+        // Adequate daylight exposure supports circadian rhythm and recovery.
+        if let today = inputs.timeInDaylightMinutes, let base = baselines.timeInDaylightMinutes, base > 0 {
+            let ratio = today / base
+            // Very low daylight can disrupt sleep/recovery
+            if ratio < 0.30 {
+                score -= 3
+            } else if ratio < 0.50 {
+                score -= 1
+            } else if ratio > 1.30 {
+                score += 2  // Good daylight exposure
+            }
+        }
+        
+        // Exercise time previous day: overtraining signal (max -4 pts)
+        // Excessive exercise yesterday can reduce today's readiness.
+        // Only penalize, don't reward (rest day shouldn't boost readiness).
+        if let today = inputs.exerciseTimeMinutes, let base = baselines.exerciseTimeMinutes, base > 0 {
+            let ratio = today / base
+            if ratio > 2.0 {
+                score -= 4  // Very high exercise load
+            } else if ratio > 1.5 {
+                score -= Int(((ratio - 1.5) / 0.5 * 4.0).rounded())
+            }
+        }
+        
+        // =======================================================================
+        // ACTIVITY LOAD (minor, max -5 pts)
+        // Very high day-to-day activity can reduce readiness.
+        // Treat "below baseline" as neutral (it could be intentional rest).
+        // =======================================================================
         if let today = inputs.activeEnergyKcal, let base = baselines.activeEnergyKcal, base > 0 {
             let ratio = today / base
             if ratio > 1.40 {

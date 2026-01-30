@@ -44,59 +44,32 @@ struct GymTypeView: View {
                     }
                 }
                 
-                // Info card - Console/System Note style with left purple accent
-                HStack(spacing: 0) {
-                    // Left purple accent bar
-                    Rectangle()
-                        .fill(neonPurple)
-                        .frame(width: 2)
-                        .shadow(color: neonPurple.opacity(0.5), radius: 4)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "terminal")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(neonPurple)
-                            
-                            Text("SYSTEM NOTE")
-                                .font(IronFont.header(10))
-                                .tracking(3)
-                                .foregroundColor(neonPurple.opacity(0.8))
-                        }
-                        
-                        Text("Workouts optimized for available equipment. Exercise selection calibrated to your training environment.")
-                            .font(IronFont.body(12))
-                            .foregroundColor(.white.opacity(0.55))
-                            .lineSpacing(4)
-                    }
-                    .padding(.leading, 14)
-                    .padding(.trailing, 16)
-                    .padding(.vertical, 14)
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.black.opacity(0.6))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
-                
                 Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
         }
         .safeAreaInset(edge: .bottom) {
-            TactileGlassButton(
-                title: "NEXT PHASE",
-                isEnabled: true,
-                brightViolet: brightViolet,
-                deepIndigo: deepIndigo
-            ) {
-                saveAndContinue()
+            VStack(spacing: 0) {
+                // Gradient fade from transparent to background
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
+                
+                TactileGlassButton(
+                    title: "NEXT PHASE",
+                    isEnabled: true,
+                    brightViolet: brightViolet,
+                    deepIndigo: deepIndigo
+                ) {
+                    saveAndContinue()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
         }
     }
     

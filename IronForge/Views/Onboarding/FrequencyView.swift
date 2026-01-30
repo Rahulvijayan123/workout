@@ -177,63 +177,32 @@ struct FrequencyView: View {
                         .stroke(Color.white.opacity(0.1), lineWidth: 1)
                 )
                 
-                // Tip card - Glass treatment with spark icon (exact same purple)
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 14, weight: .light))
-                            .foregroundColor(neonPurple)
-                            .shadow(color: neonPurple.opacity(0.6), radius: 6)
-                        
-                        Text("INSIGHT")
-                            .font(IronFont.header(10))
-                            .tracking(3)
-                            .foregroundColor(neonPurple.opacity(0.8))
-                    }
-                    
-                    Text("For optimal muscle growth, 4-5 days per week allows for adequate training volume while ensuring proper recovery.")
-                        .font(IronFont.body(13))
-                        .foregroundColor(.white.opacity(0.65))
-                        .lineSpacing(4)
-                }
-                .padding(16)
-                .background(
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(.ultraThinMaterial.opacity(0.35))
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color.white.opacity(0.03))
-                        
-                        // Top highlight (glass stacking)
-                        VStack {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.10))
-                                .frame(height: 1)
-                            Spacer()
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                )
-                
                 Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
         }
         .safeAreaInset(edge: .bottom) {
-            TactileGlassButton(
-                title: "NEXT PHASE",
-                isEnabled: true,
-                brightViolet: brightViolet,
-                deepIndigo: deepIndigo
-            ) {
-                saveAndContinue()
+            VStack(spacing: 0) {
+                // Gradient fade from transparent to background
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
+                
+                TactileGlassButton(
+                    title: "NEXT PHASE",
+                    isEnabled: true,
+                    brightViolet: brightViolet,
+                    deepIndigo: deepIndigo
+                ) {
+                    saveAndContinue()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
         }
     }
     

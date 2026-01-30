@@ -35,12 +35,12 @@ struct FitnessDetailsView: View {
                         .foregroundColor(.white.opacity(0.55))
                         .multilineTextAlignment(.center)
                 }
-                .padding(.top, 24)
+                .padding(.top, 32)
                 
-                // Fitness Level - Glass Segmented Control
-                VStack(alignment: .leading, spacing: 12) {
+                // Fitness Level - Glass Segmented Control (larger)
+                VStack(alignment: .leading, spacing: 14) {
                     Text("PERFORMANCE TIER")
-                        .font(IronFont.header(10))
+                        .font(IronFont.header(11))
                         .tracking(3)
                         .foregroundColor(coolGrey)
                     
@@ -48,7 +48,9 @@ struct FitnessDetailsView: View {
                         selectedLevel: $fitnessLevel,
                         neonPurple: neonPurple
                     )
+                    .frame(height: 50)
                 }
+                .padding(.bottom, 8)
                 
                 // Nutrition & Recovery
                 VStack(spacing: 12) {
@@ -100,59 +102,32 @@ struct FitnessDetailsView: View {
                     )
                 }
                 
-                // Tips - Console style
-                HStack(spacing: 0) {
-                    Rectangle()
-                        .fill(neonPurple)
-                        .frame(width: 2)
-                        .shadow(color: neonPurple.opacity(0.5), radius: 4)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "terminal")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(neonPurple)
-                            
-                            Text("OPTIMIZATION NOTES")
-                                .font(IronFont.header(10))
-                                .tracking(3)
-                                .foregroundColor(neonPurple.opacity(0.8))
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 6) {
-                            TechTipRow(text: "Protein: 0.7-1g per lb bodyweight", neonPurple: neonPurple)
-                            TechTipRow(text: "Sleep: 7-9 hours optimizes recovery", neonPurple: neonPurple)
-                            TechTipRow(text: "Hydration: +10% strength impact", neonPurple: neonPurple)
-                        }
-                    }
-                    .padding(.leading, 14)
-                    .padding(.trailing, 16)
-                    .padding(.vertical, 14)
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.black.opacity(0.6))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
-                
                 Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
         }
         .safeAreaInset(edge: .bottom) {
-            TactileGlassButton(
-                title: "NEXT PHASE",
-                isEnabled: true,
-                brightViolet: brightViolet,
-                deepIndigo: deepIndigo
-            ) {
-                saveAndContinue()
+            VStack(spacing: 0) {
+                // Gradient fade from transparent to background
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
+                
+                TactileGlassButton(
+                    title: "NEXT PHASE",
+                    isEnabled: true,
+                    brightViolet: brightViolet,
+                    deepIndigo: deepIndigo
+                ) {
+                    saveAndContinue()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
         }
     }
     

@@ -109,14 +109,53 @@ private struct WorkoutsDashboardView: View {
     }
     
     private var quickActions: some View {
-        SplitCapsuleHeroView(
-            onQuickStart: {
-                workoutStore.startEmptySession()
-            },
-            onBuild: {
-                onCreateTemplate()
+        Button {
+            onCreateTemplate()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                Text("MAKE YOUR OWN TEMPLATE")
+                    .font(IronFont.bodySemibold(13))
+                    .tracking(1.5)
             }
-        )
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                ZStack {
+                    // Frosted glass background
+                    RoundedRectangle(cornerRadius: 27)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.6)
+                    
+                    // Dark tint
+                    RoundedRectangle(cornerRadius: 27)
+                        .fill(Color(red: 0.08, green: 0.08, blue: 0.1).opacity(0.7))
+                    
+                    // Dashed border pattern inside
+                    RoundedRectangle(cornerRadius: 27)
+                        .strokeBorder(
+                            Color.white.opacity(0.15),
+                            style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                        )
+                        .padding(4)
+                }
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 27)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.35), .white.opacity(0.12), Color.ironPurple.opacity(0.4)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+            }
+            .shadow(color: Color.ironPurple.opacity(0.25), radius: 14, x: 0, y: 6)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private var templatesSection: some View {
@@ -127,7 +166,7 @@ private struct WorkoutsDashboardView: View {
                 .foregroundColor(.ironTextTertiary)
             
             if workoutStore.templates.isEmpty {
-                Text("No templates yet. Tap BUILD to create one.")
+                Text("No templates yet. Tap above to create your own.")
                     .font(IronFont.body(14))
                     .foregroundColor(.ironTextTertiary)
                     .padding(16)
@@ -406,115 +445,311 @@ private struct SessionDetailView: View {
     }
 }
 
-// MARK: - Template List Card (horizontal layout, fits screen)
+// MARK: - Template List Card (Mission Briefing Style)
 private struct TemplateListCard: View {
+    @EnvironmentObject var workoutStore: WorkoutStore
     let template: WorkoutTemplate
     let onStart: () -> Void
     let onEdit: () -> Void
     
+    @State private var showingRenameAlert = false
+    @State private var newName = ""
+    
+    private let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
+    
+    // Estimate workout duration based on exercise count
+    private var estimatedDuration: Int {
+        max(20, template.exercises.count * 8)
+    }
+    
+    // Determine workout type based on template name
+    private var workoutType: WorkoutTargetType {
+        let name = template.name.lowercased()
+        if name.contains("push") || name.contains("chest") || name.contains("tricep") {
+            return .push
+        } else if name.contains("pull") || name.contains("back") || name.contains("bicep") {
+            return .pull
+        } else if name.contains("leg") || name.contains("squat") || name.contains("lower") {
+            return .legs
+        } else if name.contains("upper") {
+            return .upper
+        } else if name.contains("full") {
+            return .fullBody
+        } else if name.contains("arm") {
+            return .arms
+        } else if name.contains("shoulder") {
+            return .shoulders
+        } else {
+            return .general
+        }
+    }
+    
+    // Training focus label
+    private var trainingFocus: String {
+        // Check exercises for rep ranges to determine focus
+        let avgReps = template.exercises.isEmpty ? 8 : template.exercises.map { ($0.repRangeMin + $0.repRangeMax) / 2 }.reduce(0, +) / max(1, template.exercises.count)
+        if avgReps <= 5 {
+            return "STRENGTH"
+        } else if avgReps <= 10 {
+            return "HYPERTROPHY"
+        } else {
+            return "ENDURANCE"
+        }
+    }
+    
     var body: some View {
-        HStack(spacing: 14) {
-            // Chrome orb play button on left
-            LiquidChromeOrb(size: 48, onTap: onStart)
-            
-            // Template info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(template.name.uppercased())
-                    .font(IronFont.bodySemibold(15))
-                    .tracking(1)
-                    .foregroundColor(.ironTextPrimary)
-                    .lineLimit(1)
+        Button(action: onStart) {
+            HStack(spacing: 14) {
+                // Wireframe Target Icon (replaces play button)
+                WorkoutTargetIcon(type: workoutType, neonPurple: neonPurple)
                 
-                Text("\(template.exercises.count) exercise\(template.exercises.count == 1 ? "" : "s")")
-                    .font(IronFont.body(13))
-                    .foregroundColor(.ironTextTertiary)
+                // Template info with metadata chips
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(template.name.uppercased())
+                        .font(IronFont.bodySemibold(15))
+                        .tracking(1)
+                        .foregroundColor(.ironTextPrimary)
+                        .lineLimit(1)
+                    
+                    // Metadata Chips Row
+                    HStack(spacing: 6) {
+                        MetadataChip(text: "\(estimatedDuration) MIN")
+                        MetadataChip(text: "\(template.exercises.count) EXERCISES")
+                    }
+                }
+                
+                Spacer()
+                
+                // GO Chevron indicator
+                HStack(spacing: 4) {
+                    Text("GO")
+                        .font(.system(size: 11, weight: .bold))
+                        .tracking(1)
+                        .foregroundColor(neonPurple)
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(neonPurple)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(neonPurple.opacity(0.12))
+                        .overlay(
+                            Capsule()
+                                .stroke(neonPurple.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.5)
+                    
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(red: 0.06, green: 0.06, blue: 0.08).opacity(0.8))
+                    
+                    // Top glossy highlight
+                    VStack {
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.08), Color.clear],
+                                    startPoint: .top,
+                                    endPoint: .center
+                                )
+                            )
+                            .frame(height: 40)
+                        Spacer()
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.2),
+                                Color.white.opacity(0.08),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+        .contextMenu {
+            Button {
+                onEdit()
+            } label: {
+                Label("Edit Template", systemImage: "pencil")
             }
             
-            Spacer()
-            
-            // Edit button
-            Button(action: onEdit) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.ironTextSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(Color.white.opacity(0.08)))
-                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            Button {
+                newName = template.name
+                showingRenameAlert = true
+            } label: {
+                Label("Rename", systemImage: "character.cursor.ibeam")
             }
-            .buttonStyle(.plain)
+            
+            Button(role: .destructive) {
+                workoutStore.deleteTemplate(template)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
+        .alert("Rename Template", isPresented: $showingRenameAlert) {
+            TextField("Template name", text: $newName)
+            Button("Cancel", role: .cancel) { }
+            Button("Save") {
+                if !newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    var updatedTemplate = template
+                    updatedTemplate.name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    workoutStore.updateTemplate(updatedTemplate)
+                }
+            }
+        } message: {
+            Text("Enter a new name for this template")
         }
-        .overlay {
-            RoundedRectangle(cornerRadius: 20)
+    }
+}
+
+// MARK: - Workout Target Type
+private enum WorkoutTargetType {
+    case push, pull, legs, upper, fullBody, arms, shoulders, general
+    
+    // Highlighted body region for the figure
+    var highlightOffset: CGPoint {
+        switch self {
+        case .push: return CGPoint(x: 0, y: -6)      // Chest area
+        case .pull: return CGPoint(x: 0, y: -2)      // Back/upper torso
+        case .legs: return CGPoint(x: 0, y: 12)      // Legs area
+        case .upper: return CGPoint(x: 0, y: -4)     // Upper body
+        case .fullBody: return CGPoint(x: 0, y: 2)   // Full body center
+        case .arms: return CGPoint(x: -6, y: -2)     // Arms area
+        case .shoulders: return CGPoint(x: 0, y: -8) // Shoulder area
+        case .general: return CGPoint(x: 0, y: 0)    // Center
+        }
+    }
+    
+    var highlightSize: CGFloat {
+        switch self {
+        case .legs: return 20
+        case .upper, .fullBody: return 24
+        default: return 16
+        }
+    }
+}
+
+// MARK: - Workout Target Icon (Body Figure with Highlighted Region)
+private struct WorkoutTargetIcon: View {
+    let type: WorkoutTargetType
+    let neonPurple: Color
+    
+    var body: some View {
+        ZStack {
+            // Glass container
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.03))
+                .frame(width: 56, height: 56)
+            
+            // Inner glow based on type
+            RoundedRectangle(cornerRadius: 14)
+                .fill(
+                    RadialGradient(
+                        colors: [neonPurple.opacity(0.15), neonPurple.opacity(0.05), Color.clear],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 35
+                    )
+                )
+                .frame(width: 56, height: 56)
+            
+            // Border
+            RoundedRectangle(cornerRadius: 14)
                 .stroke(
                     LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.2),
-                            Color.white.opacity(0.08),
-                            Color.clear
-                        ],
+                        colors: [neonPurple.opacity(0.5), Color.white.opacity(0.1)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
+                .frame(width: 56, height: 56)
+            
+            // Body figure with highlighted region
+            ZStack {
+                // Highlight glow behind the figure
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [neonPurple.opacity(0.8), neonPurple.opacity(0.3), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: type.highlightSize
+                        )
+                    )
+                    .frame(width: type.highlightSize * 2, height: type.highlightSize * 2)
+                    .offset(x: type.highlightOffset.x, y: type.highlightOffset.y)
+                    .blur(radius: 4)
+                
+                // Base human figure (outline style)
+                Image(systemName: "figure.stand")
+                    .font(.system(size: 28, weight: .ultraLight))
+                    .foregroundColor(.white.opacity(0.4))
+                
+                // Highlighted human figure overlay
+                Image(systemName: "figure.stand")
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [neonPurple, neonPurple.opacity(0.6)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .mask(
+                        // Mask to show only the highlighted region
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: type.highlightSize * 2.5, height: type.highlightSize * 2.5)
+                            .offset(x: type.highlightOffset.x, y: type.highlightOffset.y)
+                            .blur(radius: 6)
+                    )
+                    .shadow(color: neonPurple.opacity(0.6), radius: 4)
+            }
         }
+        .shadow(color: neonPurple.opacity(0.2), radius: 8)
     }
 }
 
-private struct TemplateRow: View {
-    let template: WorkoutTemplate
-    let onStart: () -> Void
-    let onEdit: () -> Void
+// MARK: - Metadata Chip
+private struct MetadataChip: View {
+    let text: String
     
     var body: some View {
-        Button(action: onStart) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.ironPurple.opacity(0.18))
-                        .frame(width: 52, height: 52)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.ironPurple.opacity(0.35), lineWidth: 1)
-                        }
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.ironPurple)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(template.name.uppercased())
-                        .font(IronFont.bodySemibold(16))
-                        .tracking(1)
-                        .foregroundColor(.ironTextPrimary)
-                    
-                    Text("\(template.exercises.count) exercise\(template.exercises.count == 1 ? "" : "s")")
-                        .font(IronFont.body(13))
-                        .foregroundColor(.ironTextTertiary)
-                }
-                
-                Spacer()
-                
-                Button(action: onEdit) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.ironTextSecondary)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.glassWhite))
-                        .overlay(Circle().stroke(Color.glassBorder, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(14)
-            .liquidGlass()
-        }
-        .buttonStyle(.plain)
+        Text(text)
+            .font(.system(size: 9, weight: .semibold))
+            .tracking(0.8)
+            .foregroundColor(Color(red: 0.61, green: 0.64, blue: 0.69))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.04))
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                    )
+            )
     }
 }
 
@@ -1099,6 +1334,7 @@ private struct WorkoutSessionView: View {
     @State private var showingPicker = false
     @State private var showingFinishConfirm = false
     @State private var selectedExerciseIndex: Int?
+    @State private var isEditMode = false
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -1124,14 +1360,94 @@ private struct WorkoutSessionView: View {
                         .padding(16)
                         .liquidGlass()
                 } else {
+                    // Edit mode toggle
+                    if session.exercises.count > 1 {
+                        HStack {
+                            Spacer()
+                            Button {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    isEditMode.toggle()
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: isEditMode ? "checkmark" : "arrow.up.arrow.down")
+                                        .font(.system(size: 12, weight: .semibold))
+                                    Text(isEditMode ? "DONE" : "REORDER")
+                                        .font(IronFont.label(10))
+                                        .tracking(1)
+                                }
+                                .foregroundColor(.ironPurple)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.ironPurple.opacity(0.12))
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.ironPurple.opacity(0.3), lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.bottom, 4)
+                    }
+                    
                     VStack(spacing: 12) {
                         ForEach(Array(session.exercises.enumerated()), id: \.element.id) { index, exercise in
-                            SessionExerciseRow(
-                                exercise: exercise,
-                                onTap: {
-                                    selectedExerciseIndex = index
+                            HStack(spacing: 12) {
+                                // Drag handle in edit mode
+                                if isEditMode {
+                                    VStack(spacing: 4) {
+                                        Button {
+                                            moveExercise(from: index, direction: -1)
+                                        } label: {
+                                            Image(systemName: "chevron.up")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(index == 0 ? .white.opacity(0.2) : .ironPurple)
+                                        }
+                                        .disabled(index == 0)
+                                        
+                                        Button {
+                                            moveExercise(from: index, direction: 1)
+                                        } label: {
+                                            Image(systemName: "chevron.down")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(index == session.exercises.count - 1 ? .white.opacity(0.2) : .ironPurple)
+                                        }
+                                        .disabled(index == session.exercises.count - 1)
+                                    }
+                                    .frame(width: 30)
                                 }
-                            )
+                                
+                                SessionExerciseRow(
+                                    exercise: exercise,
+                                    onTap: {
+                                        if !isEditMode {
+                                            selectedExerciseIndex = index
+                                        }
+                                    }
+                                )
+                                
+                                // Delete button in edit mode
+                                if isEditMode {
+                                    Button {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            removeExercise(at: index)
+                                        }
+                                    } label: {
+                                        Image(systemName: "trash.fill")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.red.opacity(0.8))
+                                            .frame(width: 44, height: 44)
+                                            .background(
+                                                Circle()
+                                                    .fill(Color.red.opacity(0.15))
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                         }
                     }
                 }
@@ -1197,6 +1513,29 @@ private struct WorkoutSessionView: View {
                 .font(IronFont.bodySemibold(14))
                 .tracking(1)
                 .foregroundColor(.ironTextSecondary)
+        }
+    }
+    
+    // MARK: - Exercise Management
+    
+    private func moveExercise(from index: Int, direction: Int) {
+        let newIndex = index + direction
+        guard newIndex >= 0 && newIndex < session.exercises.count else { return }
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            session.exercises.swapAt(index, newIndex)
+            workoutStore.updateActiveSession(session)
+        }
+    }
+    
+    private func removeExercise(at index: Int) {
+        guard index >= 0 && index < session.exercises.count else { return }
+        session.exercises.remove(at: index)
+        workoutStore.updateActiveSession(session)
+        
+        // Exit edit mode if no exercises left or only one
+        if session.exercises.count <= 1 {
+            isEditMode = false
         }
     }
 }
@@ -1289,6 +1628,7 @@ private struct ExerciseLoggingView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var animatePulse = false
+    @FocusState private var isWeightFieldFocused: Bool
     
     private var exercise: ExercisePerformance {
         session.exercises[exerciseIndex]
@@ -1374,6 +1714,16 @@ private struct ExerciseLoggingView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        isWeightFieldFocused = false
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(neonPurple)
+                }
+            }
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
@@ -1727,12 +2077,18 @@ private struct ExerciseLoggingView: View {
             
             VStack(spacing: 10) {
                 ForEach(Array(session.exercises[exerciseIndex].sets.enumerated()), id: \.element.id) { setIndex, _ in
+                    let previousSetCompletedAt: Date? = setIndex > 0 
+                        ? session.exercises[exerciseIndex].sets[setIndex - 1].completedAt 
+                        : nil
+                    
                     PremiumSetRow(
                         setNumber: setIndex + 1,
                         set: $session.exercises[exerciseIndex].sets[setIndex],
                         targetReps: exercise.repRangeMin...exercise.repRangeMax,
                         targetRIR: exercise.targetRIR,
-                        neonPurple: neonPurple
+                        neonPurple: neonPurple,
+                        isWeightFocused: $isWeightFieldFocused,
+                        previousSetCompletedAt: previousSetCompletedAt
                     )
                 }
             }
@@ -1775,23 +2131,19 @@ private struct ExerciseLoggingView: View {
                 .opacity(session.exercises[exerciseIndex].sets.count <= 1 ? 0.5 : 1)
             }
             
-            // Complete Exercise button
-            if !exercise.isCompleted {
-                Button {
-                    completeExercise()
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark.circle.fill")
-                        Text("COMPLETE EXERCISE")
-                            .tracking(1.5)
-                    }
-                    .font(IronFont.bodySemibold(15))
-                    .frame(maxWidth: .infinity)
+            // Save & Close button - exercises remain editable until workout is finalized
+            Button {
+                saveAndClose()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: exercise.sets.contains(where: { $0.isCompleted }) ? "checkmark.circle.fill" : "arrow.down.circle.fill")
+                    Text(exercise.sets.contains(where: { $0.isCompleted }) ? "SAVE & CLOSE" : "CLOSE")
+                        .tracking(1.5)
                 }
-                .buttonStyle(NeonGlowButtonStyle(isPrimary: true))
-                .disabled(!canComplete)
-                .opacity(canComplete ? 1 : 0.5)
+                .font(IronFont.bodySemibold(15))
+                .frame(maxWidth: .infinity)
             }
+            .buttonStyle(NeonGlowButtonStyle(isPrimary: canComplete))
         }
     }
     
@@ -1915,20 +2267,24 @@ private struct ExerciseLoggingView: View {
         return !completed.isEmpty && completed.contains(where: { $0.weight > 0 })
     }
     
-    private func completeExercise() {
+    private func saveAndClose() {
         let exerciseId = exercise.exercise.id
+        
+        // Initialize exercise state if this is the first time logging
         if workoutStore.getExerciseState(for: exerciseId) == nil {
             if let firstWeight = session.exercises[exerciseIndex].sets.first(where: { $0.isCompleted && $0.weight > 0 })?.weight {
                 workoutStore.initializeExerciseState(exerciseId: exerciseId, initialWeight: firstWeight)
             }
         }
         
-        if workoutStore.completeExercise(performanceId: exercise.id) != nil {
-            if let updatedSession = workoutStore.activeSession {
-                session = updatedSession
-            }
-            dismiss()
+        // Save progress without marking exercise as completed
+        // Exercises remain editable until the entire workout is finalized
+        workoutStore.saveExerciseProgress(performanceId: exercise.id)
+        
+        if let updatedSession = workoutStore.activeSession {
+            session = updatedSession
         }
+        dismiss()
     }
     
     private func formatWeight(_ w: Double) -> String {
@@ -1944,15 +2300,51 @@ private struct PremiumSetRow: View {
     let targetReps: ClosedRange<Int>
     let targetRIR: Int
     let neonPurple: Color
+    var isWeightFocused: FocusState<Bool>.Binding
+    /// Previous set's completion time (for calculating rest time)
+    var previousSetCompletedAt: Date?
     
     @State private var weightText: String = ""
+    @State private var showModificationReason: Bool = false
+    
+    /// Check if the set values differ from recommended
+    private var wasModified: Bool {
+        guard set.isCompleted else { return false }
+        if let recWeight = set.recommendedWeight, abs(set.weight - recWeight) > 0.1 { return true }
+        if let recReps = set.recommendedReps, set.reps != recReps { return true }
+        return false
+    }
     
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 14) {
                 // Completion toggle with set number
                 Button {
+                    let wasCompleted = set.isCompleted
                     set.isCompleted.toggle()
+                    
+                    // Track completion time for rest time calculation
+                    if set.isCompleted && !wasCompleted {
+                        set.completedAt = Date()
+                        
+                        // Calculate rest time from previous set
+                        if let prevTime = previousSetCompletedAt {
+                            set.actualRestSeconds = Int(Date().timeIntervalSince(prevTime))
+                        }
+                        
+                        // Mark as modified if values differ from recommended
+                        if let recWeight = set.recommendedWeight, abs(set.weight - recWeight) > 0.1 {
+                            set.isUserModified = true
+                        }
+                        if let recReps = set.recommendedReps, set.reps != recReps {
+                            set.isUserModified = true
+                        }
+                        
+                        // Show modification reason picker if modified and no reason set
+                        if set.isUserModified && set.modificationReason == nil {
+                            showModificationReason = true
+                        }
+                    }
                 } label: {
                     ZStack {
                         Circle()
@@ -2010,6 +2402,7 @@ private struct PremiumSetRow: View {
                                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
                         )
                         .tint(neonPurple)
+                        .focused(isWeightFocused)
                         
                         Text("lb")
                             .font(IronFont.body(12))
@@ -2137,6 +2530,15 @@ private struct PremiumSetRow: View {
                 set.rpeObserved = defaultHardness
             }
         }
+        .sheet(isPresented: $showModificationReason) {
+            ModificationReasonSheet(
+                set: $set,
+                neonPurple: neonPurple,
+                onDismiss: { showModificationReason = false }
+            )
+            .presentationDetents([.height(400)])
+            .presentationDragIndicator(.visible)
+        }
     }
     
     private var repColor: Color {
@@ -2165,6 +2567,103 @@ private struct PremiumSetRow: View {
     }
 }
 
+
+// MARK: - Modification Reason Sheet (ML Data Collection)
+/// Quick picker for why the user modified the recommended weight/reps.
+/// Critical for ML model to understand when deviations are intentional vs errors.
+private struct ModificationReasonSheet: View {
+    @Binding var set: WorkoutSet
+    let neonPurple: Color
+    let onDismiss: () -> Void
+    
+    private let reasons: [(ComplianceReasonCode, String, String)] = [
+        (.feltStrong, "flame.fill", "Felt strong"),
+        (.feltWeak, "battery.25", "Felt weak/fatigued"),
+        (.pain, "bandage.fill", "Pain/discomfort"),
+        (.formConcern, "exclamationmark.triangle.fill", "Form breaking down"),
+        (.equipmentUnavailable, "wrench.fill", "Equipment unavailable"),
+        (.timeConstraint, "clock.fill", "Short on time"),
+        (.warmupInsufficient, "thermometer.snowflake", "Needed more warmup"),
+        (.testingMax, "chart.line.uptrend.xyaxis", "Testing max"),
+        (.personalPreference, "hand.thumbsup.fill", "Personal preference"),
+        (.other, "ellipsis.circle.fill", "Other reason")
+    ]
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Header
+            VStack(spacing: 8) {
+                Image(systemName: "pencil.and.list.clipboard")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundColor(neonPurple)
+                
+                Text("WHY THE CHANGE?")
+                    .font(.system(size: 18, weight: .bold))
+                    .tracking(2)
+                    .foregroundColor(.white)
+                
+                Text("This helps us learn your preferences")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            .padding(.top, 20)
+            
+            // Reason grid
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(reasons, id: \.0) { reason, icon, label in
+                    Button {
+                        set.modificationReason = reason
+                        onDismiss()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: icon)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(set.modificationReason == reason ? neonPurple : .white.opacity(0.6))
+                                .frame(width: 24)
+                            
+                            Text(label)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(set.modificationReason == reason 
+                                    ? neonPurple.opacity(0.15) 
+                                    : Color.white.opacity(0.05))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(set.modificationReason == reason 
+                                    ? neonPurple.opacity(0.5) 
+                                    : Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            
+            // Skip button
+            Button {
+                set.modificationReason = .none
+                onDismiss()
+            } label: {
+                Text("Skip")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            .padding(.bottom, 20)
+            
+            Spacer()
+        }
+        .background(Color(red: 0.08, green: 0.08, blue: 0.1))
+    }
+}
 
 // MARK: - Backward Compatibility Alias
 private typealias TemplateEditorView = WorkoutBuilderView

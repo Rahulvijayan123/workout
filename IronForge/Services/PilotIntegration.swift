@@ -117,7 +117,8 @@ extension WorkoutStore {
             var session = TrainingEngineBridge.convertSessionPlanToUIModel(
                 sessionPlan,
                 templateId: template.id,
-                templateName: template.name
+                templateName: template.name,
+                computedReadinessScore: readiness
             )
             
             // Apply guardrail modifications to the session

@@ -55,16 +55,27 @@ struct ExperienceView: View {
         }
         .safeAreaInset(edge: .bottom) {
             // Tactile glass button with liquid energy sheen
-            TactileGlassButton(
-                title: "NEXT PHASE",
-                isEnabled: true,
-                brightViolet: brightViolet,
-                deepIndigo: deepIndigo
-            ) {
-                saveAndContinue()
+            VStack(spacing: 0) {
+                // Gradient fade from transparent to background
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
+                
+                TactileGlassButton(
+                    title: "NEXT PHASE",
+                    isEnabled: true,
+                    brightViolet: brightViolet,
+                    deepIndigo: deepIndigo
+                ) {
+                    saveAndContinue()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
         }
     }
     

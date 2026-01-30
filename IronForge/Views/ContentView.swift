@@ -11,6 +11,10 @@ struct ContentView: View {
                 // Loading/splash screen while checking auth
                 SplashView()
                     .transition(.opacity)
+            } else if !appState.isAuthenticated {
+                // Not authenticated - show auth screen
+                AuthContainerView()
+                    .transition(.opacity)
             } else if !appState.hasCompletedOnboarding {
                 // Authenticated but hasn't completed onboarding
                 OnboardingContainerView()
@@ -22,6 +26,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.5), value: appState.isCheckingAuth)
+        .animation(.easeInOut(duration: 0.5), value: appState.isAuthenticated)
         .animation(.easeInOut(duration: 0.5), value: appState.hasCompletedOnboarding)
         .task {
             // Pull data from Supabase on app launch if authenticated

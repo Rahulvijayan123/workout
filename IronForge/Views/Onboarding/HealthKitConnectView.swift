@@ -31,7 +31,7 @@ struct HealthKitConnectView: View {
                         .tracking(3)
                         .foregroundColor(.ironTextPrimary)
                     
-                    Text("We only read sleep, HRV, resting heart rate, and activity to personalize training readiness.")
+                    Text("We read sleep, HRV, heart rate, and recovery metrics to personalize your training readiness.")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundColor(Color(red: 0.61, green: 0.64, blue: 0.69)) // Silver #9CA3AF
                         .multilineTextAlignment(.center)
@@ -146,22 +146,41 @@ struct HealthKitConnectView: View {
     
     private var selectionCards: some View {
         VStack(alignment: .leading, spacing: 14) {
+            // Core recovery metrics (primary drivers of readiness)
             cyberMetricSection(title: "RECOVERY", metrics: [
                 (.sleepAnalysis, $viewModel.selection.sleepAnalysis),
                 (.heartRateVariabilitySDNN, $viewModel.selection.heartRateVariabilitySDNN),
-                (.restingHeartRate, $viewModel.selection.restingHeartRate)
+                (.restingHeartRate, $viewModel.selection.restingHeartRate),
+                (.vo2Max, $viewModel.selection.vo2Max)
             ])
             
+            // Core activity metrics
             cyberMetricSection(title: "ACTIVITY", metrics: [
                 (.activeEnergyBurned, $viewModel.selection.activeEnergyBurned),
-                (.stepCount, $viewModel.selection.stepCount)
+                (.stepCount, $viewModel.selection.stepCount),
+                (.appleExerciseTime, $viewModel.selection.appleExerciseTime)
             ])
             
-            cyberMetricSection(title: "OPTIONAL", metrics: [
-                (.workouts, $viewModel.selection.workouts),
+            // Advanced recovery metrics (enhance readiness when available)
+            cyberMetricSection(title: "ADVANCED RECOVERY", metrics: [
+                (.respiratoryRate, $viewModel.selection.respiratoryRate),
+                (.oxygenSaturation, $viewModel.selection.oxygenSaturation),
+                (.timeInDaylight, $viewModel.selection.timeInDaylight),
+                (.appleSleepingWristTemperature, $viewModel.selection.appleSleepingWristTemperature)
+            ], isOptional: true)
+            
+            // Body composition
+            cyberMetricSection(title: "BODY", metrics: [
                 (.bodyMass, $viewModel.selection.bodyMass),
-                (.bodyFatPercentage, $viewModel.selection.bodyFatPercentage)
-            ], showDividerAfter: 0, isOptional: true)
+                (.bodyFatPercentage, $viewModel.selection.bodyFatPercentage),
+                (.leanBodyMass, $viewModel.selection.leanBodyMass)
+            ], isOptional: true)
+            
+            // Other optional metrics
+            cyberMetricSection(title: "OTHER", metrics: [
+                (.workouts, $viewModel.selection.workouts),
+                (.mindfulSession, $viewModel.selection.mindfulSession)
+            ], isOptional: true)
         }
     }
     
@@ -446,6 +465,9 @@ extension HealthKitConnectView {
             do {
                 // Request HealthKit authorization - iOS shows the permission popup
                 _ = try await healthKit.requestAuthorization(selected: selection)
+                
+                // Mark HealthKit as connected for badge tracking
+                UserDefaults.standard.set(true, forKey: "hasConnectedHealthKit")
                 
                 // Best-effort cache warm-up. Never blocks onboarding.
                 let repo = DailyBiometricsRepository(modelContext: modelContext, healthKit: healthKit)

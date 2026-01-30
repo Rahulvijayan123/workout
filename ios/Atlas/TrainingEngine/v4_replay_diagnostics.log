@@ -1,4 +1,4 @@
-v4 replay detailed diagnostics @ 2026-01-27T21:54:45Z
+v4 replay detailed diagnostics @ 2026-01-27T22:05:13Z
 sessions=294 mainLiftPrescriptions=443
 decisionAgree=222/443 loadAgree=153/443 mae=16.25
 
@@ -13,7 +13,7 @@ decrease_small            16           118             0           104          
 
 Top mismatch pairs (expected->predicted):
   decrease_small->hold: 118
-    top reason_code: percent_1rm_rpe_target_and_low_readiness=62, hold_at_target_rpe_and_low_readiness=38, increase_after_exceeding_reps_target_and_low_readiness=7, decrease_small_after_grind_or_miss_and_low_readiness=5, cold_start_estimate_and_low_readiness=4, decrease_small_after_grind_or_miss=1
+    top reason_code: percent_1rm_rpe_target_and_low_readiness=62, hold_at_target_rpe_and_low_readiness=38, increase_after_exceeding_reps_target_and_low_readiness=7, decrease_small_after_grind_or_miss_and_low_readiness=5, cold_start_estimate_and_low_readiness=4, cold_start_estimate_leg_press_and_low_readiness=1
     samples:
       U301 2025-10-06 FB_A lift=squat performed=squat rf=low ready=50 step=2.50 exp=decrease_small(cold_start_estimate_and_low_readiness) pred=hold err>2step dir=hold dirReason=acute_low_readiness_single_day adj=readiness_cut baseState{w=85.00 e1rm=95.6 fail=0 grinder=0 streak=0 last=2026-01-09}
       U301 2025-10-06 FB_A lift=bench performed=bench rf=low ready=50 step=2.50 exp=decrease_small(cold_start_estimate_and_low_readiness) pred=hold err>2step dir=hold dirReason=acute_low_readiness_single_day adj=readiness_cut baseState{w=70.00 e1rm=78.8 fail=0 grinder=2 streak=0 last=2026-01-09}

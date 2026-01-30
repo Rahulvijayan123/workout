@@ -10,7 +10,8 @@ enum OnboardingStep: Int, CaseIterable {
     case workoutSplit = 6
     case maxes = 7
     case fitnessDetails = 8
-    case complete = 9
+    case notifications = 9
+    case complete = 10
 }
 
 struct OnboardingContainerView: View {
@@ -67,44 +68,46 @@ struct OnboardingContainerView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header with back button and progress
-                HStack {
-                    if currentStep != .healthKit {
-                        Button {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                previousStep()
+                // Header with back button and progress (hidden on complete step)
+                if currentStep != .complete {
+                    HStack {
+                        if currentStep != .healthKit {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    previousStep()
+                                }
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.white.opacity(0.6))
+                                    .frame(width: 38, height: 38)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(.ultraThinMaterial.opacity(0.3))
+                                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.03)))
+                                    )
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.1), lineWidth: 1))
                             }
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(.white.opacity(0.6))
-                                .frame(width: 38, height: 38)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(.ultraThinMaterial.opacity(0.3))
-                                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.03)))
-                                )
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        } else {
+                            Color.clear.frame(width: 38, height: 38)
                         }
-                    } else {
+                        
+                        Spacer()
+                        
+                        // Progress dots with connected track (liquid light effect)
+                        LiquidLightProgressBar(
+                            currentStep: currentStep.rawValue,
+                            totalSteps: 10,
+                            neonPurple: neonPurple
+                        )
+                        
+                        Spacer()
+                        
                         Color.clear.frame(width: 38, height: 38)
                     }
-                    
-                    Spacer()
-                    
-                    // Progress dots with connected track (liquid light effect)
-                    LiquidLightProgressBar(
-                        currentStep: currentStep.rawValue,
-                        totalSteps: 9,
-                        neonPurple: neonPurple
-                    )
-                    
-                    Spacer()
-                    
-                    Color.clear.frame(width: 38, height: 38)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
                 
                 // Content
                 currentStepView
@@ -133,6 +136,8 @@ struct OnboardingContainerView: View {
             MaxesView(onContinue: nextStep)
         case .fitnessDetails:
             FitnessDetailsView(onContinue: nextStep)
+        case .notifications:
+            NotificationPermissionView(onContinue: nextStep)
         case .complete:
             OnboardingCompleteView(onFinish: completeOnboarding)
         }

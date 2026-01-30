@@ -1,5 +1,7 @@
 import Foundation
 import SwiftUI
+import AuthenticationServices
+import CryptoKit
 
 @MainActor
 final class AuthViewModel: ObservableObject {
@@ -12,6 +14,10 @@ final class AuthViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var isAuthenticated = false
+    
+    // MARK: - Apple Sign-In
+    
+    private var currentNonce: String?
     
     // MARK: - Validation
     
@@ -117,5 +123,77 @@ final class AuthViewModel: ObservableObject {
         password = ""
         confirmPassword = ""
         errorMessage = nil
+    }
+    
+    // MARK: - Apple Sign-In
+    
+    /// Generate a random nonce for Apple Sign-In
+    func generateNonce() -> String {
+        let nonce = randomNonceString()
+        currentNonce = nonce
+        return nonce
+    }
+    
+    /// Get the SHA256 hash of the nonce for Apple's request
+    func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        return hashedData.compactMap { String(format: "%02x", $0) }.joined()
+    }
+    
+    /// Handle the Apple Sign-In authorization result
+    func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+        isLoading = true
+        errorMessage = nil
+        
+        switch result {
+        case .success(let authorization):
+            guard let appleCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let identityTokenData = appleCredential.identityToken,
+                  let identityToken = String(data: identityTokenData, encoding: .utf8),
+                  let nonce = currentNonce else {
+                errorMessage = "Failed to get Apple credentials"
+                isLoading = false
+                return
+            }
+            
+            do {
+                _ = try await SupabaseService.shared.signInWithApple(idToken: identityToken, nonce: nonce)
+                isAuthenticated = true
+                clearForm()
+            } catch let error as SupabaseError {
+                switch error {
+                case .authError(let message):
+                    errorMessage = message
+                default:
+                    errorMessage = error.localizedDescription
+                }
+            } catch {
+                errorMessage = "Apple sign-in failed. Please try again."
+            }
+            
+        case .failure(let error):
+            // Don't show error for user cancellation
+            if (error as NSError).code != ASAuthorizationError.canceled.rawValue {
+                errorMessage = "Apple sign-in failed: \(error.localizedDescription)"
+            }
+        }
+        
+        isLoading = false
+    }
+    
+    /// Generate a cryptographically secure random string
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        if errorCode != errSecSuccess {
+            fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+        }
+        
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(randomBytes.map { byte in
+            charset[Int(byte) % charset.count]
+        })
     }
 }

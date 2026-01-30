@@ -1,4 +1,5 @@
 import Foundation
+import AuthenticationServices
 
 // MARK: - Supabase Service
 /// Handles all Supabase REST API interactions for data persistence and sync
@@ -180,6 +181,45 @@ final class SupabaseService: ObservableObject {
         
         _ = try? await URLSession.shared.data(for: request)
         clearAuth()
+    }
+    
+    /// Sign in with Apple ID token
+    func signInWithApple(idToken: String, nonce: String) async throws -> AuthUser {
+        let url = baseURL.appendingPathComponent("auth/v1/token")
+        
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "grant_type", value: "id_token")]
+        
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        
+        let body: [String: Any] = [
+            "provider": "apple",
+            "id_token": idToken,
+            "nonce": nonce
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        if httpResponse.statusCode >= 400 {
+            if let error = try? decoder.decode(AuthError.self, from: data) {
+                throw SupabaseError.authError(error.message ?? error.errorDescription ?? "Apple sign-in failed")
+            }
+            throw SupabaseError.httpError(httpResponse.statusCode)
+        }
+        
+        let authResponse = try decoder.decode(AuthResponse.self, from: data)
+        storeAuth(token: authResponse.accessToken, userId: authResponse.user.id, refreshToken: authResponse.refreshToken)
+        
+        return authResponse.user
     }
     
     // MARK: - REST API

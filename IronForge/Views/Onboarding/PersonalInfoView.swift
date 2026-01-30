@@ -58,16 +58,33 @@ struct PersonalInfoView: View {
         }
         .safeAreaInset(edge: .bottom) {
             // Tactile, glowing button with liquid energy sheen
-            TactileGlassButton(
-                title: "NEXT PHASE",
-                isEnabled: isValid,
-                brightViolet: brightViolet,
-                deepIndigo: deepIndigo
-            ) {
-                saveAndContinue()
+            VStack(spacing: 0) {
+                // Gradient fade from transparent to background
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
+                
+                TactileGlassButton(
+                    title: isNameFocused ? "DONE" : "NEXT PHASE",
+                    isEnabled: isNameFocused ? true : isValid,
+                    brightViolet: brightViolet,
+                    deepIndigo: deepIndigo
+                ) {
+                    if isNameFocused {
+                        // Just dismiss keyboard
+                        isNameFocused = false
+                    } else {
+                        // Proceed to next step
+                        saveAndContinue()
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
         }
         .onTapGesture {
             isNameFocused = false
@@ -110,6 +127,11 @@ struct CyberpunkNameInput: View {
                 .font(IronFont.bodyMedium(18))
                 .foregroundColor(.white)
                 .focused(isFocused)
+                .submitLabel(.done)
+                .onSubmit {
+                    // Just dismiss the keyboard, don't advance to next step
+                    isFocused.wrappedValue = false
+                }
                 .padding(.vertical, 16)
                 .padding(.horizontal, 18)
                 .background(
@@ -302,6 +324,17 @@ struct ScientificSexSelector: View {
     @Binding var selectedSex: Sex
     let neonPurple: Color
     
+    // Sex-specific colors
+    let maleColor = Color(red: 0.3, green: 0.5, blue: 1.0)    // Blue
+    let femaleColor = Color(red: 0.95, green: 0.45, blue: 0.7)  // Hot Pink
+    
+    func colorForSex(_ sex: Sex) -> Color {
+        switch sex {
+        case .male: return maleColor
+        case .female: return femaleColor
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("BIOLOGICAL SEX")
@@ -313,6 +346,7 @@ struct ScientificSexSelector: View {
             HStack(spacing: 0) {
                 ForEach(Sex.allCases, id: \.self) { sex in
                     let isSelected = selectedSex == sex
+                    let sexColor = colorForSex(sex)
                     
                     Button {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
@@ -328,15 +362,15 @@ struct ScientificSexSelector: View {
                             if isSelected {
                                 Text(sex.scientificSymbol)
                                     .font(.system(size: 36, weight: .light))
-                                    .foregroundColor(neonPurple.opacity(0.5))
+                                    .foregroundColor(sexColor.opacity(0.5))
                                     .blur(radius: 12)
                             }
                             
                             Text(sex.scientificSymbol)
                                 .font(.system(size: 36, weight: .light))
                                 .foregroundColor(isSelected ? .white : .white.opacity(0.45))
-                                .shadow(color: isSelected ? neonPurple.opacity(0.9) : .clear, radius: 15)
-                                .shadow(color: isSelected ? neonPurple.opacity(0.5) : .clear, radius: 25)
+                                .shadow(color: isSelected ? sexColor.opacity(0.9) : .clear, radius: 15)
+                                .shadow(color: isSelected ? sexColor.opacity(0.5) : .clear, radius: 25)
                         }
                         .offset(x: sex == .male ? -2 : 0) // Optical centering for Mars symbol
                         .frame(maxWidth: .infinity)
@@ -348,11 +382,11 @@ struct ScientificSexSelector: View {
                                     .fill(Color.white.opacity(isSelected ? 0 : 0.02))
                                 
                                 if isSelected {
-                                    // Liquid plasma fill (selected state)
+                                    // Liquid plasma fill (selected state) - sex specific color
                                     RoundedRectangle(cornerRadius: 14)
                                         .fill(
                                             RadialGradient(
-                                                colors: [neonPurple.opacity(0.35), neonPurple.opacity(0.15), neonPurple.opacity(0.05)],
+                                                colors: [sexColor.opacity(0.35), sexColor.opacity(0.15), sexColor.opacity(0.05)],
                                                 center: .center,
                                                 startRadius: 0,
                                                 endRadius: 100
@@ -362,7 +396,7 @@ struct ScientificSexSelector: View {
                                     // Top inner glow (pressed glass effect)
                                     VStack {
                                         LinearGradient(
-                                            colors: [Color.white.opacity(0.20), neonPurple.opacity(0.15), Color.clear],
+                                            colors: [Color.white.opacity(0.20), sexColor.opacity(0.15), Color.clear],
                                             startPoint: .top,
                                             endPoint: .bottom
                                         )
@@ -375,7 +409,7 @@ struct ScientificSexSelector: View {
                                     VStack {
                                         Spacer()
                                         LinearGradient(
-                                            colors: [Color.clear, neonPurple.opacity(0.1)],
+                                            colors: [Color.clear, sexColor.opacity(0.1)],
                                             startPoint: .top,
                                             endPoint: .bottom
                                         )
@@ -390,7 +424,7 @@ struct ScientificSexSelector: View {
                                 .stroke(
                                     LinearGradient(
                                         colors: isSelected
-                                            ? [Color.white.opacity(0.5), neonPurple.opacity(0.6), neonPurple.opacity(0.3)]
+                                            ? [Color.white.opacity(0.5), sexColor.opacity(0.6), sexColor.opacity(0.3)]
                                             : [Color.white.opacity(0.1), Color.white.opacity(0.05)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -398,7 +432,7 @@ struct ScientificSexSelector: View {
                                     lineWidth: isSelected ? 1.5 : 1
                                 )
                         )
-                        .shadow(color: isSelected ? neonPurple.opacity(0.4) : .clear, radius: 12, y: 4)
+                        .shadow(color: isSelected ? sexColor.opacity(0.4) : .clear, radius: 12, y: 4)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .scaleEffect(isSelected ? 1.02 : 1.0)

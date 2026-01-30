@@ -17,262 +17,272 @@ struct OnboardingCompleteView: View {
     }
     
     var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            
-            // Holographic Seal - Glass Orb with Rotating Ring
-            ZStack {
-                // Outer rotating dashed ring
-                Circle()
-                    .stroke(
-                        LinearGradient(
-                            colors: [neonPurple.opacity(0.6), purpleGlow.opacity(0.3), neonPurple.opacity(0.4)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        style: StrokeStyle(lineWidth: 2, dash: [8, 6])
-                    )
-                    .frame(width: 150, height: 150)
-                    .rotationEffect(.degrees(ringRotation))
-                
-                // Outer glow rings (pulsing)
-                ForEach(0..<2) { i in
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 20) {
+                // Holographic Seal - Glass Orb with Rotating Ring
+                ZStack {
+                    // Outer rotating dashed ring
                     Circle()
                         .stroke(
                             LinearGradient(
-                                colors: [neonPurple.opacity(0.2 - Double(i) * 0.08), neonPurple.opacity(0.1 - Double(i) * 0.04)],
+                                colors: [neonPurple.opacity(0.6), purpleGlow.opacity(0.3), neonPurple.opacity(0.4)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            lineWidth: 1.5
+                            style: StrokeStyle(lineWidth: 2, dash: [8, 6])
                         )
-                        .frame(width: CGFloat(170 + i * 30), height: CGFloat(170 + i * 30))
-                        .scaleEffect(isAnimating ? 1.03 : 0.97)
-                        .opacity(isAnimating ? 0.7 : 0.4)
-                        .animation(
-                            .easeInOut(duration: 2.5)
-                            .repeatForever(autoreverses: true)
-                            .delay(Double(i) * 0.2),
-                            value: isAnimating
-                        )
-                }
-                
-                // Glass Orb
-                ZStack {
-                    // Base orb with gradient
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    neonPurple.opacity(0.9),
-                                    neonPurple,
-                                    neonPurple.opacity(0.8)
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 55
-                            )
-                        )
-                        .frame(width: 110, height: 110)
+                        .frame(width: 130, height: 130)
+                        .rotationEffect(.degrees(ringRotation))
                     
-                    // Glass overlay (white -> transparent radial)
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    Color.white.opacity(0.2),
-                                    Color.white.opacity(0.05),
-                                    Color.clear
-                                ],
-                                center: .topLeading,
-                                startRadius: 0,
-                                endRadius: 80
-                            )
-                        )
-                        .frame(width: 110, height: 110)
-                    
-                    // Top-left specular reflection (crisp white curve)
-                    Circle()
-                        .trim(from: 0.55, to: 0.75)
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.8), Color.white.opacity(0.1)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            lineWidth: 3
-                        )
-                        .frame(width: 90, height: 90)
-                        .rotationEffect(.degrees(-30))
-                    
-                    // Small highlight dot
-                    Circle()
-                        .fill(Color.white.opacity(0.6))
-                        .frame(width: 8, height: 8)
-                        .offset(x: -28, y: -28)
-                        .blur(radius: 2)
-                    
-                    // Checkmark
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 44, weight: .bold))
-                        .foregroundColor(.white)
-                        .shadow(color: .white.opacity(0.5), radius: 4)
-                        .scaleEffect(showContent ? 1 : 0)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.3), value: showContent)
-                }
-                .shadow(color: neonPurple.opacity(0.6), radius: 30, x: 0, y: 10)
-                .shadow(color: purpleGlow.opacity(0.3), radius: 50, x: 0, y: 15)
-            }
-            
-            // Text content - Branded copy
-            VStack(spacing: 10) {
-                Text("SYSTEM OPTIMIZED")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .tracking(2)
-                    .foregroundColor(.white)
-                    .opacity(showContent ? 1 : 0)
-                    .offset(y: showContent ? 0 : 20)
-                    .animation(.easeOut(duration: 0.5).delay(0.4), value: showContent)
-                
-                HStack(spacing: 0) {
-                    Text("Training parameters calibrated for ")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
-                    
-                    Text(capitalizedName)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(neonPurple)
-                    
-                    Text(".")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
-                }
-                .opacity(showContent ? 1 : 0)
-                .offset(y: showContent ? 0 : 20)
-                .animation(.easeOut(duration: 0.5).delay(0.5), value: showContent)
-                
-                Text("LET'S WORK.")
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(3)
-                    .foregroundColor(coolGrey)
-                    .padding(.top, 4)
-                    .opacity(showContent ? 1 : 0)
-                    .animation(.easeOut(duration: 0.5).delay(0.55), value: showContent)
-            }
-            
-            Spacer()
-            
-            // Visual Summary Card - "Don't Tell Me, Show Me"
-            VStack(spacing: 16) {
-                Text("YOUR PROFILE")
-                    .font(.system(size: 10, weight: .bold))
-                    .tracking(2)
-                    .foregroundColor(.white.opacity(0.4))
-                
-                VStack(spacing: 14) {
-                    // Split - Icon + Text
-                    VisualSummaryRow(
-                        label: "SPLIT",
-                        icon: appState.userProfile.workoutSplit.icon,
-                        value: appState.userProfile.workoutSplit.rawValue,
-                        neonPurple: neonPurple
-                    )
-                    
-                    Divider().background(Color.white.opacity(0.08))
-                    
-                    // Frequency - Battery Bar
-                    FrequencySummaryRow(
-                        selectedDays: appState.userProfile.weeklyFrequency,
-                        neonPurple: neonPurple
-                    )
-                    
-                    Divider().background(Color.white.opacity(0.08))
-                    
-                    // Goals - Chips/Pills
-                    GoalsSummaryRow(
-                        goals: appState.userProfile.goals,
-                        neonPurple: neonPurple
-                    )
-                    
-                    Divider().background(Color.white.opacity(0.08))
-                    
-                    // Experience - Signal Bars
-                    ExperienceSummaryRow(
-                        experience: appState.userProfile.workoutExperience,
-                        neonPurple: neonPurple
-                    )
-                }
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(.ultraThinMaterial.opacity(0.5))
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.white.opacity(0.03))
-                    VStack {
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(
+                    // Outer glow rings (pulsing)
+                    ForEach(0..<2) { i in
+                        Circle()
+                            .stroke(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.1), Color.clear],
-                                    startPoint: .top,
-                                    endPoint: .center
+                                    colors: [neonPurple.opacity(0.2 - Double(i) * 0.08), neonPurple.opacity(0.1 - Double(i) * 0.04)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.5
+                            )
+                            .frame(width: CGFloat(150 + i * 25), height: CGFloat(150 + i * 25))
+                            .scaleEffect(isAnimating ? 1.03 : 0.97)
+                            .opacity(isAnimating ? 0.7 : 0.4)
+                            .animation(
+                                .easeInOut(duration: 2.5)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(i) * 0.2),
+                                value: isAnimating
+                            )
+                    }
+                    
+                    // Glass Orb
+                    ZStack {
+                        // Base orb with gradient
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        neonPurple.opacity(0.9),
+                                        neonPurple,
+                                        neonPurple.opacity(0.8)
+                                    ],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 50
                                 )
                             )
-                            .frame(height: 50)
-                        Spacer()
+                            .frame(width: 100, height: 100)
+                        
+                        // Glass overlay (white -> transparent radial)
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        Color.white.opacity(0.2),
+                                        Color.white.opacity(0.05),
+                                        Color.clear
+                                    ],
+                                    center: .topLeading,
+                                    startRadius: 0,
+                                    endRadius: 70
+                                )
+                            )
+                            .frame(width: 100, height: 100)
+                        
+                        // Top-left specular reflection (crisp white curve)
+                        Circle()
+                            .trim(from: 0.55, to: 0.75)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.8), Color.white.opacity(0.1)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 3
+                            )
+                            .frame(width: 80, height: 80)
+                            .rotationEffect(.degrees(-30))
+                        
+                        // Small highlight dot
+                        Circle()
+                            .fill(Color.white.opacity(0.6))
+                            .frame(width: 8, height: 8)
+                            .offset(x: -24, y: -24)
+                            .blur(radius: 2)
+                        
+                        // Checkmark
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 40, weight: .bold))
+                            .foregroundColor(.white)
+                            .shadow(color: .white.opacity(0.5), radius: 4)
+                            .scaleEffect(showContent ? 1 : 0)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.3), value: showContent)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .shadow(color: neonPurple.opacity(0.6), radius: 25, x: 0, y: 8)
+                    .shadow(color: purpleGlow.opacity(0.3), radius: 40, x: 0, y: 12)
                 }
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
-            )
-            .padding(.horizontal, 20)
-            .opacity(showContent ? 1 : 0)
-            .offset(y: showContent ? 0 : 30)
-            .animation(.easeOut(duration: 0.5).delay(0.6), value: showContent)
-            
-            Spacer()
-            
-            // Start button
-            Button {
-                onFinish()
-            } label: {
-                HStack(spacing: 10) {
-                    Text("START TRAINING")
-                        .font(.system(size: 14, weight: .bold))
-                        .tracking(1.5)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 13, weight: .semibold))
+                .padding(.top, 20)
+                
+                // Text content - Branded copy
+                VStack(spacing: 8) {
+                    Text("SYSTEM OPTIMIZED")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .tracking(2)
+                        .foregroundColor(.white)
+                        .opacity(showContent ? 1 : 0)
+                        .offset(y: showContent ? 0 : 20)
+                        .animation(.easeOut(duration: 0.5).delay(0.4), value: showContent)
+                    
+                    HStack(spacing: 0) {
+                        Text("Training parameters calibrated for ")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.5))
+                        
+                        Text(capitalizedName)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(neonPurple)
+                        
+                        Text(".")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    .opacity(showContent ? 1 : 0)
+                    .offset(y: showContent ? 0 : 20)
+                    .animation(.easeOut(duration: 0.5).delay(0.5), value: showContent)
+                    
+                    Text("LET'S WORK.")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(3)
+                        .foregroundColor(coolGrey)
+                        .padding(.top, 2)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.easeOut(duration: 0.5).delay(0.55), value: showContent)
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
+                
+                // Visual Summary Card - "Don't Tell Me, Show Me"
+                VStack(spacing: 14) {
+                    Text("YOUR PROFILE")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(2)
+                        .foregroundColor(.white.opacity(0.4))
+                    
+                    VStack(spacing: 12) {
+                        // Split - Icon + Text
+                        VisualSummaryRow(
+                            label: "SPLIT",
+                            icon: appState.userProfile.workoutSplit.icon,
+                            value: appState.userProfile.workoutSplit.rawValue,
+                            neonPurple: neonPurple
+                        )
+                        
+                        Divider().background(Color.white.opacity(0.08))
+                        
+                        // Frequency - Battery Bar
+                        FrequencySummaryRow(
+                            selectedDays: appState.userProfile.weeklyFrequency,
+                            neonPurple: neonPurple
+                        )
+                        
+                        Divider().background(Color.white.opacity(0.08))
+                        
+                        // Goals - Chips/Pills
+                        GoalsSummaryRow(
+                            goals: appState.userProfile.goals,
+                            neonPurple: neonPurple
+                        )
+                        
+                        Divider().background(Color.white.opacity(0.08))
+                        
+                        // Experience - Signal Bars
+                        ExperienceSummaryRow(
+                            experience: appState.userProfile.workoutExperience,
+                            neonPurple: neonPurple
+                        )
+                    }
+                }
+                .padding(18)
                 .background(
                     ZStack {
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(neonPurple)
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(.ultraThinMaterial.opacity(0.5))
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color.white.opacity(0.03))
                         VStack {
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.25), Color.clear],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 1)
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.1), Color.clear],
+                                        startPoint: .top,
+                                        endPoint: .center
+                                    )
+                                )
+                                .frame(height: 50)
                             Spacer()
                         }
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
                     }
                 )
-                .cornerRadius(14)
-                .shadow(color: neonPurple.opacity(0.5), radius: 16, y: 6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+                .opacity(showContent ? 1 : 0)
+                .offset(y: showContent ? 0 : 30)
+                .animation(.easeOut(duration: 0.5).delay(0.6), value: showContent)
+                
+                Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 30)
-            .opacity(showContent ? 1 : 0)
-            .offset(y: showContent ? 0 : 20)
-            .animation(.easeOut(duration: 0.5).delay(0.7), value: showContent)
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
+                
+                // Start button
+                Button {
+                    onFinish()
+                } label: {
+                    HStack(spacing: 10) {
+                        Text("START TRAINING")
+                            .font(.system(size: 14, weight: .bold))
+                            .tracking(1.5)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(neonPurple)
+                            VStack {
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.25), Color.clear],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                .frame(height: 1)
+                                Spacer()
+                            }
+                        }
+                    )
+                    .cornerRadius(14)
+                    .shadow(color: neonPurple.opacity(0.5), radius: 16, y: 6)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
+                .opacity(showContent ? 1 : 0)
+                .offset(y: showContent ? 0 : 20)
+                .animation(.easeOut(duration: 0.5).delay(0.7), value: showContent)
+            }
         }
         .onAppear {
             isAnimating = true

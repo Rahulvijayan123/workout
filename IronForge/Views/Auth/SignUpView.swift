@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct SignUpView: View {
     @ObservedObject var viewModel: AuthViewModel
@@ -117,6 +118,36 @@ struct SignUpView: View {
             }
             .disabled(!viewModel.isSignUpFormValid || viewModel.isLoading)
             .padding(.top, 8)
+            
+            // Divider
+            HStack(spacing: 16) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(height: 1)
+                
+                Text("or")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.5))
+                
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(height: 1)
+            }
+            .padding(.vertical, 8)
+            
+            // Sign up with Apple
+            SignInWithAppleButton(.signUp) { request in
+                let nonce = viewModel.generateNonce()
+                request.requestedScopes = [.email, .fullName]
+                request.nonce = viewModel.sha256(nonce)
+            } onCompletion: { result in
+                Task {
+                    await viewModel.handleAppleSignIn(result)
+                }
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 52)
+            .cornerRadius(14)
             
             // Switch to sign in
             HStack(spacing: 4) {

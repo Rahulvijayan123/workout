@@ -12,25 +12,191 @@ struct UserProfile: Codable {
     var weeklyFrequency: Int = 4
     var gymType: GymType = .commercial
     var workoutSplit: WorkoutSplit = .pushPullLegs
+    var customWeeklySchedule: CustomWeeklySchedule = CustomWeeklySchedule()
     var maxes: LiftMaxes = LiftMaxes()
     var fitnessLevel: FitnessLevel = .intermediate
     var dailyProteinGrams: Int = 150
     var sleepHours: Double = 7.5
     var waterIntakeLiters: Double = 3.0
     var supplements: [String] = []
+    
+    /// Current training phase (affects progression and recovery expectations)
+    /// ML model uses this to adjust predictions for caloric deficit vs surplus
+    var trainingPhase: TrainingPhase = .maintenance
+}
+
+// MARK: - Training Phase (Critical for ML)
+/// Training phase affects expected performance, recovery, and progression rates.
+/// During a cut, strength may stall or decrease slightly - this is expected.
+/// During a bulk, faster progression is typical.
+enum TrainingPhase: String, Codable, CaseIterable {
+    case cut = "Cut"
+    case maintenance = "Maintenance"
+    case bulk = "Bulk"
+    case recomp = "Recomp"
+    
+    var description: String {
+        switch self {
+        case .cut: return "Caloric deficit • Fat loss focus"
+        case .maintenance: return "Caloric balance • Maintain"
+        case .bulk: return "Caloric surplus • Muscle gain"
+        case .recomp: return "Slight deficit • Body recomposition"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .cut: return "arrow.down.circle"
+        case .maintenance: return "equal.circle"
+        case .bulk: return "arrow.up.circle"
+        case .recomp: return "arrow.triangle.2.circlepath.circle"
+        }
+    }
+    
+    /// Expected strength progression rate modifier (1.0 = normal)
+    var progressionExpectation: Double {
+        switch self {
+        case .cut: return 0.7      // Slower progression expected
+        case .maintenance: return 1.0
+        case .bulk: return 1.2     // Faster progression expected
+        case .recomp: return 0.85  // Slightly slower
+        }
+    }
+}
+
+// MARK: - Custom Weekly Schedule
+struct CustomWeeklySchedule: Codable {
+    var monday: WorkoutDayType = .push
+    var tuesday: WorkoutDayType = .pull
+    var wednesday: WorkoutDayType = .legs
+    var thursday: WorkoutDayType = .rest
+    var friday: WorkoutDayType = .push
+    var saturday: WorkoutDayType = .pull
+    var sunday: WorkoutDayType = .rest
+    
+    subscript(day: DayOfWeek) -> WorkoutDayType {
+        get {
+            switch day {
+            case .monday: return monday
+            case .tuesday: return tuesday
+            case .wednesday: return wednesday
+            case .thursday: return thursday
+            case .friday: return friday
+            case .saturday: return saturday
+            case .sunday: return sunday
+            }
+        }
+        set {
+            switch day {
+            case .monday: monday = newValue
+            case .tuesday: tuesday = newValue
+            case .wednesday: wednesday = newValue
+            case .thursday: thursday = newValue
+            case .friday: friday = newValue
+            case .saturday: saturday = newValue
+            case .sunday: sunday = newValue
+            }
+        }
+    }
+    
+    var workoutDaysCount: Int {
+        [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+            .filter { $0 != .rest }
+            .count
+    }
+}
+
+enum DayOfWeek: String, CaseIterable, Codable {
+    case monday = "Monday"
+    case tuesday = "Tuesday"
+    case wednesday = "Wednesday"
+    case thursday = "Thursday"
+    case friday = "Friday"
+    case saturday = "Saturday"
+    case sunday = "Sunday"
+    
+    var shortName: String {
+        String(rawValue.prefix(3)).uppercased()
+    }
+    
+    var singleLetter: String {
+        String(rawValue.prefix(1))
+    }
+}
+
+enum WorkoutDayType: String, Codable, CaseIterable {
+    case rest = "Rest"
+    case push = "Push"
+    case pull = "Pull"
+    case legs = "Legs"
+    case fullBody = "Full Body"
+    case upperBody = "Upper Body"
+    case lowerBody = "Lower Body"
+    case chest = "Chest"
+    case back = "Back"
+    case shoulders = "Shoulders"
+    case arms = "Arms"
+    case biceps = "Biceps"
+    case triceps = "Triceps"
+    case quads = "Quads"
+    case hamstrings = "Hamstrings"
+    case glutes = "Glutes"
+    case abs = "Abs/Core"
+    
+    var icon: String {
+        switch self {
+        case .rest: return "bed.double.fill"
+        case .push: return "arrow.right"
+        case .pull: return "arrow.left"
+        case .legs: return "figure.walk"
+        case .fullBody: return "figure.stand"
+        case .upperBody: return "figure.arms.open"
+        case .lowerBody: return "figure.walk"
+        case .chest: return "heart.fill"
+        case .back: return "arrow.uturn.backward"
+        case .shoulders: return "figure.arms.open"
+        case .arms: return "figure.strengthtraining.functional"
+        case .biceps: return "figure.strengthtraining.functional"
+        case .triceps: return "figure.strengthtraining.functional"
+        case .quads: return "figure.walk"
+        case .hamstrings: return "figure.walk"
+        case .glutes: return "figure.walk"
+        case .abs: return "figure.core.training"
+        }
+    }
+    
+    var color: (red: Double, green: Double, blue: Double) {
+        switch self {
+        case .rest: return (0.5, 0.5, 0.5)        // Gray
+        case .push: return (0.9, 0.3, 0.3)        // Red
+        case .pull: return (0.3, 0.6, 0.9)        // Blue
+        case .legs: return (0.3, 0.8, 0.4)        // Green
+        case .fullBody: return (0.6, 0.3, 1.0)    // Purple
+        case .upperBody: return (1.0, 0.6, 0.2)   // Orange
+        case .lowerBody: return (0.2, 0.7, 0.6)   // Teal
+        case .chest: return (0.9, 0.2, 0.4)       // Pink-red
+        case .back: return (0.2, 0.5, 0.8)        // Navy
+        case .shoulders: return (0.9, 0.7, 0.2)   // Gold
+        case .arms: return (0.7, 0.4, 0.9)        // Light purple
+        case .biceps: return (0.8, 0.3, 0.6)      // Magenta
+        case .triceps: return (0.5, 0.3, 0.8)     // Indigo
+        case .quads: return (0.3, 0.7, 0.3)       // Forest green
+        case .hamstrings: return (0.4, 0.6, 0.3)  // Olive
+        case .glutes: return (0.8, 0.5, 0.3)      // Bronze
+        case .abs: return (0.9, 0.5, 0.1)         // Orange-red
+        }
+    }
 }
 
 // MARK: - Enums
 enum Sex: String, Codable, CaseIterable {
     case male = "Male"
     case female = "Female"
-    case other = "Other"
     
     var icon: String {
         switch self {
         case .male: return "figure.stand"
         case .female: return "figure.stand.dress"
-        case .other: return "person.fill"
         }
     }
     
@@ -39,7 +205,6 @@ enum Sex: String, Codable, CaseIterable {
         switch self {
         case .male: return "♂"
         case .female: return "♀"
-        case .other: return "⚥"
         }
     }
     
@@ -48,7 +213,14 @@ enum Sex: String, Codable, CaseIterable {
         switch self {
         case .male: return "M"
         case .female: return "F"
-        case .other: return "X"
+        }
+    }
+    
+    /// Color for the sex indicator
+    var accentColor: (red: Double, green: Double, blue: Double) {
+        switch self {
+        case .male: return (0.3, 0.5, 1.0)    // Blue
+        case .female: return (0.95, 0.45, 0.7)  // Hot Pink
         }
     }
 }

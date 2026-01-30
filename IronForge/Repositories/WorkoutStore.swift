@@ -19,6 +19,7 @@ final class WorkoutStore: ObservableObject {
     private let templatesKey = "ironforge.workoutTemplates.v2"
     private let sessionsKey = "ironforge.workoutSessions.v2"
     private let exerciseStatesKey = "ironforge.liftStates.v2"
+    private let activeSessionKey = "ironforge.activeSession.v2"
     
     init(exerciseRepository: ExerciseRepository = WorkoutStore.makeDefaultExerciseRepository()) {
         self.exerciseRepository = exerciseRepository
@@ -91,7 +92,8 @@ final class WorkoutStore: ObservableObject {
             activeSession = TrainingEngineBridge.convertSessionPlanToUIModel(
                 sessionPlan,
                 templateId: template.id,
-                templateName: template.name
+                templateName: template.name,
+                computedReadinessScore: readiness
             )
         } else {
             // Fallback: seed from template directly (for edge cases)
@@ -107,9 +109,13 @@ final class WorkoutStore: ObservableObject {
                 name: template.name,
                 startedAt: Date(),
                 endedAt: nil,
-                exercises: seededExercises
+                exercises: seededExercises,
+                computedReadinessScore: readiness
             )
         }
+        
+        // Persist active session so user can continue after closing the app
+        saveActiveSession()
     }
     
     /// Start a recommended session using TrainingEngine's scheduler
@@ -146,10 +152,13 @@ final class WorkoutStore: ObservableObject {
             activeSession = TrainingEngineBridge.convertSessionPlanToUIModel(
                 sessionPlan,
                 templateId: sessionPlan.templateId,
-                templateName: templateName
+                templateName: templateName,
+                computedReadinessScore: readiness
             )
+            // Persist active session so user can continue after closing the app
+            saveActiveSession()
         } else {
-            // Fallback: start from first template
+            // Fallback: start from first template (startSession will call saveActiveSession)
             if let template = templates.first {
                 startSession(from: template, userProfile: userProfile, readiness: readiness, dailyBiometrics: dailyBiometrics)
             }
@@ -173,6 +182,8 @@ final class WorkoutStore: ObservableObject {
             endedAt: nil,
             exercises: []
         )
+        // Persist active session so user can continue after closing the app
+        saveActiveSession()
     }
     
     func addExerciseToActiveSession(_ exercise: ExerciseRef) {
@@ -191,10 +202,15 @@ final class WorkoutStore: ObservableObject {
         let performance = ExercisePerformance(from: defaultSettings, sets: sets)
         session.exercises.append(performance)
         activeSession = session
+        
+        // Persist changes to active session
+        saveActiveSession()
     }
     
     func updateActiveSession(_ session: WorkoutSession) {
         activeSession = session
+        // Persist changes to active session so user can continue after closing the app
+        saveActiveSession()
     }
     
     func finishActiveSession() {
@@ -259,6 +275,9 @@ final class WorkoutStore: ObservableObject {
         activeSession = nil
         save()
         
+        // Clear the persisted active session since workout is complete
+        UserDefaults.standard.removeObject(forKey: activeSessionKey)
+        
         // Sync completed session to Supabase
         let completedSession = session
         let currentLiftStates = exerciseStates
@@ -314,6 +333,8 @@ final class WorkoutStore: ObservableObject {
     
     func cancelActiveSession() {
         activeSession = nil
+        // Clear the persisted active session
+        UserDefaults.standard.removeObject(forKey: activeSessionKey)
     }
     
     func lastSession(for exerciseId: String) -> WorkoutSession? {
@@ -329,7 +350,91 @@ final class WorkoutStore: ObservableObject {
         exerciseStates[exerciseId]
     }
     
+    /// Save exercise progress without marking it as completed.
+    /// Exercises remain editable until the entire workout is finalized.
+    /// - Parameters:
+    ///   - performanceId: The ID of the ExercisePerformance to save
+    /// - Returns: The computed next prescription snapshot (preview), or nil if not found
+    @discardableResult
+    func saveExerciseProgress(performanceId: UUID) -> NextPrescriptionSnapshot? {
+        guard var session = activeSession,
+              let idx = session.exercises.firstIndex(where: { $0.id == performanceId }) else {
+            return nil
+        }
+        
+        var performance = session.exercises[idx]
+        let exerciseId = performance.exercise.id
+        
+        // Only compute progression if there are completed sets
+        let completedSets = performance.sets.filter { $0.isCompleted }
+        guard !completedSets.isEmpty else {
+            // No completed sets, just update session
+            activeSession = session
+            return nil
+        }
+        
+        // Get prior state
+        let priorState = exerciseStates[exerciseId]
+        let previousWeight = priorState?.currentWorkingWeight ?? 0
+        
+        // Create a temporary completed session for this exercise to preview updated state
+        // NOTE: We do NOT permanently update lift states here - that happens at workout finalization
+        var tempSession = session
+        tempSession.endedAt = Date()
+        var tempPerformance = performance
+        tempPerformance.isCompleted = true
+        tempSession.exercises[idx] = tempPerformance
+        
+        // Use TrainingEngine to compute what the updated lift state WOULD be (preview only)
+        let previewStates = TrainingEngineBridge.updateLiftStates(
+            afterSession: tempSession,
+            previousLiftStates: exerciseStates
+        )
+        
+        let previewState = previewStates[exerciseId] ?? ExerciseState(
+            exerciseId: exerciseId,
+            currentWorkingWeight: previousWeight,
+            failuresCount: 0
+        )
+
+        let reason = determineProgressionReason(
+            performance: performance,
+            previousWeight: previousWeight,
+            newWeight: previewState.currentWorkingWeight
+        )
+        let targetReps = computeTargetReps(performance: performance, reason: reason)
+        
+        // Build snapshot for UI preview (shows what next session would look like)
+        let snapshot = NextPrescriptionSnapshot(
+            exerciseId: exerciseId,
+            nextWorkingWeight: previewState.currentWorkingWeight,
+            targetReps: targetReps,
+            setsTarget: performance.setsTarget,
+            repRangeMin: performance.repRangeMin,
+            repRangeMax: performance.repRangeMax,
+            increment: performance.increment,
+            deloadFactor: performance.deloadFactor,
+            failureThreshold: performance.failureThreshold,
+            reason: reason
+        )
+        
+        // Update performance with preview snapshot but DO NOT mark as completed
+        // Exercise remains editable until workout is finalized
+        performance.nextPrescription = snapshot
+        // performance.isCompleted stays false - only set when workout is finished
+        session.exercises[idx] = performance
+        
+        // Update session (but don't update lift states permanently yet)
+        activeSession = session
+        
+        // Save the active session to persist through app restarts
+        saveActiveSession()
+        
+        return snapshot
+    }
+    
     /// Complete an exercise in the active session and compute progression
+    /// NOTE: This is now only called during workout finalization
     /// - Parameters:
     ///   - performanceId: The ID of the ExercisePerformance to complete
     /// - Returns: The computed next prescription snapshot, or nil if not found
@@ -481,10 +586,23 @@ final class WorkoutStore: ObservableObject {
         }
     }
     
+    /// Save the active session to persist through app restarts.
+    /// This allows users to close the app and continue their workout later.
+    private func saveActiveSession() {
+        if let session = activeSession,
+           let data = try? JSONEncoder().encode(session) {
+            UserDefaults.standard.set(data, forKey: activeSessionKey)
+        } else {
+            // Clear active session if nil
+            UserDefaults.standard.removeObject(forKey: activeSessionKey)
+        }
+    }
+    
     private func load() {
         loadTemplates()
         loadSessions()
         loadExerciseStates()
+        loadActiveSession()
         seedTemplatesIfNeeded()
     }
     
@@ -509,6 +627,21 @@ final class WorkoutStore: ObservableObject {
         }
     }
     
+    /// Load any active session that was in progress when the app was closed.
+    /// This allows users to continue their workout after closing and reopening the app.
+    private func loadActiveSession() {
+        if let data = UserDefaults.standard.data(forKey: activeSessionKey),
+           let decoded = try? JSONDecoder().decode(WorkoutSession.self, from: data) {
+            // Only restore if the session doesn't have an end time (still in progress)
+            if decoded.endedAt == nil {
+                activeSession = decoded
+            } else {
+                // Session was ended but not saved properly, clear it
+                UserDefaults.standard.removeObject(forKey: activeSessionKey)
+            }
+        }
+    }
+    
     private func seedTemplatesIfNeeded() {
         guard templates.isEmpty else { return }
         
@@ -529,6 +662,16 @@ final class WorkoutStore: ObservableObject {
             let pullUp = await findExercise(containing: "pull-up")
             let deadlift = await findExercise(containing: "deadlift")
             let shoulderPress = await findExercise(containing: "shoulder press")
+            let inclinePress = await findExercise(containing: "incline")
+            let tricepExtension = await findExercise(containing: "tricep")
+            let lateralRaise = await findExercise(containing: "lateral raise")
+            let barbellRow = await findExercise(containing: "barbell row")
+            let bicepCurl = await findExercise(containing: "bicep curl")
+            let facePull = await findExercise(containing: "face pull")
+            let legPress = await findExercise(containing: "leg press")
+            let romanianDeadlift = await findExercise(containing: "romanian")
+            let legCurl = await findExercise(containing: "leg curl")
+            let calfRaise = await findExercise(containing: "calf raise")
             
             // Fallback to hardcoded exercises if not found (for graceful degradation)
             let benchPressEx = benchPress ?? ExerciseSeeds.defaultExercises[1]
@@ -537,38 +680,116 @@ final class WorkoutStore: ObservableObject {
             let deadliftEx = deadlift ?? ExerciseSeeds.defaultExercises[2]
             let shoulderPressEx = shoulderPress ?? ExerciseSeeds.defaultExercises[4]
             
-            #if DEBUG
-            // Debug-only seed templates for testing the full flow
+            // Create fallback exercises for ones that may not be found
+            let inclinePressEx = inclinePress ?? Exercise(
+                id: "incline_dumbbell_press",
+                name: "incline dumbbell press",
+                bodyPart: "chest",
+                equipment: "dumbbell",
+                gifUrl: nil,
+                target: "upper pectorals",
+                secondaryMuscles: ["triceps", "front deltoids"],
+                instructions: ["Set bench to 30-45 degrees.", "Press dumbbells up and together."]
+            )
+            let tricepEx = tricepExtension ?? Exercise(
+                id: "tricep_pushdown",
+                name: "tricep pushdown",
+                bodyPart: "upper arms",
+                equipment: "cable",
+                gifUrl: nil,
+                target: "triceps",
+                secondaryMuscles: [],
+                instructions: ["Keep elbows pinned.", "Push down until arms are straight."]
+            )
+            let lateralRaiseEx = lateralRaise ?? Exercise(
+                id: "dumbbell_lateral_raise",
+                name: "dumbbell lateral raise",
+                bodyPart: "shoulders",
+                equipment: "dumbbell",
+                gifUrl: nil,
+                target: "side deltoids",
+                secondaryMuscles: [],
+                instructions: ["Raise arms to shoulder height.", "Control the descent."]
+            )
+            let barbellRowEx = barbellRow ?? Exercise(
+                id: "barbell_row",
+                name: "barbell row",
+                bodyPart: "back",
+                equipment: "barbell",
+                gifUrl: nil,
+                target: "lats",
+                secondaryMuscles: ["biceps", "rear deltoids"],
+                instructions: ["Hinge at hips.", "Pull bar to lower chest."]
+            )
+            let bicepCurlEx = bicepCurl ?? Exercise(
+                id: "dumbbell_bicep_curl",
+                name: "dumbbell bicep curl",
+                bodyPart: "upper arms",
+                equipment: "dumbbell",
+                gifUrl: nil,
+                target: "biceps",
+                secondaryMuscles: [],
+                instructions: ["Keep elbows stable.", "Curl weight up with control."]
+            )
+            let facePullEx = facePull ?? Exercise(
+                id: "cable_face_pull",
+                name: "cable face pull",
+                bodyPart: "shoulders",
+                equipment: "cable",
+                gifUrl: nil,
+                target: "rear deltoids",
+                secondaryMuscles: ["traps", "rotator cuff"],
+                instructions: ["Pull rope to face.", "Spread hands apart at end."]
+            )
+            let legPressEx = legPress ?? Exercise(
+                id: "leg_press",
+                name: "leg press",
+                bodyPart: "upper legs",
+                equipment: "machine",
+                gifUrl: nil,
+                target: "quads",
+                secondaryMuscles: ["glutes", "hamstrings"],
+                instructions: ["Place feet shoulder width.", "Lower with control."]
+            )
+            let rdlEx = romanianDeadlift ?? Exercise(
+                id: "romanian_deadlift",
+                name: "romanian deadlift",
+                bodyPart: "upper legs",
+                equipment: "barbell",
+                gifUrl: nil,
+                target: "hamstrings",
+                secondaryMuscles: ["glutes", "erector spinae"],
+                instructions: ["Hinge at hips with slight knee bend.", "Feel stretch in hamstrings."]
+            )
+            let legCurlEx = legCurl ?? Exercise(
+                id: "lying_leg_curl",
+                name: "lying leg curl",
+                bodyPart: "upper legs",
+                equipment: "machine",
+                gifUrl: nil,
+                target: "hamstrings",
+                secondaryMuscles: [],
+                instructions: ["Curl weight up.", "Squeeze at top."]
+            )
+            let calfRaiseEx = calfRaise ?? Exercise(
+                id: "standing_calf_raise",
+                name: "standing calf raise",
+                bodyPart: "lower legs",
+                equipment: "machine",
+                gifUrl: nil,
+                target: "calves",
+                secondaryMuscles: [],
+                instructions: ["Rise onto toes.", "Lower with full stretch."]
+            )
+            
+            // Full workout templates (same for both DEBUG and production)
             self.templates = [
                 WorkoutTemplate(
-                    name: "Demo (Debug)",
+                    name: "Push Day",
                     exercises: [
                         WorkoutTemplateExercise(
                             exercise: ExerciseRef(from: benchPressEx),
-                            setsTarget: 3,
-                            repRangeMin: 6,
-                            repRangeMax: 10,
-                            increment: 5,
-                            deloadFactor: ProgressionDefaults.deloadFactor,
-                            failureThreshold: ProgressionDefaults.failureThreshold
-                        ),
-                        WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: squatEx),
-                            setsTarget: 3,
-                            repRangeMin: 5,
-                            repRangeMax: 8,
-                            increment: 10,
-                            deloadFactor: ProgressionDefaults.deloadFactor,
-                            failureThreshold: ProgressionDefaults.failureThreshold
-                        )
-                    ]
-                ),
-                WorkoutTemplate(
-                    name: "Push (Starter)",
-                    exercises: [
-                        WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: benchPressEx),
-                            setsTarget: 3,
+                            setsTarget: 4,
                             repRangeMin: 6,
                             repRangeMax: 10,
                             increment: 5,
@@ -583,79 +804,51 @@ final class WorkoutStore: ObservableObject {
                             increment: 5,
                             deloadFactor: ProgressionDefaults.deloadFactor,
                             failureThreshold: ProgressionDefaults.failureThreshold
-                        )
-                    ]
-                ),
-                WorkoutTemplate(
-                    name: "Pull (Starter)",
-                    exercises: [
-                        WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: pullUpEx),
-                            setsTarget: 3,
-                            repRangeMin: 6,
-                            repRangeMax: 10,
-                            increment: 5,
-                            deloadFactor: ProgressionDefaults.deloadFactor,
-                            failureThreshold: ProgressionDefaults.failureThreshold
                         ),
                         WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: deadliftEx),
-                            setsTarget: 2,
-                            repRangeMin: 3,
-                            repRangeMax: 5,
-                            increment: 10,
-                            deloadFactor: ProgressionDefaults.deloadFactor,
-                            failureThreshold: ProgressionDefaults.failureThreshold
-                        )
-                    ]
-                ),
-                WorkoutTemplate(
-                    name: "Legs (Starter)",
-                    exercises: [
-                        WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: squatEx),
-                            setsTarget: 3,
-                            repRangeMin: 5,
-                            repRangeMax: 8,
-                            increment: 10,
-                            deloadFactor: ProgressionDefaults.deloadFactor,
-                            failureThreshold: ProgressionDefaults.failureThreshold
-                        )
-                    ]
-                )
-            ]
-            #else
-            // Production seed templates
-            self.templates = [
-                WorkoutTemplate(
-                    name: "Push (Starter)",
-                    exercises: [
-                        WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: benchPressEx),
-                            setsTarget: 3,
-                            repRangeMin: 6,
-                            repRangeMax: 10,
-                            increment: 5,
-                            deloadFactor: ProgressionDefaults.deloadFactor,
-                            failureThreshold: ProgressionDefaults.failureThreshold
-                        ),
-                        WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: shoulderPressEx),
+                            exercise: ExerciseRef(from: inclinePressEx),
                             setsTarget: 3,
                             repRangeMin: 8,
                             repRangeMax: 12,
                             increment: 5,
                             deloadFactor: ProgressionDefaults.deloadFactor,
                             failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: lateralRaiseEx),
+                            setsTarget: 3,
+                            repRangeMin: 12,
+                            repRangeMax: 15,
+                            increment: 2.5,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: tricepEx),
+                            setsTarget: 3,
+                            repRangeMin: 10,
+                            repRangeMax: 15,
+                            increment: 5,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
                         )
                     ]
                 ),
                 WorkoutTemplate(
-                    name: "Pull (Starter)",
+                    name: "Pull Day",
                     exercises: [
                         WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: pullUpEx),
+                            exercise: ExerciseRef(from: deadliftEx),
                             setsTarget: 3,
+                            repRangeMin: 3,
+                            repRangeMax: 6,
+                            increment: 10,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: pullUpEx),
+                            setsTarget: 4,
                             repRangeMin: 6,
                             repRangeMax: 10,
                             increment: 5,
@@ -663,32 +856,85 @@ final class WorkoutStore: ObservableObject {
                             failureThreshold: ProgressionDefaults.failureThreshold
                         ),
                         WorkoutTemplateExercise(
-                            exercise: ExerciseRef(from: deadliftEx),
-                            setsTarget: 2,
-                            repRangeMin: 3,
-                            repRangeMax: 5,
-                            increment: 10,
+                            exercise: ExerciseRef(from: barbellRowEx),
+                            setsTarget: 3,
+                            repRangeMin: 8,
+                            repRangeMax: 12,
+                            increment: 5,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: facePullEx),
+                            setsTarget: 3,
+                            repRangeMin: 12,
+                            repRangeMax: 15,
+                            increment: 5,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: bicepCurlEx),
+                            setsTarget: 3,
+                            repRangeMin: 10,
+                            repRangeMax: 15,
+                            increment: 2.5,
                             deloadFactor: ProgressionDefaults.deloadFactor,
                             failureThreshold: ProgressionDefaults.failureThreshold
                         )
                     ]
                 ),
                 WorkoutTemplate(
-                    name: "Legs (Starter)",
+                    name: "Leg Day",
                     exercises: [
                         WorkoutTemplateExercise(
                             exercise: ExerciseRef(from: squatEx),
-                            setsTarget: 3,
+                            setsTarget: 4,
                             repRangeMin: 5,
                             repRangeMax: 8,
                             increment: 10,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: legPressEx),
+                            setsTarget: 3,
+                            repRangeMin: 10,
+                            repRangeMax: 15,
+                            increment: 10,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: rdlEx),
+                            setsTarget: 3,
+                            repRangeMin: 8,
+                            repRangeMax: 12,
+                            increment: 10,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: legCurlEx),
+                            setsTarget: 3,
+                            repRangeMin: 10,
+                            repRangeMax: 15,
+                            increment: 5,
+                            deloadFactor: ProgressionDefaults.deloadFactor,
+                            failureThreshold: ProgressionDefaults.failureThreshold
+                        ),
+                        WorkoutTemplateExercise(
+                            exercise: ExerciseRef(from: calfRaiseEx),
+                            setsTarget: 4,
+                            repRangeMin: 12,
+                            repRangeMax: 20,
+                            increment: 5,
                             deloadFactor: ProgressionDefaults.deloadFactor,
                             failureThreshold: ProgressionDefaults.failureThreshold
                         )
                     ]
                 )
             ]
-            #endif
             
             self.saveTemplates()
         }

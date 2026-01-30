@@ -389,10 +389,12 @@ public enum Engine {
             
             // Safety: bodyweight exercises should not inherit external loads.
             guard exercise.equipment != .bodyweight else {
+                // Keep load units consistent with the plan's execution unit.
+                let zeroLoad = Load(value: 0, unit: plan.loadRoundingPolicy.unit)
                 let setPlans = (0..<prescription.setCount).map { setIndex in
                     SetPlan(
                         setIndex: setIndex,
-                        targetLoad: .zero,
+                        targetLoad: zeroLoad,
                         targetReps: prescription.targetRepsRange.lowerBound,
                         targetRIR: prescription.targetRIR,
                         restSeconds: prescription.restSeconds,

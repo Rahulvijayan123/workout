@@ -87,28 +87,39 @@ struct MaxesView: View {
             .padding(.horizontal, 20)
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 14) {
-                TactileGlassButton(
-                    title: "NEXT PHASE",
-                    isEnabled: true,
-                    brightViolet: brightViolet,
-                    deepIndigo: deepIndigo
-                ) {
-                    saveAndContinue()
-                }
+            VStack(spacing: 0) {
+                // Gradient fade from transparent to background
+                LinearGradient(
+                    colors: [Color.clear, Color(red: 0.02, green: 0.02, blue: 0.02)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 30)
                 
-                Button {
-                    onContinue()
-                } label: {
-                    Text("SKIP FOR NOW")
-                        .font(IronFont.bodyMedium(12))
-                        .tracking(2)
-                        .foregroundColor(.white.opacity(0.45)) // More visible
+                VStack(spacing: 14) {
+                    TactileGlassButton(
+                        title: "NEXT PHASE",
+                        isEnabled: true,
+                        brightViolet: brightViolet,
+                        deepIndigo: deepIndigo
+                    ) {
+                        saveAndContinue()
+                    }
+                    
+                    Button {
+                        onContinue()
+                    } label: {
+                        Text("SKIP FOR NOW")
+                            .font(IronFont.bodyMedium(12))
+                            .tracking(2)
+                            .foregroundColor(.white.opacity(0.45))
+                    }
+                    .padding(.bottom, 4)
                 }
-                .padding(.bottom, 4) // Extra spacing from home indicator
+                .padding(.horizontal, 20)
+                .padding(.bottom, 34)
+                .background(Color(red: 0.02, green: 0.02, blue: 0.02))
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 34) // Pushed up from home indicator
         }
     }
     

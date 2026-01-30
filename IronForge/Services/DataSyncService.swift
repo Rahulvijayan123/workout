@@ -44,6 +44,8 @@ final class DataSyncService: ObservableObject {
         var defaultRestSeconds: Int?
         var onboardingCompleted: Bool?
         var onboardingCompletedAt: Date?
+        /// Training phase: cut, maintenance, bulk, recomp (ML critical)
+        var trainingPhase: String?
         var createdAt: Date?
         var updatedAt: Date?
     }
@@ -94,14 +96,53 @@ final class DataSyncService: ObservableObject {
         var startedAt: Date
         var endedAt: Date?
         var durationSeconds: Int?
-        var readinessScore: Int?
         var wasDeload: Bool?
         var deloadReason: String?
+        
+        // Pre-session subjective signals
+        var preWorkoutReadiness: Int?       // 1-5 scale
+        var preWorkoutSoreness: Int?        // 0-10 scale
+        var preWorkoutEnergy: Int?          // 1-5 scale
+        var preWorkoutMotivation: Int?      // 1-5 scale
+        
+        // Post-session subjective signals
+        var sessionRpe: Int?                // 1-10 scale (validated internal load metric)
+        var postWorkoutFeeling: Int?        // 1-5 scale
+        var harderThanExpected: Bool?
+        
+        // Session-level pain/injury (safety critical)
+        var sessionPainEntriesJson: String? // JSON array of pain entries
+        var maxPainLevel: Int?              // 0-10 scale
+        var anyStoppedDueToPain: Bool?
+        
+        // Life stress flags
+        var hasIllness: Bool?
+        var hasTravel: Bool?
+        var hasWorkStress: Bool?
+        var hasPoorSleep: Bool?
+        var hasOtherStress: Bool?
+        var stressNotes: String?
+        
+        // Context signals
+        var timeOfDay: String?              // TimeOfDay raw value
+        var wasFasted: Bool?
+        var hoursSinceLastMeal: Double?
+        var sleepQualityLastNight: Int?     // 1-5 scale
+        var sleepHoursLastNight: Double?
+        
+        // Location (optional)
         var gymName: String?
         var latitude: Double?
         var longitude: Double?
+        
+        // Computed readiness score (0-100) captured at session start
+        var computedReadinessScore: Int?
+        
+        // Legacy fields (kept for backward compatibility)
+        var readinessScore: Int?
         var perceivedDifficulty: Int?
         var overallFeeling: String?
+        
         var notes: String?
         var totalSets: Int?
         var totalReps: Int?
@@ -124,12 +165,48 @@ final class DataSyncService: ObservableObject {
         var incrementKg: Double?
         var deloadFactor: Double?
         var failureThreshold: Int?
+        var targetRir: Int?
+        var restSeconds: Int?
+        
+        // Tempo prescription
+        var tempoEccentric: Int?
+        var tempoPauseBottom: Int?
+        var tempoConcentric: Int?
+        var tempoPauseTop: Int?
+        
         var sortOrder: Int
         var isCompleted: Bool?
         var completedAt: Date?
         var totalSetsCompleted: Int?
         var totalRepsCompleted: Int?
         var totalVolumeKg: Double?
+        
+        // Pain/injury tracking (safety critical)
+        var painEntriesJson: String?        // JSON array of pain entries
+        var overallPainLevel: Int?          // 0-10 scale
+        var stoppedDueToPain: Bool?
+        
+        // Substitution tracking
+        var originalExerciseId: String?
+        var originalExerciseName: String?
+        var substitutionReason: String?     // SubstitutionReason raw value
+        var isSubstitution: Bool?
+        
+        // Equipment variation
+        var equipmentVariation: String?     // EquipmentVariation raw value
+        
+        // Exercise-level compliance
+        var exerciseCompliance: String?     // RecommendationCompliance raw value
+        var exerciseComplianceReason: String? // ComplianceReasonCode raw value
+        
+        // Technique limitations
+        var hasLimitedRom: Bool?
+        var hasGripIssue: Bool?
+        var hasStabilityIssue: Bool?
+        var hasBreathingIssue: Bool?
+        var hasTechniqueOther: Bool?
+        var techniqueLimitationNotes: String?
+        
         var notes: String?
         var createdAt: Date?
         var updatedAt: Date?
@@ -143,13 +220,45 @@ final class DataSyncService: ObservableObject {
         var weightKg: Double
         var durationSeconds: Int?
         var distanceMeters: Double?
+        
+        // Target effort (prescription)
+        var targetRir: Int?
+        var targetRpe: Double?
+        
+        // Observed effort (actual)
         var rirObserved: Int?
         var rpeObserved: Double?
+        
+        // Timing
+        var completedAt: Date?
+        var actualRestSeconds: Int?
+        
+        // Set classification
         var isWarmup: Bool?
         var isDropset: Bool?
         var isFailure: Bool?
         var isCompleted: Bool?
-        var completedAt: Date?
+        
+        // Recommendation compliance (ML critical)
+        var compliance: String?            // RecommendationCompliance raw value
+        var complianceReason: String?      // ComplianceReasonCode raw value
+        var recommendedWeightKg: Double?
+        var recommendedReps: Int?
+        
+        // Tempo (actual, if different from prescribed)
+        var tempoEccentric: Int?
+        var tempoPauseBottom: Int?
+        var tempoConcentric: Int?
+        var tempoPauseTop: Int?
+        
+        // Technique limitations
+        var hasLimitedRom: Bool?
+        var hasGripIssue: Bool?
+        var hasStabilityIssue: Bool?
+        var hasBreathingIssue: Bool?
+        var hasTechniqueOther: Bool?
+        var techniqueLimitationNotes: String?
+        
         var notes: String?
         var createdAt: Date?
     }
@@ -178,25 +287,94 @@ final class DataSyncService: ObservableObject {
         var id: String?
         var userId: String
         var date: String // YYYY-MM-DD format
-        var sleepHours: Double?
-        var sleepQuality: Int?
-        var timeInBedHours: Double?
-        var hrvMs: Double?
-        var restingHeartRate: Int?
-        var steps: Int?
-        var activeCalories: Int?
-        var totalCalories: Int?
-        var exerciseMinutes: Int?
+        
+        // MARK: - Core Recovery Metrics
+        var sleepMinutes: Double?
+        var hrvSdnn: Double?
+        var restingHr: Double?
+        var vo2Max: Double?
+        var respiratoryRate: Double?
+        var oxygenSaturation: Double?
+        
+        // MARK: - Activity Metrics
+        var activeEnergy: Double?
+        var steps: Double?
+        var exerciseTimeMinutes: Double?
         var standHours: Int?
+        
+        // MARK: - Walking Metrics (Injury Detection)
+        var walkingHeartRateAvg: Double?
+        var walkingAsymmetry: Double?
+        var walkingSpeed: Double?
+        var walkingStepLength: Double?
+        var walkingDoubleSupport: Double?
+        var stairAscentSpeed: Double?
+        var stairDescentSpeed: Double?
+        var sixMinuteWalkDistance: Double?
+        
+        // MARK: - Sleep Details (iOS 16+)
+        var timeInBedMinutes: Double?
+        var sleepAwakeMinutes: Double?
+        var sleepCoreMinutes: Double?
+        var sleepDeepMinutes: Double?
+        var sleepRemMinutes: Double?
+        var timeInDaylightMinutes: Double?
+        var wristTemperatureCelsius: Double?
+        
+        // MARK: - Body Composition
         var bodyWeightKg: Double?
         var bodyFatPercentage: Double?
+        var leanBodyMassKg: Double?
+        var bodyWeightFromHealthkit: Bool?
+        
+        // MARK: - Nutrition (HealthKit)
+        var dietaryEnergyKcal: Double?
+        var dietaryProteinGrams: Double?
+        var dietaryCarbsGrams: Double?
+        var dietaryFatGrams: Double?
+        var waterIntakeLiters: Double?
+        var caffeineMg: Double?
+        
+        // MARK: - Nutrition Buckets (Manual)
+        var nutritionBucket: String?
+        var proteinBucket: String?
+        var proteinGrams: Int?
+        var totalCalories: Int?
+        var hydrationLevel: Int?
+        var alcoholLevel: Int?
+        
+        // MARK: - Female Health (HealthKit - Opt-in)
+        var menstrualFlowRaw: Int?
+        var cervicalMucusQualityRaw: Int?
+        var basalBodyTemperatureCelsius: Double?
+        var cyclePhase: String?
+        var cycleDayNumber: Int?
+        var onHormonalBirthControl: Bool?
+        
+        // MARK: - Mindfulness
+        var mindfulMinutes: Double?
+        
+        // MARK: - Subjective Daily Metrics
+        var sleepQuality: Int?
+        var sleepDisruptions: Int?
         var energyLevel: Int?
         var stressLevel: Int?
-        var sorenessLevel: Int?
-        var mood: Int?
+        var moodScore: Int?
+        var overallSoreness: Int?
         var readinessScore: Int?
+        
+        // MARK: - Life Stress Flags
+        var hasIllness: Bool?
+        var hasTravel: Bool?
+        var hasWorkStress: Bool?
+        var hadPoorSleep: Bool?
+        var hasOtherStress: Bool?
+        var stressNotes: String?
+        
+        // MARK: - Data Source Flags
         var fromHealthkit: Bool?
         var fromManualEntry: Bool?
+        
         var createdAt: Date?
         var updatedAt: Date?
     }
@@ -213,6 +391,105 @@ final class DataSyncService: ObservableObject {
         var screenName: String?
         var sessionId: String?
         var occurredAt: Date?
+    }
+    
+    // MARK: - ML Training Data Models
+    
+    struct DBRecommendationEvent: Codable {
+        var id: String?
+        var userId: String
+        var sessionId: String?
+        var sessionExerciseId: String?
+        var exerciseId: String
+        
+        // What was recommended
+        var recommendedWeightKg: Double
+        var recommendedReps: Int
+        var recommendedSets: Int
+        var recommendedRir: Int
+        
+        // Policy metadata
+        var policyVersion: String
+        var policyType: String
+        var actionType: String
+        var reasonCodes: [String]?
+        
+        // Confidence/exploration
+        var modelConfidence: Double?
+        var isExploration: Bool?
+        var explorationDeltaKg: Double?
+        
+        // Counterfactual
+        var deterministicWeightKg: Double?
+        var deterministicReps: Int?
+        
+        // State snapshot (JSONB)
+        var stateAtRecommendation: String?
+        
+        var generatedAt: Date?
+    }
+    
+    struct DBPlannedSet: Codable {
+        var id: String?
+        var sessionExerciseId: String
+        var recommendationEventId: String?
+        
+        var setNumber: Int
+        var targetWeightKg: Double
+        var targetReps: Int
+        var targetRir: Int?
+        var targetRestSeconds: Int?
+        
+        // Tempo
+        var targetTempoEccentric: Int?
+        var targetTempoPauseBottom: Int?
+        var targetTempoConcentric: Int?
+        var targetTempoPauseTop: Int?
+        
+        var isWarmup: Bool?
+        var createdAt: Date?
+    }
+    
+    struct DBPainEvent: Codable {
+        var id: String?
+        var userId: String
+        var sessionId: String?
+        var sessionExerciseId: String?
+        var sessionSetId: String?
+        
+        var bodyRegion: String
+        var severity: Int
+        var painType: String?
+        var causedStop: Bool?
+        var notes: String?
+        
+        var reportedAt: Date?
+    }
+    
+    struct DBUserSensitiveContext: Codable {
+        var id: String?
+        var userId: String
+        var date: String  // YYYY-MM-DD
+        
+        // Menstrual cycle
+        var cyclePhase: String?
+        var cycleDayNumber: Int?
+        var onHormonalBirthControl: Bool?
+        
+        // Nutrition
+        var nutritionBucket: String?
+        var proteinBucket: String?
+        
+        // Mood/stress
+        var moodScore: Int?
+        var stressLevel: Int?
+        
+        // Consent
+        var consentedToMlTraining: Bool?
+        var consentTimestamp: Date?
+        
+        var createdAt: Date?
+        var updatedAt: Date?
     }
     
     // MARK: - Sync Operations
@@ -234,7 +511,8 @@ final class DataSyncService: ObservableObject {
             gymType: profile.gymType.rawValue,
             preferredWeightUnit: "pounds",
             onboardingCompleted: true,
-            onboardingCompletedAt: Date()
+            onboardingCompletedAt: Date(),
+            trainingPhase: profile.trainingPhase.rawValue
         )
         
         let _: DBUserProfile? = try await supabase.upsert(into: "user_profiles", values: dbProfile)
@@ -307,7 +585,17 @@ final class DataSyncService: ObservableObject {
         
         let durationSeconds: Int? = session.endedAt.map { Int($0.timeIntervalSince(session.startedAt)) }
         
-        // Sync session
+        // Encode pain entries to JSON
+        let sessionPainJson: String? = {
+            guard let entries = session.sessionPainEntries, !entries.isEmpty else { return nil }
+            let encoder = JSONEncoder()
+            if let data = try? encoder.encode(entries), let str = String(data: data, encoding: .utf8) {
+                return str
+            }
+            return nil
+        }()
+        
+        // Sync session with all new fields
         let dbSession = DBWorkoutSession(
             id: session.id.uuidString,
             userId: userId,
@@ -319,6 +607,36 @@ final class DataSyncService: ObservableObject {
             durationSeconds: durationSeconds,
             wasDeload: session.wasDeload,
             deloadReason: session.deloadReason,
+            // Pre-session signals
+            preWorkoutReadiness: session.preWorkoutReadiness,
+            preWorkoutSoreness: session.preWorkoutSoreness,
+            preWorkoutEnergy: session.preWorkoutEnergy,
+            preWorkoutMotivation: session.preWorkoutMotivation,
+            // Post-session signals
+            sessionRpe: session.sessionRPE,
+            postWorkoutFeeling: session.postWorkoutFeeling,
+            harderThanExpected: session.harderThanExpected,
+            // Pain/injury
+            sessionPainEntriesJson: sessionPainJson,
+            maxPainLevel: session.maxPainLevel,
+            anyStoppedDueToPain: session.anyExerciseStoppedDueToPain,
+            // Life stress flags
+            hasIllness: session.lifeStressFlags?.illness,
+            hasTravel: session.lifeStressFlags?.travel,
+            hasWorkStress: session.lifeStressFlags?.workStress,
+            hasPoorSleep: session.lifeStressFlags?.poorSleep,
+            hasOtherStress: session.lifeStressFlags?.other,
+            stressNotes: session.lifeStressFlags?.notes,
+            // Context signals
+            timeOfDay: session.timeOfDay?.rawValue ?? TimeOfDay.from(date: session.startedAt).rawValue,
+            wasFasted: session.wasFasted,
+            hoursSinceLastMeal: session.hoursSinceLastMeal,
+            sleepQualityLastNight: session.sleepQualityLastNight,
+            sleepHoursLastNight: session.sleepHoursLastNight,
+            // Computed readiness score
+            computedReadinessScore: session.computedReadinessScore,
+            // Notes and stats
+            notes: session.sessionNotes,
             totalSets: totalSets,
             totalReps: totalReps,
             totalVolumeKg: totalVolume,
@@ -342,6 +660,16 @@ final class DataSyncService: ObservableObject {
                 exVolume += set.weight * Double(set.reps) * 0.453592
             }
             
+            // Encode exercise pain entries to JSON
+            let exercisePainJson: String? = {
+                guard let entries = ex.painEntries, !entries.isEmpty else { return nil }
+                let encoder = JSONEncoder()
+                if let data = try? encoder.encode(entries), let str = String(data: data, encoding: .utf8) {
+                    return str
+                }
+                return nil
+            }()
+            
             let dbExercise = DBSessionExercise(
                 id: ex.id.uuidString,
                 sessionId: session.id.uuidString,
@@ -355,16 +683,43 @@ final class DataSyncService: ObservableObject {
                 incrementKg: ex.increment * 0.453592,
                 deloadFactor: ex.deloadFactor,
                 failureThreshold: ex.failureThreshold,
+                targetRir: ex.targetRIR,
+                restSeconds: ex.restSeconds,
+                // Tempo prescription
+                tempoEccentric: ex.tempo.eccentric,
+                tempoPauseBottom: ex.tempo.pauseBottom,
+                tempoConcentric: ex.tempo.concentric,
+                tempoPauseTop: ex.tempo.pauseTop,
                 sortOrder: idx,
                 isCompleted: ex.isCompleted,
                 totalSetsCompleted: exSets,
                 totalRepsCompleted: exReps,
-                totalVolumeKg: exVolume
+                totalVolumeKg: exVolume,
+                // Pain/injury
+                painEntriesJson: exercisePainJson,
+                overallPainLevel: ex.overallPainLevel,
+                stoppedDueToPain: ex.stoppedDueToPain,
+                // Substitution
+                originalExerciseId: ex.originalExerciseId,
+                originalExerciseName: ex.originalExerciseName,
+                substitutionReason: ex.substitutionReason?.rawValue,
+                isSubstitution: ex.isSubstitution,
+                // Equipment/compliance
+                equipmentVariation: ex.equipmentVariation?.rawValue,
+                exerciseCompliance: ex.exerciseCompliance?.rawValue,
+                exerciseComplianceReason: ex.exerciseComplianceReason?.rawValue,
+                // Technique limitations
+                hasLimitedRom: ex.techniqueLimitations?.limitedROM,
+                hasGripIssue: ex.techniqueLimitations?.gripIssue,
+                hasStabilityIssue: ex.techniqueLimitations?.stabilityIssue,
+                hasBreathingIssue: ex.techniqueLimitations?.breathingIssue,
+                hasTechniqueOther: ex.techniqueLimitations?.other,
+                techniqueLimitationNotes: ex.techniqueLimitations?.notes
             )
             
             let _: DBSessionExercise? = try await supabase.upsert(into: "session_exercises", values: dbExercise)
             
-            // Insert sets
+            // Insert sets with all new fields
             let dbSets = ex.sets.enumerated().map { setIdx, set in
                 DBSessionSet(
                     id: set.id.uuidString,
@@ -372,7 +727,38 @@ final class DataSyncService: ObservableObject {
                     setNumber: setIdx + 1,
                     reps: set.reps,
                     weightKg: set.weight * 0.453592,
-                    isCompleted: set.isCompleted
+                    // Target effort
+                    targetRir: set.targetRIR,
+                    targetRpe: set.targetRPE,
+                    // Observed effort
+                    rirObserved: set.rirObserved,
+                    rpeObserved: set.rpeObserved,
+                    // Timing
+                    completedAt: set.completedAt,
+                    actualRestSeconds: set.actualRestSeconds,
+                    // Set classification
+                    isWarmup: set.isWarmup,
+                    isDropset: set.isDropSet,
+                    isFailure: set.isFailure,
+                    isCompleted: set.isCompleted,
+                    // Recommendation compliance
+                    compliance: set.compliance?.rawValue,
+                    complianceReason: set.complianceReason?.rawValue,
+                    recommendedWeightKg: set.recommendedWeight.map { $0 * 0.453592 },
+                    recommendedReps: set.recommendedReps,
+                    // Tempo actual
+                    tempoEccentric: set.tempoActual?.eccentric,
+                    tempoPauseBottom: set.tempoActual?.pauseBottom,
+                    tempoConcentric: set.tempoActual?.concentric,
+                    tempoPauseTop: set.tempoActual?.pauseTop,
+                    // Technique limitations
+                    hasLimitedRom: set.techniqueLimitations?.limitedROM,
+                    hasGripIssue: set.techniqueLimitations?.gripIssue,
+                    hasStabilityIssue: set.techniqueLimitations?.stabilityIssue,
+                    hasBreathingIssue: set.techniqueLimitations?.breathingIssue,
+                    hasTechniqueOther: set.techniqueLimitations?.other,
+                    techniqueLimitationNotes: set.techniqueLimitations?.notes,
+                    notes: set.notes
                 )
             }
             
@@ -422,21 +808,226 @@ final class DataSyncService: ObservableObject {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
-        // Convert sleep minutes to hours
-        let sleepHours = biometrics.sleepMinutes.map { $0 / 60.0 }
-        
         let dbBiometrics = DBDailyBiometrics(
             userId: userId,
             date: dateFormatter.string(from: biometrics.date),
-            sleepHours: sleepHours,
-            hrvMs: biometrics.hrvSDNN,
-            restingHeartRate: biometrics.restingHR.map { Int($0) },
-            steps: biometrics.steps.map { Int($0) },
-            activeCalories: biometrics.activeEnergy.map { Int($0) },
-            fromHealthkit: true
+            
+            // Core Recovery
+            sleepMinutes: biometrics.sleepMinutes,
+            hrvSdnn: biometrics.hrvSDNN,
+            restingHr: biometrics.restingHR,
+            vo2Max: biometrics.vo2Max,
+            respiratoryRate: biometrics.respiratoryRate,
+            oxygenSaturation: biometrics.oxygenSaturation,
+            
+            // Activity
+            activeEnergy: biometrics.activeEnergy,
+            steps: biometrics.steps,
+            exerciseTimeMinutes: biometrics.exerciseTimeMinutes,
+            standHours: biometrics.standHours,
+            
+            // Walking Metrics
+            walkingHeartRateAvg: biometrics.walkingHeartRateAvg,
+            walkingAsymmetry: biometrics.walkingAsymmetry,
+            walkingSpeed: biometrics.walkingSpeed,
+            walkingStepLength: biometrics.walkingStepLength,
+            walkingDoubleSupport: biometrics.walkingDoubleSupport,
+            stairAscentSpeed: biometrics.stairAscentSpeed,
+            stairDescentSpeed: biometrics.stairDescentSpeed,
+            sixMinuteWalkDistance: biometrics.sixMinuteWalkDistance,
+            
+            // Sleep Details
+            timeInBedMinutes: biometrics.timeInBedMinutes,
+            sleepAwakeMinutes: biometrics.sleepAwakeMinutes,
+            sleepCoreMinutes: biometrics.sleepCoreMinutes,
+            sleepDeepMinutes: biometrics.sleepDeepMinutes,
+            sleepRemMinutes: biometrics.sleepRemMinutes,
+            timeInDaylightMinutes: biometrics.timeInDaylightMinutes,
+            wristTemperatureCelsius: biometrics.wristTemperatureCelsius,
+            
+            // Body Composition
+            bodyWeightKg: biometrics.bodyWeightKg,
+            bodyFatPercentage: biometrics.bodyFatPercentage,
+            leanBodyMassKg: biometrics.leanBodyMassKg,
+            bodyWeightFromHealthkit: biometrics.bodyWeightFromHealthKit,
+            
+            // Nutrition (HealthKit)
+            dietaryEnergyKcal: biometrics.dietaryEnergyKcal,
+            dietaryProteinGrams: biometrics.dietaryProteinGrams,
+            dietaryCarbsGrams: biometrics.dietaryCarbsGrams,
+            dietaryFatGrams: biometrics.dietaryFatGrams,
+            waterIntakeLiters: biometrics.waterIntakeLiters,
+            caffeineMg: biometrics.caffeineMg,
+            
+            // Nutrition Buckets (Manual)
+            nutritionBucket: biometrics.nutritionBucket?.rawValue,
+            proteinBucket: biometrics.proteinBucket?.rawValue,
+            proteinGrams: biometrics.proteinGrams,
+            totalCalories: biometrics.totalCalories,
+            hydrationLevel: biometrics.hydrationLevel,
+            alcoholLevel: biometrics.alcoholLevel,
+            
+            // Female Health
+            menstrualFlowRaw: biometrics.menstrualFlowRaw,
+            cervicalMucusQualityRaw: biometrics.cervicalMucusQualityRaw,
+            basalBodyTemperatureCelsius: biometrics.basalBodyTemperatureCelsius,
+            cyclePhase: biometrics.cyclePhase?.rawValue,
+            cycleDayNumber: biometrics.cycleDayNumber,
+            onHormonalBirthControl: biometrics.onHormonalBirthControl,
+            
+            // Mindfulness
+            mindfulMinutes: biometrics.mindfulMinutes,
+            
+            // Subjective Metrics
+            sleepQuality: biometrics.sleepQuality,
+            sleepDisruptions: biometrics.sleepDisruptions,
+            energyLevel: biometrics.energyLevel,
+            stressLevel: biometrics.stressLevel,
+            moodScore: biometrics.moodScore,
+            overallSoreness: biometrics.overallSoreness,
+            readinessScore: biometrics.readinessScore,
+            
+            // Life Stress Flags
+            hasIllness: biometrics.hasIllness,
+            hasTravel: biometrics.hasTravel,
+            hasWorkStress: biometrics.hasWorkStress,
+            hadPoorSleep: biometrics.hadPoorSleep,
+            hasOtherStress: biometrics.hasOtherStress,
+            stressNotes: biometrics.stressNotes,
+            
+            // Data Source Flags
+            fromHealthkit: biometrics.fromHealthKit,
+            fromManualEntry: biometrics.fromManualEntry
         )
         
         let _: DBDailyBiometrics? = try await supabase.upsert(into: "daily_biometrics", values: dbBiometrics)
+    }
+    
+    // MARK: - ML Training Data Sync
+    
+    /// Sync a recommendation event (immutable - never update)
+    func syncRecommendationEvent(_ event: RecommendationEvent) async throws {
+        guard supabase.isAuthenticated, let userId = supabase.currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        // Encode state snapshot to JSON
+        let stateJson: String? = {
+            let encoder = JSONEncoder()
+            if let data = try? encoder.encode(event.stateSnapshot), let str = String(data: data, encoding: .utf8) {
+                return str
+            }
+            return nil
+        }()
+        
+        let dbEvent = DBRecommendationEvent(
+            id: event.id.uuidString,
+            userId: userId,
+            sessionId: event.sessionId?.uuidString,
+            sessionExerciseId: event.sessionExerciseId?.uuidString,
+            exerciseId: event.exerciseId,
+            recommendedWeightKg: event.recommendedWeightLbs * 0.453592,
+            recommendedReps: event.recommendedReps,
+            recommendedSets: event.recommendedSets,
+            recommendedRir: event.recommendedRIR,
+            policyVersion: event.policyVersion,
+            policyType: event.policyType.rawValue,
+            actionType: event.actionType.rawValue,
+            reasonCodes: event.reasonCodes.map { $0.rawValue },
+            modelConfidence: event.modelConfidence,
+            isExploration: event.isExploration,
+            explorationDeltaKg: event.explorationDeltaLbs.map { $0 * 0.453592 },
+            deterministicWeightKg: event.deterministicWeightLbs.map { $0 * 0.453592 },
+            deterministicReps: event.deterministicReps,
+            stateAtRecommendation: stateJson,
+            generatedAt: event.generatedAt
+        )
+        
+        // Insert only - never update recommendation events
+        let _: DBRecommendationEvent? = try await supabase.insert(into: "recommendation_events", values: dbEvent)
+    }
+    
+    /// Sync planned sets (immutable - created at session start)
+    func syncPlannedSets(_ sets: [PlannedSet]) async throws {
+        guard supabase.isAuthenticated else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let dbSets = sets.map { set in
+            DBPlannedSet(
+                id: set.id.uuidString,
+                sessionExerciseId: set.sessionExerciseId.uuidString,
+                recommendationEventId: set.recommendationEventId?.uuidString,
+                setNumber: set.setNumber,
+                targetWeightKg: set.targetWeightLbs * 0.453592,
+                targetReps: set.targetReps,
+                targetRir: set.targetRIR,
+                targetRestSeconds: set.targetRestSeconds,
+                targetTempoEccentric: set.targetTempo?.eccentric,
+                targetTempoPauseBottom: set.targetTempo?.pauseBottom,
+                targetTempoConcentric: set.targetTempo?.concentric,
+                targetTempoPauseTop: set.targetTempo?.pauseTop,
+                isWarmup: set.isWarmup,
+                createdAt: set.createdAt
+            )
+        }
+        
+        if !dbSets.isEmpty {
+            try await supabase.insertBatch(into: "planned_sets", values: dbSets)
+        }
+    }
+    
+    /// Sync pain events (normalized, one per pain report)
+    func syncPainEvents(_ events: [PainEvent]) async throws {
+        guard supabase.isAuthenticated, let userId = supabase.currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let dbEvents = events.map { event in
+            DBPainEvent(
+                id: event.id.uuidString,
+                userId: userId,
+                sessionId: event.sessionId?.uuidString,
+                sessionExerciseId: event.sessionExerciseId?.uuidString,
+                sessionSetId: event.sessionSetId?.uuidString,
+                bodyRegion: event.bodyRegion.rawValue,
+                severity: event.severity,
+                painType: event.painType?.rawValue,
+                causedStop: event.causedStop,
+                notes: event.notes,
+                reportedAt: event.reportedAt
+            )
+        }
+        
+        if !dbEvents.isEmpty {
+            try await supabase.insertBatch(into: "pain_events", values: dbEvents)
+        }
+    }
+    
+    /// Sync user sensitive context (opt-in data)
+    func syncUserSensitiveContext(_ context: UserSensitiveContext) async throws {
+        guard supabase.isAuthenticated, let userId = supabase.currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        let dbContext = DBUserSensitiveContext(
+            userId: userId,
+            date: dateFormatter.string(from: context.date),
+            cyclePhase: context.cyclePhase?.rawValue,
+            cycleDayNumber: context.cycleDayNumber,
+            onHormonalBirthControl: context.onHormonalBirthControl,
+            nutritionBucket: context.nutritionBucket?.rawValue,
+            proteinBucket: context.proteinBucket?.rawValue,
+            moodScore: context.moodScore,
+            stressLevel: context.stressLevel,
+            consentedToMlTraining: context.consentedToMLTraining,
+            consentTimestamp: context.consentTimestamp
+        )
+        
+        let _: DBUserSensitiveContext? = try await supabase.upsert(into: "user_sensitive_context", values: dbContext)
     }
     
     /// Track app event
@@ -679,6 +1270,12 @@ final class DataSyncService: ObservableObject {
         if let weightKg = db.bodyWeightKg {
             profile.bodyWeightLbs = weightKg / 0.453592  // Convert kg to lbs
         }
+        if let phaseStr = db.trainingPhase, let phase = TrainingPhase(rawValue: phaseStr) {
+            profile.trainingPhase = phase
+        } else if let phaseStr = db.trainingPhase {
+            // Case-insensitive fallback
+            profile.trainingPhase = TrainingPhase.allCases.first { $0.rawValue.lowercased() == phaseStr.lowercased() } ?? .maintenance
+        }
         
         return profile
     }
@@ -798,7 +1395,8 @@ final class DataSyncService: ObservableObject {
             endedAt: db.endedAt,
             wasDeload: db.wasDeload ?? false,
             deloadReason: db.deloadReason,
-            exercises: localExercises
+            exercises: localExercises,
+            computedReadinessScore: db.computedReadinessScore
         )
     }
 }
