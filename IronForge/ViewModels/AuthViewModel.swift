@@ -18,6 +18,7 @@ final class AuthViewModel: ObservableObject {
     // MARK: - Apple Sign-In
     
     private var currentNonce: String?
+    private var hashedNonce: String?
     
     // MARK: - Validation
     
@@ -127,15 +128,28 @@ final class AuthViewModel: ObservableObject {
     
     // MARK: - Apple Sign-In
     
-    /// Generate a random nonce for Apple Sign-In
-    func generateNonce() -> String {
+    /// Prepare a nonce for Apple Sign-In. Call this once before starting the sign-in flow.
+    /// Returns the SHA256 hash to send to Apple.
+    func prepareAppleSignIn() -> String {
         let nonce = randomNonceString()
         currentNonce = nonce
-        return nonce
+        let hashed = sha256(nonce)
+        hashedNonce = hashed
+        return hashed
     }
     
-    /// Get the SHA256 hash of the nonce for Apple's request
-    func sha256(_ input: String) -> String {
+    /// Get the already-generated hashed nonce for Apple's request.
+    /// This ensures the same nonce is used even if the closure is called multiple times.
+    func getHashedNonce() -> String {
+        if let hashed = hashedNonce {
+            return hashed
+        }
+        // Fallback: generate new nonce if none exists
+        return prepareAppleSignIn()
+    }
+    
+    /// Get the SHA256 hash of a string
+    private func sha256(_ input: String) -> String {
         let inputData = Data(input.utf8)
         let hashedData = SHA256.hash(data: inputData)
         return hashedData.compactMap { String(format: "%02x", $0) }.joined()
@@ -154,6 +168,9 @@ final class AuthViewModel: ObservableObject {
                   let nonce = currentNonce else {
                 errorMessage = "Failed to get Apple credentials"
                 isLoading = false
+                // Clear nonce for next attempt
+                currentNonce = nil
+                hashedNonce = nil
                 return
             }
             
@@ -179,6 +196,9 @@ final class AuthViewModel: ObservableObject {
             }
         }
         
+        // Clear nonce after attempt (success or failure)
+        currentNonce = nil
+        hashedNonce = nil
         isLoading = false
     }
     

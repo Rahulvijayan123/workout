@@ -137,9 +137,8 @@ struct SignUpView: View {
             
             // Sign up with Apple
             SignInWithAppleButton(.signUp) { request in
-                let nonce = viewModel.generateNonce()
                 request.requestedScopes = [.email, .fullName]
-                request.nonce = viewModel.sha256(nonce)
+                request.nonce = viewModel.getHashedNonce()
             } onCompletion: { result in
                 Task {
                     await viewModel.handleAppleSignIn(result)
@@ -148,6 +147,9 @@ struct SignUpView: View {
             .signInWithAppleButtonStyle(.white)
             .frame(height: 52)
             .cornerRadius(14)
+            .onAppear {
+                _ = viewModel.prepareAppleSignIn()
+            }
             
             // Switch to sign in
             HStack(spacing: 4) {

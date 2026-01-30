@@ -15,11 +15,16 @@ final class WorkoutStore: ObservableObject {
     /// - optional `ironforge.exerciseDB.rapidAPIHost`
     let exerciseRepository: ExerciseRepository
     
-    /// Shared shadow mode policy selector for ML data collection.
-    /// Uses UserDefaults-backed bandit state store. Shadow mode executes baseline
-    /// but logs what the bandit would have chosen for offline evaluation.
-    /// Note: nonisolated(unsafe) is required because this static property must be accessible
+    /// The policy selector used for all engine recommend calls.
+    /// This is the single source of truth for policy selection in the app.
+    /// Note: nonisolated(unsafe) is required because this property must be accessible
     /// from non-main-actor contexts (e.g., TrainingEngine callbacks) while WorkoutStore is @MainActor.
+    nonisolated(unsafe) let policySelector: any ProgressionPolicySelector
+    
+    /// Shared shadow mode policy selector for ML data collection.
+    /// @deprecated Use the instance `policySelector` property instead.
+    /// Kept for backwards compatibility with any code that references the static property.
+    @available(*, deprecated, message: "Use instance policySelector instead")
     nonisolated(unsafe) static let sharedPolicySelector: any ProgressionPolicySelector = ShadowModePolicySelector(
         stateStore: UserDefaultsBanditStateStore.shared
     )
@@ -30,8 +35,12 @@ final class WorkoutStore: ObservableObject {
     private let exerciseStatesKey = "ironforge.liftStates.v2"
     private let activeSessionKey = "ironforge.activeSession.v2"
     
-    init(exerciseRepository: ExerciseRepository = WorkoutStore.makeDefaultExerciseRepository()) {
+    init(
+        exerciseRepository: ExerciseRepository = WorkoutStore.makeDefaultExerciseRepository(),
+        policySelector: (any ProgressionPolicySelector)? = nil
+    ) {
         self.exerciseRepository = exerciseRepository
+        self.policySelector = policySelector ?? PolicySelectorFactory.makeFromPersistedMode()
         load()
     }
     
@@ -83,7 +92,7 @@ final class WorkoutStore: ObservableObject {
         userProfile: UserProfile? = nil,
         readiness: Int = 75,
         dailyBiometrics: [DailyBiometrics] = [],
-        policySelector: ProgressionPolicySelector? = nil
+        policySelector: (any ProgressionPolicySelector)? = nil
     ) {
         // Use TrainingEngine to get recommended session plan
         let sessionPlan = TrainingEngineBridge.recommendSessionForTemplate(
@@ -95,7 +104,7 @@ final class WorkoutStore: ObservableObject {
             liftStates: exerciseStates,
             readiness: readiness,
             dailyBiometrics: dailyBiometrics,
-            policySelector: policySelector ?? Self.sharedPolicySelector
+            policySelector: policySelector ?? self.policySelector
         )
         
         // If TrainingEngine returns exercises, use them; otherwise fallback to template-based seeding
@@ -136,7 +145,7 @@ final class WorkoutStore: ObservableObject {
         userProfile: UserProfile,
         readiness: Int = 75,
         dailyBiometrics: [DailyBiometrics] = [],
-        policySelector: ProgressionPolicySelector? = nil
+        policySelector: (any ProgressionPolicySelector)? = nil
     ) {
         guard !templates.isEmpty else { return }
         
@@ -149,7 +158,7 @@ final class WorkoutStore: ObservableObject {
             liftStates: exerciseStates,
             readiness: readiness,
             dailyBiometrics: dailyBiometrics,
-            policySelector: policySelector ?? Self.sharedPolicySelector
+            policySelector: policySelector ?? self.policySelector
         )
         
         // Find the template name
@@ -310,11 +319,61 @@ final class WorkoutStore: ObservableObject {
         // Clear the persisted active session since workout is complete
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
         
+        // ML CRITICAL: Record outcomes for each exercise to trigger bandit learning.
+        // Convert session to engine format and call recordOutcome for each exercise.
+        // We join by exerciseId (not array index) to compute executionContext correctly.
+        let teCompletedSession = TrainingEngineBridge.convertCompletedSession(
+            session,
+            previousLiftStates: priorStates
+        )
+        
+        // Build a lookup of exerciseId -> ExercisePerformance for execution context derivation
+        let exerciseLookup = Dictionary(
+            session.exercises.map { ($0.exercise.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        
+        for exerciseResult in teCompletedSession.exerciseResults {
+            // Only record if there are completed working sets
+            let completedWorkingSets = exerciseResult.sets.filter { !$0.isWarmup && $0.completed }
+            guard !completedWorkingSets.isEmpty else { continue }
+            
+            // Derive execution context by joining on exerciseId (not array index)
+            let executionContext: TrainingEngine.ExecutionContext = {
+                guard let perf = exerciseLookup[exerciseResult.exerciseId] else {
+                    return .normal
+                }
+                
+                // Check for injury/pain-related context
+                if perf.stoppedDueToPain == true {
+                    return .injuryDiscomfort
+                }
+                if let painLevel = perf.overallPainLevel, painLevel >= 5 {
+                    return .injuryDiscomfort
+                }
+                
+                return .normal
+            }()
+            
+            // Record outcome - this triggers the log handler which calls policySelector.recordOutcome
+            TrainingEngine.Engine.recordOutcome(
+                sessionId: session.id,
+                exerciseResult: exerciseResult,
+                readinessScore: session.computedReadinessScore,
+                executionContext: executionContext
+            )
+        }
+        
         // Sync completed session to Supabase
         let completedSession = session
         let currentLiftStates = exerciseStates
+        let sessionIdToClean = session.id
         Task { @MainActor in
-            guard SupabaseService.shared.isAuthenticated else { return }
+            guard SupabaseService.shared.isAuthenticated else {
+                // Clean up snapshot store even if not syncing
+                PolicySelectionSnapshotStore.shared.removeSession(sessionIdToClean)
+                return
+            }
             
             do {
                 try await DataSyncService.shared.syncWorkoutSession(completedSession)
@@ -329,11 +388,36 @@ final class WorkoutStore: ObservableObject {
                 print("[WorkoutStore] Failed to sync lift states: \(error)")
                 DataSyncService.shared.syncError = error
             }
+            
+            // Clean up snapshot store after successful sync
+            PolicySelectionSnapshotStore.shared.removeSession(sessionIdToClean)
         }
     }
     
-    /// Determine progression reason based on weight change
+    /// Determine progression reason based on engine decision or weight change.
+    ///
+    /// Prefers the engine's `progressionDirection` when available (set during session planning).
+    /// Falls back to heuristic-based reasoning when engine direction is not present.
     private func determineProgressionReason(performance: ExercisePerformance, previousWeight: Double, newWeight: Double) -> ProgressionReason {
+        // ML CRITICAL: Prefer engine's direction decision when available.
+        // This ensures UI display is consistent with the engine's actual reasoning.
+        if let direction = performance.progressionDirection {
+            switch direction {
+            case "increase":
+                return newWeight > previousWeight ? .increaseWeight : .increaseReps
+            case "hold":
+                return .hold
+            case "decrease_slightly", "deload":
+                return .deload
+            case "reset_after_break":
+                return .deload
+            default:
+                // Fall through to heuristic logic for unknown directions
+                break
+            }
+        }
+        
+        // Fallback: heuristic-based reasoning for exercises without engine direction
         let completedSets = performance.sets.filter { $0.isCompleted }
         guard !completedSets.isEmpty else { return .hold }
         

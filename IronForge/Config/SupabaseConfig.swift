@@ -4,37 +4,43 @@ import Foundation
 /// Keys are loaded from Secrets.plist which should NOT be committed to version control
 enum SupabaseConfig {
     
+    /// Error message if Secrets.plist is missing (for debugging)
+    static var loadError: String?
+    
     private static let secrets: [String: Any] = {
-        guard let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
-              let data = try? Data(contentsOf: url),
+        guard let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist") else {
+            loadError = "Secrets.plist not found in app bundle. Make sure it's added to the Xcode project and included in 'Copy Bundle Resources'."
+            print("⚠️ FATAL CONFIG ERROR: \(loadError!)")
+            // Return empty dict - app will show error UI instead of crashing
+            return [:]
+        }
+        guard let data = try? Data(contentsOf: url),
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
-            fatalError("Secrets.plist not found. Copy Secrets.plist.template to Secrets.plist and add your keys.")
+            loadError = "Secrets.plist exists but could not be parsed. Check the file format."
+            print("⚠️ FATAL CONFIG ERROR: \(loadError!)")
+            return [:]
         }
         return plist
     }()
     
+    /// Returns true if configuration is valid and ready to use
+    static var isConfigured: Bool {
+        return loadError == nil && !url.isEmpty && !anonKey.isEmpty && !anonKey.contains("PASTE_")
+    }
+    
     static var url: String {
-        guard let url = secrets["SUPABASE_URL"] as? String, !url.isEmpty else {
-            fatalError("SUPABASE_URL not found in Secrets.plist")
-        }
-        return url
+        secrets["SUPABASE_URL"] as? String ?? ""
     }
     
     static var anonKey: String {
-        guard let key = secrets["SUPABASE_ANON_KEY"] as? String, !key.isEmpty else {
-            fatalError("SUPABASE_ANON_KEY not found in Secrets.plist")
-        }
-        return key
+        secrets["SUPABASE_ANON_KEY"] as? String ?? ""
     }
     
     // Service key should NEVER be in client code in production
     // Only use for local development/testing
     #if DEBUG
     static var serviceKey: String {
-        guard let key = secrets["SUPABASE_SERVICE_KEY"] as? String, !key.isEmpty else {
-            fatalError("SUPABASE_SERVICE_KEY not found in Secrets.plist")
-        }
-        return key
+        secrets["SUPABASE_SERVICE_KEY"] as? String ?? ""
     }
     #endif
 }

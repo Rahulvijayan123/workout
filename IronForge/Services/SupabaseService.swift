@@ -22,7 +22,9 @@ final class SupabaseService: ObservableObject {
     // MARK: - Init
     
     private init() {
-        self.baseURL = URL(string: SupabaseConfig.url)!
+        // Handle missing/invalid config gracefully
+        let urlString = SupabaseConfig.url
+        self.baseURL = URL(string: urlString.isEmpty ? "https://placeholder.supabase.co" : urlString)!
         self.anonKey = SupabaseConfig.anonKey
         
         self.encoder = JSONEncoder()
@@ -33,8 +35,10 @@ final class SupabaseService: ObservableObject {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
         
-        // Check for stored auth
-        loadStoredAuth()
+        // Only check for stored auth if config is valid
+        if SupabaseConfig.isConfigured {
+            loadStoredAuth()
+        }
     }
     
     // MARK: - Auth Storage

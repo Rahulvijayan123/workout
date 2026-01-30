@@ -10,6 +10,7 @@
 		1A8A3C58DCD14D1184D03693 /* Repositories/ExerciseLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDF08A0B7BC4620991935C8 /* Repositories/ExerciseLoader.swift */; };
 		4CE4D84D31D44A29B396423E /* Models/FreeExerciseDBModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 538347BCF895478EB1E85681 /* Models/FreeExerciseDBModels.swift */; };
 		98D4B38AB1B94CEB82F370B3 /* Resources/exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = AA20921D9E5C475483C6997A /* Resources/exercises.json */; };
+		AAA0000000000049 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = BBB0000000000049 /* Secrets.plist */; };
 		AAA0000000000001 /* IronForgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000001 /* IronForgeApp.swift */; };
 		AAA0000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0000000000002 /* ContentView.swift */; };
 		AAA0000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BBB0000000000003 /* Assets.xcassets */; };
@@ -112,6 +113,7 @@
 		BBB0000000000046 /* ShadowModePolicySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShadowModePolicySelector.swift; sourceTree = "<group>"; };
 		BBB0000000000047 /* ThompsonSamplingBanditPolicySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThompsonSamplingBanditPolicySelector.swift; sourceTree = "<group>"; };
 		BBB0000000000048 /* BanditStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BanditStateStore.swift; sourceTree = "<group>"; };
+		BBB0000000000049 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
 		CCC0000000000001 /* IronForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IronForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -277,6 +279,7 @@
 			isa = PBXGroup;
 			children = (
 				BBB0000000000035 /* SupabaseConfig.swift */,
+				BBB0000000000049 /* Secrets.plist */,
 			);
 			path = Config;
 			sourceTree = SOURCE_ROOT;
@@ -347,6 +350,7 @@
 			files = (
 				98D4B38AB1B94CEB82F370B3 /* Resources/exercises.json in Resources */,
 				AAA0000000000003 /* Assets.xcassets in Resources */,
+				AAA0000000000049 /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

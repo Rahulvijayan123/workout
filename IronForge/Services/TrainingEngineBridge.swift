@@ -1008,9 +1008,16 @@ enum TrainingEngineBridge {
             perf.progressionDirection = exercisePlan.direction?.rawValue
             perf.progressionDirectionReason = exercisePlan.directionReason?.rawValue
             
-            // Note: Policy selection is logged in TrainingEngine's TrainingDataLogger
-            // and is not exposed on ExercisePlan. The policySelectionSnapshot on
-            // ExercisePerformance remains nil here but can be populated from logs if needed.
+            // ML CRITICAL: Populate policy selection snapshot from the store.
+            // TrainingEngine logs decisions to TrainingDataLogger which calls our log handler,
+            // which stores the policy selection data in PolicySelectionSnapshotStore.
+            // We retrieve it here to attach to the UI model for downstream sync to Supabase.
+            if let snapshot = PolicySelectionSnapshotStore.shared.snapshot(
+                sessionId: sessionPlan.sessionId,
+                exerciseId: exercisePlan.exercise.id
+            ) {
+                perf.policySelectionSnapshot = snapshot
+            }
             
             return perf
         }

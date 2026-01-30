@@ -1,10 +1,29 @@
 import SwiftUI
 import SwiftData
+import TrainingEngine
 
 @main
 struct IronForgeApp: App {
     @StateObject private var appState = AppState()
-    @StateObject private var workoutStore = WorkoutStore()
+    @StateObject private var workoutStore: WorkoutStore
+    
+    /// The single policy selector instance for the entire app.
+    /// Created once at app launch and injected into WorkoutStore.
+    private let policySelector: any ProgressionPolicySelector
+    
+    init() {
+        // Create the policy selector from persisted mode (defaults to shadow)
+        let selector = PolicySelectorFactory.makeFromPersistedMode()
+        self.policySelector = selector
+        
+        // Create WorkoutStore with the injected policy selector
+        let store = WorkoutStore(policySelector: selector)
+        _workoutStore = StateObject(wrappedValue: store)
+        
+        // Configure TrainingEngine telemetry (logging + learning updates)
+        // This enables ML data logging and wires outcome recording to the policy selector
+        TrainingEngineTelemetry.configure(policySelector: selector)
+    }
     
     var body: some Scene {
         WindowGroup {

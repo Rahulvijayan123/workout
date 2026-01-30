@@ -34,9 +34,10 @@ struct SignInView: View {
             
             // Sign in with Apple - main action
             SignInWithAppleButton(.signIn) { request in
-                let nonce = viewModel.generateNonce()
                 request.requestedScopes = [.email, .fullName]
-                request.nonce = viewModel.sha256(nonce)
+                // Use getHashedNonce() to ensure the same nonce is used
+                // even if this closure is called multiple times
+                request.nonce = viewModel.getHashedNonce()
             } onCompletion: { result in
                 Task {
                     await viewModel.handleAppleSignIn(result)
@@ -46,6 +47,10 @@ struct SignInView: View {
             .frame(height: 56)
             .cornerRadius(14)
             .shadow(color: .white.opacity(0.1), radius: 10, y: 4)
+            .onAppear {
+                // Prepare fresh nonce when view appears
+                _ = viewModel.prepareAppleSignIn()
+            }
             
             // Loading indicator
             if viewModel.isLoading {
