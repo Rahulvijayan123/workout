@@ -1,43 +1,43 @@
 ================================================================================
-V7 FULL E2E REPLAY DIAGNOSTICS @ 2026-01-27T22:05:15Z
+V7 FULL E2E REPLAY DIAGNOSTICS @ 2026-01-30T22:06:52Z
 ================================================================================
 
 OVERALL SUMMARY:
   Total test cases: 116
   Main lift prescriptions scored: 203
 
-  📊 Load Agreement: 132/203 = 65.0%
-  🎯 Decision Agreement: 146/203 = 71.9%
-  📏 Mean Absolute Error: 7.04 lb
-  ✅ Assertions Passed: 283/458 = 61.8%
+  📊 Load Agreement: 153/203 = 75.4%
+  🎯 Decision Agreement: 93/203 = 45.8%
+  📏 Mean Absolute Error: 6.58 lb
+  ✅ Assertions Passed: 254/458 = 55.5%
 
 --------------------------------------------------------------------------------
 DECISION CONFUSION MATRIX (rows=expected, cols=predicted):
       exp\pred        deload          hold      increasedecrease_small
         deload            12             0             0             0
-          hold             4           119             0             4
-      increase             0            33             0             0
-decrease_small             0            16             0            15
+          hold             4            33            86             4
+      increase             0             0            33             0
+decrease_small             0            11             5            15
 
 --------------------------------------------------------------------------------
 PER-SCENARIO BREAKDOWN:
   beginner_linear_progression:
-    lifts=108 load=68.5% dec=57.4% mae=6.2lb
+    lifts=108 load=86.1% dec=57.4% mae=4.8lb
   cut_recomp_intermediate:
-    lifts=25 load=32.0% dec=88.0% mae=12.6lb
+    lifts=25 load=40.0% dec=28.0% mae=11.5lb
   messy_adherence_breaks:
-    lifts=30 load=60.0% dec=90.0% mae=5.5lb
+    lifts=30 load=60.0% dec=50.0% mae=6.8lb
   microloading_pressing:
-    lifts=30 load=93.3% dec=93.3% mae=3.0lb
+    lifts=30 load=93.3% dec=16.7% mae=4.4lb
   variations_substitutions:
-    lifts=10 load=40.0% dec=70.0% mae=19.0lb
+    lifts=10 load=40.0% dec=40.0% mae=19.2lb
 
 --------------------------------------------------------------------------------
 PER-CATEGORY BREAKDOWN:
-  break_recovery: lifts=30 load=60.0% dec=90.0% mae=5.5lb
-  progression: lifts=138 load=73.9% dec=65.2% mae=5.5lb
-  readiness: lifts=25 load=32.0% dec=88.0% mae=12.6lb
-  substitution: lifts=10 load=40.0% dec=70.0% mae=19.0lb
+  break_recovery: lifts=30 load=60.0% dec=50.0% mae=6.8lb
+  progression: lifts=138 load=87.7% dec=48.6% mae=4.7lb
+  readiness: lifts=25 load=40.0% dec=28.0% mae=11.5lb
+  substitution: lifts=10 load=40.0% dec=40.0% mae=19.2lb
 
 --------------------------------------------------------------------------------
-MISMATCH SAMPLES: 57 total (set V7_VERBOSE=1 for details)
+MISMATCH SAMPLES: 100 total (set V7_VERBOSE=1 for details)

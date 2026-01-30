@@ -295,6 +295,9 @@ final class SyntheticCalibrationReplayTests: XCTestCase {
                 wasDeload: expectedDeload,
                 previousLiftStates: liftStates,
                 readinessScore: readiness,
+                // This synthetic fixture marks deload sessions as "scheduled deload weeks".
+                // Propagate the reason so the engine can correctly continue a 7-day deload block.
+                deloadReason: expectedDeload ? .scheduledDeload : nil,
                 notes: nil
             )
             

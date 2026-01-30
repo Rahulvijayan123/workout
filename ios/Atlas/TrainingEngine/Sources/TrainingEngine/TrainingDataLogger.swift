@@ -1190,13 +1190,27 @@ public final class TrainingDataLogger: @unchecked Sendable {
             executionContext: executionContext
         )
         
-        // Find and update matching pending entry
-        lock.lock()
-        defer { lock.unlock() }
+        // Find and update matching pending entries.
+        //
+        // IMPORTANT: Do NOT call `logHandler` while holding the lock.
+        // The handler may do work that calls back into the logger (or does IO), risking deadlocks
+        // and inflating critical sections.
+        var toEmit: [DecisionLogEntry] = []
         
-        for (id, var entry) in pendingEntries where entry.sessionId == sessionId && entry.exerciseId == exerciseId {
+        lock.lock()
+        // Avoid mutating the dictionary while iterating it (can trap at runtime).
+        let idsToUpdate: [UUID] = pendingEntries.compactMap { (id, entry) in
+            (entry.sessionId == sessionId && entry.exerciseId == exerciseId) ? id : nil
+        }
+        for id in idsToUpdate {
+            guard var entry = pendingEntries[id] else { continue }
             entry.outcome = outcome
             pendingEntries[id] = entry
+            toEmit.append(entry)
+        }
+        lock.unlock()
+        
+        for entry in toEmit {
             logHandler?(entry)
         }
     }
@@ -1225,10 +1239,17 @@ public final class TrainingDataLogger: @unchecked Sendable {
         let wasFailure = workingSets.contains { $0.reps < targetRepsLower }
         let wasSuccess = !wasFailure
         
-        lock.lock()
-        defer { lock.unlock() }
+        // Update and emit outside the lock (see note in `recordOutcome`).
+        var toEmit: [DecisionLogEntry] = []
+        var idsToRemove: [UUID] = []
         
-        for (id, var entry) in pendingEntries where entry.sessionId == previousSessionId && entry.exerciseId == exerciseId {
+        lock.lock()
+        // Avoid mutating the dictionary while iterating it (can trap at runtime).
+        let idsToUpdate: [UUID] = pendingEntries.compactMap { (id, entry) in
+            (entry.sessionId == previousSessionId && entry.exerciseId == exerciseId) ? id : nil
+        }
+        for id in idsToUpdate {
+            guard var entry = pendingEntries[id] else { continue }
             guard let outcome = entry.outcome else { continue }
             
             let loadDelta = nextLoad.value - outcome.actualLoadValue
@@ -1249,10 +1270,17 @@ public final class TrainingDataLogger: @unchecked Sendable {
             )
             
             pendingEntries[id] = entry
-            logHandler?(entry)
-            
-            // Remove from pending after full linkage
+            toEmit.append(entry)
+            idsToRemove.append(id)
+        }
+        
+        for id in idsToRemove {
             pendingEntries.removeValue(forKey: id)
+        }
+        lock.unlock()
+        
+        for entry in toEmit {
+            logHandler?(entry)
         }
     }
     

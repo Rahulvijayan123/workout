@@ -419,7 +419,10 @@ public final class ThompsonSamplingBanditPolicySelector: ProgressionPolicySelect
     
     /// Samples from a standard normal distribution using Box-Muller transform.
     private func sampleStandardNormal() -> Double {
-        let u1 = Double.random(in: 0..<1, using: &rng)
+        // IMPORTANT: `Double.random(in: 0..<1)` can return 0.0, which would make `log(u1)` = -inf
+        // and produce inf/NaN samples (poisoning the bandit priors).
+        // Clamp to a small epsilon to keep the distribution well-defined.
+        let u1 = max(Double.random(in: 0..<1, using: &rng), 1e-12)
         let u2 = Double.random(in: 0..<1, using: &rng)
         return sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
     }

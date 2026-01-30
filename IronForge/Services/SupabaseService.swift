@@ -53,6 +53,9 @@ final class SupabaseService: ObservableObject {
             self.authToken = token
             self.currentUserId = userId
             self.isAuthenticated = true
+            
+            // Best-effort: if we have queued telemetry, flush now that auth is available.
+            TrainingEngineTelemetry.flushQueuedPolicyDecisionLogs()
         }
     }
     
@@ -65,6 +68,9 @@ final class SupabaseService: ObservableObject {
         self.authToken = token
         self.currentUserId = userId
         self.isAuthenticated = true
+        
+        // Best-effort: flush queued telemetry now that auth is available.
+        TrainingEngineTelemetry.flushQueuedPolicyDecisionLogs()
     }
     
     func clearAuth() {

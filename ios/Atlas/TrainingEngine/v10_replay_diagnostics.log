@@ -1,14 +1,14 @@
 ================================================================================
-V10 FULL E2E REPLAY DIAGNOSTICS (microloading, cut, isolation DP) @ 2026-01-27T22:05:12Z
+V10 FULL E2E REPLAY DIAGNOSTICS (microloading, cut, isolation DP) @ 2026-01-30T22:06:49Z
 ================================================================================
 
 OVERALL SUMMARY:
   Total test cases: 171
   Total prescriptions scored: 367
 
-  📊 Load Agreement: 209/367 = 56.9%
-  🎯 Decision Agreement: 306/367 = 83.4%
-  📏 Mean Absolute Error: 4.21 lb
+  📊 Load Agreement: 213/367 = 58.0%
+  🎯 Decision Agreement: 277/367 = 75.5%
+  📏 Mean Absolute Error: 4.32 lb
   ✅ Assertions Passed: 188/279 = 67.4%
   ⚠️ Load Step Violations: 0
 
@@ -16,14 +16,14 @@ OVERALL SUMMARY:
 DECISION CONFUSION MATRIX (rows=expected, cols=predicted):
       exp\pred        deload          hold      increasedecrease_small
         deload             6             0             0             0
-          hold             7           273            26             5
-      increase             1            22            12             0
+          hold             7           243            56             5
+      increase             1            21            13             0
 decrease_small             0             0             0            15
 
 --------------------------------------------------------------------------------
 PER-PLATE-PROFILE BREAKDOWN (V10 microloading focus):
   coarse_dumbbells:
-    lifts=8 load=100.0% dec=87.5% mae=1.2lb stepViolations=0
+    lifts=8 load=75.0% dec=62.5% mae=2.5lb stepViolations=0
   kg_0.5:
     lifts=54 load=42.6% dec=75.9% mae=2.1lb stepViolations=0
   micro_1.25:
@@ -31,9 +31,9 @@ PER-PLATE-PROFILE BREAKDOWN (V10 microloading focus):
   no_microplates:
     lifts=54 load=68.5% dec=81.5% mae=2.3lb stepViolations=0
   standard_2.5:
-    lifts=124 load=54.0% dec=83.1% mae=5.9lb stepViolations=0
+    lifts=124 load=58.9% dec=72.6% mae=5.8lb stepViolations=0
   standard_dumbbells:
-    lifts=72 load=70.8% dec=86.1% mae=3.4lb stepViolations=0
+    lifts=72 load=70.8% dec=66.7% mae=3.9lb stepViolations=0
 
 --------------------------------------------------------------------------------
 PER-EXPERIENCE BREAKDOWN:
@@ -44,32 +44,32 @@ PER-EXPERIENCE BREAKDOWN:
   elite:
     lifts=72 load=45.8% dec=87.5% mae=4.4lb
   intermediate:
-    lifts=146 load=63.0% dec=87.0% mae=5.1lb
+    lifts=146 load=65.8% dec=67.1% mae=5.3lb
 
 --------------------------------------------------------------------------------
 PER-MOVEMENT-TYPE BREAKDOWN (compound vs isolation):
   compound:
-    lifts=301 load=54.5% dec=83.1% mae=3.8lb
+    lifts=301 load=55.8% dec=74.4% mae=4.0lb
   isolation:
-    lifts=66 load=68.2% dec=84.8% mae=5.9lb
+    lifts=66 load=68.2% dec=80.3% mae=5.9lb
 
 --------------------------------------------------------------------------------
 PER-SEX BREAKDOWN:
   female:
-    lifts=156 load=70.5% dec=84.0% mae=2.9lb
+    lifts=156 load=69.2% dec=73.7% mae=3.2lb
   male:
-    lifts=211 load=46.9% dec=82.9% mae=5.2lb
+    lifts=211 load=49.8% dec=76.8% mae=5.1lb
 
 --------------------------------------------------------------------------------
 PER-SCENARIO BREAKDOWN:
   01_microloading_torture_suite:
     lifts=216 load=53.7% dec=80.6% mae=3.3lb
   02_cut_maintenance_regime:
-    lifts=56 load=51.8% dec=85.7% mae=5.0lb
+    lifts=56 load=57.1% dec=71.4% mae=5.1lb
   03_isolation_double_progression:
-    lifts=80 load=73.8% dec=86.2% mae=3.2lb
+    lifts=80 load=71.2% dec=66.2% mae=3.8lb
   04_variation_substitution_integrity:
-    lifts=10 load=40.0% dec=100.0% mae=20.5lb
+    lifts=10 load=70.0% dec=50.0% mae=19.2lb
   05_messy_adherence_time_semantics:
     lifts=4 load=25.0% dec=100.0% mae=20.6lb
   06_cross_signal_conflicts:
@@ -78,11 +78,11 @@ PER-SCENARIO BREAKDOWN:
 --------------------------------------------------------------------------------
 PER-CATEGORY BREAKDOWN:
   cross_signal_conflict: lifts=1 load=0.0% dec=100.0% mae=2.5lb
-  cut_maintenance: lifts=56 load=51.8% dec=85.7% mae=5.0lb
-  isolation_dp: lifts=80 load=73.8% dec=86.2% mae=3.2lb
+  cut_maintenance: lifts=56 load=57.1% dec=71.4% mae=5.1lb
+  isolation_dp: lifts=80 load=71.2% dec=66.2% mae=3.8lb
   messy_adherence: lifts=4 load=25.0% dec=100.0% mae=20.6lb
   microloading: lifts=216 load=53.7% dec=80.6% mae=3.3lb
-  variation_substitution: lifts=10 load=40.0% dec=100.0% mae=20.5lb
+  variation_substitution: lifts=10 load=70.0% dec=50.0% mae=19.2lb
 
 --------------------------------------------------------------------------------
-MISMATCH SAMPLES: 61 total (set V10_VERBOSE=1 for details)
+MISMATCH SAMPLES: 90 total (set V10_VERBOSE=1 for details)

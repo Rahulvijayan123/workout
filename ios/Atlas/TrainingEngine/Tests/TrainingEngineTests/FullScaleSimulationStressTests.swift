@@ -570,14 +570,11 @@ final class FullScaleSimulationStressTests: XCTestCase {
         
         // Per-exercise direction should indicate readiness cut
         XCTAssertEqual(benchPlan.recommendedAdjustmentKind, .readinessCut, "Should recommend readiness cut for low readiness")
-        XCTAssertEqual(benchPlan.direction, .decreaseSlightly, "Direction should be decreaseSlightly for low readiness")
+        XCTAssertEqual(benchPlan.direction, .hold, "Low readiness (single day) should hold load (volume cut only)")
         
-        // Load should be slightly reduced (2.5-5% acute readiness cut), not full deload reduction
-        // Original: 100 lb, with ~2.5-4% cut depending on experience
-        let maxExpectedLoad = 100.0 * 0.98 // At most 2% cut for beginners
-        let minExpectedLoad = 100.0 * 0.95 // At least 5% cut for elite
-        XCTAssertGreaterThanOrEqual(benchPlan.sets[0].targetLoad.value, minExpectedLoad - 1, "Load should not be reduced more than 5%")
-        XCTAssertLessThanOrEqual(benchPlan.sets[0].targetLoad.value, maxExpectedLoad + 1, "Load should be reduced at least slightly")
+        // V10 readiness behavior: hold load but reduce volume (-1 set).
+        XCTAssertEqual(benchPlan.sets.count, 4, "Readiness cut should reduce volume by 1 set")
+        XCTAssertEqual(benchPlan.sets[0].targetLoad.value, 100.0, accuracy: 0.001, "Load should be held at baseline for single-day low readiness")
         assertRounded(benchPlan.sets[0].targetLoad, policy: .standardPounds)
     }
     

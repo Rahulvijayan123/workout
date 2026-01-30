@@ -1,56 +1,65 @@
 ================================================================================
-V6 REPLAY DETAILED DIAGNOSTICS @ 2026-01-27T22:05:15Z
+V6 REPLAY DETAILED DIAGNOSTICS @ 2026-01-30T22:06:52Z
 ================================================================================
 
 SUMMARY:
   sessions=308 mainLiftPrescriptions=560
-  Load Agreement: 209/560 = 37.3%
-  Decision Agreement: 392/560 = 70.0%
-  MAE: 15.13 lb
+  Load Agreement: 203/560 = 36.2%
+  Decision Agreement: 311/560 = 55.5%
+  MAE: 15.41 lb
 
 --------------------------------------------------------------------------------
 DECISION CONFUSION MATRIX (rows=expected, cols=predicted):
       exp\pred        deload          hold      increasedecrease_small
-        deload            57             6             0            21
-          hold             4           185             0            49
-      increase             0            10             0             4
-decrease_small             4            70             0           150
+        deload            57             5             1            21
+          hold             4            94            91            49
+      increase             0             0            10             4
+decrease_small             4            63             7           150
 
 --------------------------------------------------------------------------------
 TOP MISMATCH PAIRS (exp→pred:engineReason):
+  91x  hold→increase:successful_progression
   36x  decrease_small→hold:acute_low_readiness_single_day
-  30x  decrease_small→hold:consolidating
   25x  hold→decrease_small:low_readiness_acute
   24x  hold→decrease_small:minor_fatigue_signal
+  23x  decrease_small→hold:consolidating
   11x  deload→decrease_small:low_readiness_acute
   10x  deload→decrease_small:minor_fatigue_signal
-  10x  increase→hold:consolidating
-  5x  deload→hold:consolidating
+  7x  decrease_small→increase:successful_progression
   4x  hold→deload:fail_streak_threshold
   4x  decrease_small→hold:insufficient_data
   4x  decrease_small→deload:fail_streak_threshold
+  4x  deload→hold:consolidating
   2x  increase→decrease_small:minor_fatigue_signal
   2x  increase→decrease_small:low_readiness_acute
-  1x  deload→hold:acute_low_readiness_single_day
+  1x  deload→increase:successful_progression
 
 --------------------------------------------------------------------------------
 BUCKETS BY LIFT:
-  squat: n=163 dec=75.5% load=47.2% mae=11.5lb
-  bench: n=164 dec=68.9% load=26.2% mae=17.4lb
-  deadlift: n=137 dec=69.3% load=31.4% mae=19.4lb
-  ohp: n=96 dec=63.5% load=47.9% mae=11.3lb
+  squat: n=163 dec=57.1% load=48.5% mae=11.8lb
+  bench: n=164 dec=56.7% load=22.6% mae=17.7lb
+  deadlift: n=137 dec=55.5% load=32.8% mae=19.8lb
+  ohp: n=96 dec=51.0% load=43.8% mae=11.6lb
 
 --------------------------------------------------------------------------------
 PER-USER BUCKETS:
-  U601: n=72 dec=86.1% load=63.9% mae=5.0lb
-  U602: n=84 dec=81.0% load=75.0% mae=2.1lb
-  U603: n=96 dec=63.5% load=34.4% mae=13.5lb
-  U604: n=98 dec=57.1% load=31.6% mae=11.7lb
-  U605: n=112 dec=71.4% load=9.8% mae=27.2lb
-  U606: n=98 dec=66.3% load=25.5% mae=25.0lb
+  U601: n=72 dec=54.2% load=58.3% mae=5.8lb
+  U602: n=84 dec=33.3% load=72.6% mae=2.8lb
+  U603: n=96 dec=63.5% load=33.3% mae=13.6lb
+  U604: n=98 dec=48.0% load=32.7% mae=11.8lb
+  U605: n=112 dec=65.2% load=9.8% mae=27.3lb
+  U606: n=98 dec=64.3% load=25.5% mae=25.2lb
 
 --------------------------------------------------------------------------------
 SAMPLE MISMATCHES (up to 50):
+  U601 2025-09-08 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=135.0lb pred=137.5lb err=2.5lb readiness=75
+  U601 2025-09-12 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=135.0lb pred=137.5lb err=2.5lb readiness=70
   U601 2025-09-15 FB_A lift=squat
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
@@ -59,6 +68,30 @@ SAMPLE MISMATCHES (up to 50):
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
     weight: exp=87.5lb pred=92.5lb err=5.0lb readiness=60
+  U601 2025-09-17 FB_B lift=deadlift
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=152.5lb pred=155.0lb err=2.5lb readiness=70
+  U601 2025-09-17 FB_B lift=ohp
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=50.0lb pred=52.5lb err=2.5lb readiness=70
+  U601 2025-09-26 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=127.5lb pred=130.0lb err=2.5lb readiness=75
+  U601 2025-09-26 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=87.5lb pred=92.5lb err=5.0lb readiness=75
+  U601 2025-09-29 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=127.5lb pred=130.0lb err=2.5lb readiness=80
+  U601 2025-09-29 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=87.5lb pred=92.5lb err=5.0lb readiness=80
   U601 2025-10-01 FB_B lift=deadlift
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
@@ -67,6 +100,14 @@ SAMPLE MISMATCHES (up to 50):
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
     weight: exp=47.5lb pred=50.0lb err=2.5lb readiness=60
+  U601 2025-10-27 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=107.5lb pred=110.0lb err=2.5lb readiness=70
+  U601 2025-10-27 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=75.0lb pred=85.0lb err=10.0lb readiness=70
   U601 2025-10-29 FB_B lift=deadlift
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
@@ -83,6 +124,30 @@ SAMPLE MISMATCHES (up to 50):
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
     weight: exp=70.0lb pred=80.0lb err=10.0lb readiness=50
+  U601 2025-11-07 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=102.5lb pred=105.0lb err=2.5lb readiness=70
+  U601 2025-11-07 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=70.0lb pred=82.5lb err=12.5lb readiness=70
+  U601 2025-11-10 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=102.5lb pred=105.0lb err=2.5lb readiness=70
+  U601 2025-11-10 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=70.0lb pred=80.0lb err=10.0lb readiness=70
+  U601 2025-11-12 FB_B lift=deadlift
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=127.5lb pred=130.0lb err=2.5lb readiness=70
+  U601 2025-11-12 FB_B lift=ohp
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=45.0lb pred=50.0lb err=5.0lb readiness=70
   U601 2025-11-14 FB_A lift=squat
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
@@ -91,6 +156,50 @@ SAMPLE MISMATCHES (up to 50):
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
     weight: exp=67.5lb pred=75.0lb err=7.5lb readiness=40
+  U601 2025-11-19 FB_B lift=deadlift
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=127.5lb pred=130.0lb err=2.5lb readiness=70
+  U601 2025-11-19 FB_B lift=ohp
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=45.0lb pred=50.0lb err=5.0lb readiness=70
+  U601 2025-11-28 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=97.5lb pred=100.0lb err=2.5lb readiness=70
+  U601 2025-11-28 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=67.5lb pred=77.5lb err=10.0lb readiness=70
+  U601 2025-12-01 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=97.5lb pred=100.0lb err=2.5lb readiness=85
+  U601 2025-12-01 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=67.5lb pred=75.0lb err=7.5lb readiness=85
+  U601 2025-12-03 FB_B lift=deadlift
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=127.5lb pred=130.0lb err=2.5lb readiness=70
+  U602 2025-09-05 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=105.0lb pred=106.2lb err=1.2lb readiness=85
+  U602 2025-09-05 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=72.5lb pred=73.8lb err=1.2lb readiness=85
+  U602 2025-09-08 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=105.0lb pred=106.2lb err=1.2lb readiness=75
+  U602 2025-09-08 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=72.5lb pred=73.8lb err=1.2lb readiness=75
   U602 2025-09-10 FB_B lift=deadlift
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
@@ -107,147 +216,39 @@ SAMPLE MISMATCHES (up to 50):
     exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
     engine: dir=hold reason=acute_low_readiness_single_day
     weight: exp=68.8lb pred=72.5lb err=3.8lb readiness=60
-  U602 2025-09-22 FB_A lift=bench
-    exp=increase(increase_after_exceeding_reps_target) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=71.2lb pred=71.2lb err=0.0lb readiness=70
-  U602 2025-10-08 FB_B lift=deadlift
-    exp=increase(increase_after_exceeding_reps_target) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=121.2lb pred=117.5lb err=3.8lb readiness=80
-  U602 2025-10-08 FB_B lift=ohp
-    exp=increase(increase_after_exceeding_reps_target) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=46.2lb pred=45.0lb err=1.2lb readiness=80
-  U602 2025-10-29 FB_B lift=deadlift
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
-    engine: dir=hold reason=acute_low_readiness_single_day
-    weight: exp=115.0lb pred=121.2lb err=6.2lb readiness=45
-  U602 2025-10-29 FB_B lift=ohp
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
-    engine: dir=hold reason=acute_low_readiness_single_day
-    weight: exp=45.0lb pred=46.2lb err=1.2lb readiness=45
-  U602 2025-10-31 FB_A lift=squat
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
-    engine: dir=hold reason=acute_low_readiness_single_day
-    weight: exp=95.0lb pred=100.0lb err=5.0lb readiness=30
-  U602 2025-10-31 FB_A lift=bench
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
-    engine: dir=hold reason=acute_low_readiness_single_day
-    weight: exp=67.5lb pred=71.2lb err=3.8lb readiness=30
-  U602 2025-11-07 FB_A lift=squat
-    exp=increase(increase_after_exceeding_reps_target) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=101.2lb pred=97.5lb err=3.8lb readiness=70
-  U602 2025-11-12 FB_B lift=deadlift
-    exp=increase(increase_after_exceeding_reps_target) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=122.5lb pred=118.8lb err=3.8lb readiness=80
-  U602 2025-11-17 FB_A lift=bench
-    exp=deload(fatigue_deload_after_streak) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=61.2lb pred=68.8lb err=7.5lb readiness=90
-  U602 2025-11-28 FB_A lift=bench
-    exp=increase(increase_after_exceeding_reps_target) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=63.8lb pred=65.0lb err=1.2lb readiness=80
-  U602 2025-12-03 FB_B lift=ohp
-    exp=increase(increase_after_exceeding_reps_target) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=46.2lb pred=46.2lb err=0.0lb readiness=90
-  U603 2025-09-01 UpperA lift=bench
-    exp=decrease_small(e1rm_percent_table_and_readiness_cut) pred=hold
-    engine: dir=hold reason=acute_low_readiness_single_day
-    weight: exp=177.5lb pred=180.0lb err=2.5lb readiness=20
-  U603 2025-09-04 UpperB lift=ohp
-    exp=decrease_small(e1rm_percent_table_and_readiness_cut) pred=hold
-    engine: dir=hold reason=acute_low_readiness_single_day
-    weight: exp=120.0lb pred=120.0lb err=0.0lb readiness=30
-  U603 2025-09-11 UpperB lift=ohp
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=acute_low_readiness_single_day
-    weight: exp=112.5lb pred=120.0lb err=7.5lb readiness=30
-  U603 2025-09-12 LowerB lift=deadlift
-    exp=deload(fatigue_deload_after_streak) pred=decrease_small
-    engine: dir=decrease_slightly reason=low_readiness_acute
-    weight: exp=252.5lb pred=272.5lb err=20.0lb readiness=60
-  U603 2025-09-12 LowerB lift=squat
-    exp=deload(fatigue_deload_after_streak) pred=decrease_small
-    engine: dir=decrease_slightly reason=low_readiness_acute
-    weight: exp=202.5lb pred=202.5lb err=0.0lb readiness=60
-  U603 2025-09-15 UpperA lift=bench
-    exp=decrease_small(single_grind_or_miss_2p5pct) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=142.5lb pred=177.5lb err=35.0lb readiness=55
-  U603 2025-09-25 UpperB lift=ohp
-    exp=deload(fatigue_deload_after_streak) pred=decrease_small
-    engine: dir=decrease_slightly reason=low_readiness_acute
-    weight: exp=95.0lb pred=117.5lb err=22.5lb readiness=30
-  U603 2025-09-29 UpperA lift=bench
-    exp=deload(fatigue_deload_after_streak) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=105.0lb pred=167.5lb err=62.5lb readiness=30
-  U603 2025-10-09 UpperB lift=ohp
-    exp=decrease_small(single_grind_or_miss_2p5pct) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=85.0lb pred=87.5lb err=2.5lb readiness=70
-  U603 2025-10-09 UpperB lift=bench
-    exp=deload(fatigue_deload_after_streak) pred=decrease_small
-    engine: dir=decrease_slightly reason=minor_fatigue_signal
-    weight: exp=80.0lb pred=132.5lb err=52.5lb readiness=70
-  U603 2025-10-13 UpperA lift=bench
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=75.0lb pred=132.5lb err=57.5lb readiness=35
-  U603 2025-10-16 UpperB lift=ohp
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=80.0lb pred=85.0lb err=5.0lb readiness=25
-  U603 2025-10-17 LowerB lift=deadlift
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=120.0lb pred=127.5lb err=7.5lb readiness=30
-  U603 2025-10-17 LowerB lift=squat
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=92.5lb pred=97.5lb err=5.0lb readiness=30
-  U603 2025-10-27 UpperA lift=bench
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=75.0lb pred=95.0lb err=20.0lb readiness=20
-  U603 2025-10-28 LowerA lift=squat
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=deload
-    engine: dir=deload reason=fail_streak_threshold
-    weight: exp=112.5lb pred=102.5lb err=10.0lb readiness=25
-  U603 2025-10-28 LowerA lift=deadlift
-    exp=decrease_small(hold_at_target_or_uncertain_and_readiness_cut) pred=deload
-    engine: dir=deload reason=fail_streak_threshold
-    weight: exp=140.0lb pred=122.5lb err=17.5lb readiness=25
-  U603 2025-10-30 UpperB lift=ohp
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=80.0lb pred=80.0lb err=0.0lb readiness=25
-  U603 2025-10-30 UpperB lift=bench
-    exp=deload(fatigue_deload_after_streak) pred=decrease_small
-    engine: dir=decrease_slightly reason=minor_fatigue_signal
-    weight: exp=67.5lb pred=95.0lb err=27.5lb readiness=25
-  U603 2025-10-31 LowerB lift=deadlift
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=130.0lb pred=140.0lb err=10.0lb readiness=25
-  U603 2025-11-07 LowerB lift=deadlift
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=120.0lb pred=125.0lb err=5.0lb readiness=40
-  U603 2025-11-10 UpperA lift=bench
-    exp=decrease_small(single_grind_or_miss_2p5pct_and_readiness_cut) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=57.5lb pred=95.0lb err=37.5lb readiness=20
-  U603 2025-11-11 LowerA lift=squat
-    exp=deload(fatigue_deload_after_streak) pred=decrease_small
-    engine: dir=decrease_slightly reason=minor_fatigue_signal
-    weight: exp=87.5lb pred=87.5lb err=0.0lb readiness=30
-  U603 2025-11-13 UpperB lift=ohp
-    exp=deload(fatigue_deload_after_streak) pred=hold
-    engine: dir=hold reason=consolidating
-    weight: exp=65.0lb pred=80.0lb err=15.0lb readiness=20
+  U602 2025-09-15 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=68.8lb pred=73.8lb err=5.0lb readiness=80
+  U602 2025-09-17 FB_B lift=deadlift
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=113.8lb pred=115.0lb err=1.2lb readiness=90
+  U602 2025-09-19 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=68.8lb pred=72.5lb err=3.8lb readiness=90
+  U602 2025-09-22 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=100.0lb pred=101.2lb err=1.2lb readiness=70
+  U602 2025-09-24 FB_B lift=deadlift
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=113.8lb pred=115.0lb err=1.2lb readiness=75
+  U602 2025-09-24 FB_B lift=ohp
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=45.0lb pred=46.2lb err=1.2lb readiness=75
+  U602 2025-09-26 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=100.0lb pred=101.2lb err=1.2lb readiness=70
+  U602 2025-09-26 FB_A lift=bench
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=71.2lb pred=72.5lb err=1.2lb readiness=70
+  U602 2025-09-29 FB_A lift=squat
+    exp=hold(hold_at_target_or_uncertain) pred=increase
+    engine: dir=increase reason=successful_progression
+    weight: exp=100.0lb pred=101.2lb err=1.2lb readiness=70

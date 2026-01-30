@@ -211,7 +211,8 @@ final class PolicyAndSessionIdentityTests: XCTestCase {
             XCTAssertEqual(entry.executedActionProbability, expectedProbability, accuracy: 0.001)
             XCTAssertEqual(entry.explorationMode, "explore")
             XCTAssertEqual(entry.shadowPolicyId, "shadow_conservative")
-            XCTAssertEqual(entry.shadowActionProbability, 0.33, accuracy: 0.001)
+            XCTAssertNotNil(entry.shadowActionProbability)
+            XCTAssertEqual(entry.shadowActionProbability ?? 0, 0.33, accuracy: 0.001)
             
             // Check tags
             XCTAssertTrue(entry.tags.contains("policy=\(expectedPolicyId)"))
@@ -341,15 +342,15 @@ final class PolicyAndSessionIdentityTests: XCTestCase {
     
     private func createTestUserProfile() -> UserProfile {
         UserProfile(
+            id: "test-user",
             sex: .male,
-            bodyweightKg: 80,
-            bodyweightLbs: 176,
             experience: .intermediate,
-            goal: .strength,
-            trainingFrequencyPerWeek: 4,
-            equipmentAvailability: .fullGym,
-            birthDate: nil,
-            stableId: "test-user"
+            goals: [.strength],
+            weeklyFrequency: 4,
+            availableEquipment: .commercialGym,
+            preferredUnit: .pounds,
+            bodyWeight: .pounds(176),
+            age: 30
         )
     }
     
@@ -358,9 +359,9 @@ final class PolicyAndSessionIdentityTests: XCTestCase {
             id: "test-bench-press",
             name: "Bench Press",
             equipment: .barbell,
-            movementPattern: .horizontalPush,
             primaryMuscles: [.chest],
-            secondaryMuscles: [.triceps, .shoulders]
+            secondaryMuscles: [.triceps, .shoulders],
+            movementPattern: .horizontalPush
         )
         
         let templateExercise = TemplateExercise(
@@ -369,25 +370,25 @@ final class PolicyAndSessionIdentityTests: XCTestCase {
                 setCount: 3,
                 targetRepsRange: 8...12,
                 targetRIR: 2,
+                tempo: .standard,
                 restSeconds: 120,
+                loadStrategy: .absolute,
                 increment: .pounds(5)
             ),
-            progressionPolicy: .doubleProgression(DoubleProgressionConfig()),
             order: 0
         )
         
         let template = WorkoutTemplate(
-            id: UUID(),
             name: "Test Workout",
             exercises: [templateExercise]
         )
         
         return TrainingPlan(
-            id: "test-plan",
             name: "Test Plan",
             templates: [template.id: template],
-            schedule: .fixed(templateIds: [template.id]),
-            loadRoundingPolicy: .fivePound
+            schedule: .rotation(order: [template.id]),
+            progressionPolicies: [exercise.id: .doubleProgression(config: .default)],
+            loadRoundingPolicy: .standardPounds
         )
     }
 }

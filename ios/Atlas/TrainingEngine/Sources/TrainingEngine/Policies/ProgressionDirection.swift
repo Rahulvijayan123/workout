@@ -1055,7 +1055,9 @@ public enum DirectionPolicy {
         )
         checks.append(effortAtLimitCheck)
         
-        if effortAtTargetLimit && allInRange && !sessionWasEasyByRIR {
+        // If reps are already at the top of the range, "at target effort" should NOT block
+        // progression; otherwise fixed-rep and top-of-range scenarios can stall forever.
+        if effortAtTargetLimit && allInRange && !sessionWasEasyByRIR && !allAtTop {
             return (DirectionDecision(
                 direction: .hold,
                 primaryReason: .consolidating,
@@ -1144,6 +1146,38 @@ public enum DirectionPolicy {
                 direction: .increase,
                 primaryReason: .allRepsAtTop,
                 explanation: "All sets at top of rep range (\(repRange.upperBound)+ reps). Ready to increase load."
+            ), checks)
+        }
+        
+        // Fixed-rep progression (LP-style).
+        //
+        // For fixed-rep prescriptions (e.g., 5x5), it is normal to increase load when the lifter
+        // meets the rep targets at (or better than) the intended effort, even if RIR is exactly on target.
+        // Without this, fixed-rep programs can stall indefinitely because "easyByRIR" is rarely true.
+        let isAdvancedUpperBodyPressForFixedRep =
+            signals.isUpperBodyPress && (signals.experienceLevel == .advanced || signals.experienceLevel == .elite)
+        
+        let fixedRepProgressionTriggered =
+            isFixedRepRange &&
+            allInRange &&
+            !signals.isIsolation &&
+            !sessionWasHarderThanTarget &&
+            !isAdvancedUpperBodyPressForFixedRep
+        
+        let fixedRepProgressionCheck = PolicyCheckResult(
+            checkName: "fixed_rep_progression",
+            triggered: fixedRepProgressionTriggered,
+            condition: "fixedRepRange AND allInRange AND NOT isolation AND NOT harderThanTargetRIR AND NOT advancedUpperBodyPress",
+            observed: "fixed=\(isFixedRepRange) allInRange=\(allInRange) isIsolation=\(signals.isIsolation) advancedUpperPress=\(isAdvancedUpperBodyPressForFixedRep) observedRIR=\(observedRIR.map { String(format: "%.1f", $0) } ?? "nil") target=\(targetRIR)",
+            wouldProduce: .increase
+        )
+        checks.append(fixedRepProgressionCheck)
+        
+        if fixedRepProgressionTriggered {
+            return (DirectionDecision(
+                direction: .increase,
+                primaryReason: .successfulProgression,
+                explanation: "Fixed-rep prescription met at target effort. Increase load (LP-style progression)."
             ), checks)
         }
         

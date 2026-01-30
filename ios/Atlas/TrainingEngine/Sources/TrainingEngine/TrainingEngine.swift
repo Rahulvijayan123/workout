@@ -2,6 +2,7 @@
 // Pure Swift module for deterministic workout progression, deload, and substitutions.
 
 import Foundation
+import CryptoKit
 
 // MARK: - Session Planning Context (for logging)
 
@@ -33,6 +34,48 @@ public struct SessionPlanningContext {
 /// Note: Named `Engine` (not `TrainingEngine`) to avoid shadowing the module name.
 public enum Engine {
     
+    // MARK: - Deterministic Session IDs
+    
+    /// Namespace UUID used for deterministic, name-based session IDs when callers do not provide a planningContext.
+    ///
+    /// Rationale:
+    /// - Many tests assert that `recommendSession` is deterministic for identical inputs.
+    /// - When no `planningContext` is provided, we still want stable IDs across repeated calls.
+    /// - App callers that need a *fresh* ID per plan materialization should pass an explicit planningContext.
+    private static let defaultSessionIdNamespace = UUID(uuidString: "0F5C7A4E-8F7A-4B3B-A6D6-6B5C9D1C2E3F")!
+    
+    /// Generates a deterministic UUID from a namespace + name (v5-style over SHA256).
+    private static func deterministicUUID(namespace: UUID, name: String) -> UUID {
+        var data = Data()
+        var ns = namespace.uuid
+        withUnsafeBytes(of: &ns) { data.append(contentsOf: $0) }
+        data.append(contentsOf: name.utf8)
+        
+        let digest = SHA256.hash(data: data)
+        var bytes = Array(digest.prefix(16))
+        
+        // RFC 4122 variant + "name-based" version nibble (v5-style).
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+    
+    /// Returns a deterministic sessionId when the caller did not supply one.
+    private static func defaultSessionId(userId: String, date: Date) -> UUID {
+        // Use the absolute timestamp to avoid timezone-dependent formatting.
+        let seconds = Int(date.timeIntervalSince1970)
+        return deterministicUUID(
+            namespace: defaultSessionIdNamespace,
+            name: "session:\(userId):\(seconds)"
+        )
+    }
+    
     /// Recommends a session plan for the given date based on user profile, plan, history, and readiness.
     ///
     /// - Parameters:
@@ -55,9 +98,12 @@ public enum Engine {
         planningContext: SessionPlanningContext? = nil,
         policySelectionProvider: PolicySelectionProvider? = nil
     ) -> SessionPlan {
+        let effectiveUserId = planningContext?.userId ?? userProfile.id
+        let effectiveSessionId = planningContext?.sessionId ?? defaultSessionId(userId: effectiveUserId, date: date)
+        
         let context = SessionPlanningContext(
-            sessionId: planningContext?.sessionId ?? UUID(),
-            userId: planningContext?.userId ?? "anonymous",
+            sessionId: effectiveSessionId,
+            userId: effectiveUserId,
             sessionDate: date,
             isPlannedDeloadWeek: plannedDeloadWeek,
             calendar: calendar
@@ -110,9 +156,12 @@ public enum Engine {
         policySelectionProvider: PolicySelectionProvider? = nil
     ) -> SessionPlan {
         
+        let effectiveUserId = planningContext?.userId ?? userProfile.id
+        let effectiveSessionId = planningContext?.sessionId ?? defaultSessionId(userId: effectiveUserId, date: date)
+        
         let context = SessionPlanningContext(
-            sessionId: planningContext?.sessionId ?? UUID(),
-            userId: planningContext?.userId ?? "anonymous",
+            sessionId: effectiveSessionId,
+            userId: effectiveUserId,
             sessionDate: date,
             isPlannedDeloadWeek: plannedDeloadWeek,
             calendar: calendar
