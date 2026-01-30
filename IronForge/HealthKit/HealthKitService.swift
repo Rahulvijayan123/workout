@@ -859,4 +859,3 @@ struct SleepStagesBreakdown: Sendable {
         return remMinutes / totalAsleepMinutes * 100
     }
 }
-

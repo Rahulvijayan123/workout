@@ -54,6 +54,11 @@ private struct WorkoutsDashboardView: View {
     
     @State private var selectedSession: WorkoutSession?
     
+    // Pre-workout check-in state
+    @State private var showingPreWorkoutCheckIn = false
+    @State private var pendingTemplate: WorkoutTemplate?
+    @State private var pendingSession: WorkoutSession?
+    
     private var recentBiometrics: [DailyBiometrics] {
         Array(dailyBiometrics.suffix(60))
     }
@@ -177,13 +182,29 @@ private struct WorkoutsDashboardView: View {
                 VStack(spacing: 12) {
                     ForEach(workoutStore.templates) { template in
                         TemplateListCard(template: template) {
+                            // Create a pending session for check-in
                             let readiness = ReadinessScoreCalculator.todayScore(from: recentBiometrics) ?? 75
-                            workoutStore.startSession(
-                                from: template,
+                            pendingTemplate = template
+                            // Pre-create session so check-in can modify it
+                            let sessionPlan = TrainingEngineBridge.recommendSessionForTemplate(
+                                date: Date(),
+                                templateId: template.id,
                                 userProfile: appState.userProfile,
+                                templates: workoutStore.templates,
+                                sessions: workoutStore.sessions,
+                                liftStates: workoutStore.exerciseStates,
                                 readiness: readiness,
                                 dailyBiometrics: recentBiometrics
                             )
+                            pendingSession = TrainingEngineBridge.convertSessionPlanToUIModel(
+                                sessionPlan,
+                                templateId: template.id,
+                                templateName: template.name,
+                                computedReadinessScore: readiness,
+                                exerciseStates: workoutStore.exerciseStates,
+                                sessions: workoutStore.sessions
+                            )
+                            showingPreWorkoutCheckIn = true
                         } onEdit: {
                             onEditTemplate(template)
                         }
@@ -214,6 +235,40 @@ private struct WorkoutsDashboardView: View {
         }
         .sheet(item: $selectedSession) { session in
             SessionDetailView(session: session)
+        }
+        .sheet(isPresented: $showingPreWorkoutCheckIn) {
+            if var session = pendingSession {
+                PreWorkoutCheckInSheet(
+                    session: Binding(
+                        get: { session },
+                        set: { session = $0 }
+                    ),
+                    neonPurple: .ironPurple,
+                    onStart: {
+                        // Apply check-in data and start session
+                        workoutStore.activeSession = session
+                        workoutStore.saveActiveSession()
+                        showingPreWorkoutCheckIn = false
+                        pendingTemplate = nil
+                        pendingSession = nil
+                    },
+                    onCancel: {
+                        // Skip check-in, start session without data
+                        if let template = pendingTemplate {
+                            let readiness = ReadinessScoreCalculator.todayScore(from: recentBiometrics) ?? 75
+                            workoutStore.startSession(
+                                from: template,
+                                userProfile: appState.userProfile,
+                                readiness: readiness,
+                                dailyBiometrics: recentBiometrics
+                            )
+                        }
+                        showingPreWorkoutCheckIn = false
+                        pendingTemplate = nil
+                        pendingSession = nil
+                    }
+                )
+            }
         }
     }
 }
@@ -1491,12 +1546,19 @@ private struct WorkoutSessionView: View {
                 workoutStore: workoutStore
             )
         }
-        .confirmationDialog("Finish workout?", isPresented: $showingFinishConfirm, titleVisibility: .visible) {
-            Button("Finish & Save", role: .none) {
-                workoutStore.updateActiveSession(session)
-                workoutStore.finishActiveSession()
-            }
-            Button("Keep Logging", role: .cancel) {}
+        .sheet(isPresented: $showingFinishConfirm) {
+            PostWorkoutSummarySheet(
+                session: $session,
+                neonPurple: .ironPurple,
+                onFinish: {
+                    workoutStore.updateActiveSession(session)
+                    workoutStore.finishActiveSession()
+                    showingFinishConfirm = false
+                },
+                onCancel: {
+                    showingFinishConfirm = false
+                }
+            )
         }
         .onChange(of: session) { _, newValue in
             workoutStore.updateActiveSession(newValue)
@@ -2567,6 +2629,583 @@ private struct PremiumSetRow: View {
     }
 }
 
+
+// MARK: - Pre-Workout Check-In (ML Data Collection)
+/// Quick check-in before starting a workout to capture baseline state.
+/// Critical for ML model to understand context and adjust expectations.
+struct PreWorkoutCheckInSheet: View {
+    @Binding var session: WorkoutSession
+    let neonPurple: Color
+    let onStart: () -> Void
+    let onCancel: () -> Void
+    
+    @State private var readiness: Int = 3
+    @State private var soreness: Int = 0
+    @State private var energy: Int = 3
+    @State private var motivation: Int = 3
+    @State private var sleepQuality: Int = 3
+    @State private var sleepHours: Double = 7.0
+    @State private var wasFasted: Bool = false
+    
+    // Life stress flags
+    @State private var hasIllness: Bool = false
+    @State private var hasTravel: Bool = false
+    @State private var hasWorkStress: Bool = false
+    @State private var hadPoorSleep: Bool = false
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 8) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.system(size: 40, weight: .semibold))
+                            .foregroundColor(neonPurple)
+                        
+                        Text("PRE-WORKOUT CHECK-IN")
+                            .font(.system(size: 20, weight: .bold))
+                            .tracking(2)
+                            .foregroundColor(.white)
+                        
+                        Text("Quick check helps optimize your workout")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    .padding(.top, 20)
+                    
+                    // Readiness (1-5)
+                    RatingRow(
+                        title: "READINESS",
+                        subtitle: "How ready do you feel to train?",
+                        value: $readiness,
+                        range: 1...5,
+                        labels: ["Awful", "Poor", "Okay", "Good", "Great"],
+                        color: neonPurple
+                    )
+                    
+                    // Soreness (0-10)
+                    RatingRow(
+                        title: "MUSCLE SORENESS",
+                        subtitle: "Overall soreness level",
+                        value: $soreness,
+                        range: 0...10,
+                        labels: nil,
+                        color: Color.orange
+                    )
+                    
+                    // Energy (1-5)
+                    RatingRow(
+                        title: "ENERGY LEVEL",
+                        subtitle: "Physical energy right now",
+                        value: $energy,
+                        range: 1...5,
+                        labels: ["Exhausted", "Low", "Normal", "Good", "High"],
+                        color: Color.green
+                    )
+                    
+                    // Motivation (1-5)
+                    RatingRow(
+                        title: "MOTIVATION",
+                        subtitle: "Mental drive to train",
+                        value: $motivation,
+                        range: 1...5,
+                        labels: ["None", "Low", "Okay", "High", "Max"],
+                        color: Color.cyan
+                    )
+                    
+                    Divider().background(Color.white.opacity(0.1))
+                    
+                    // Sleep last night
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("LAST NIGHT'S SLEEP")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(1.5)
+                            .foregroundColor(.white.opacity(0.5))
+                        
+                        HStack(spacing: 16) {
+                            // Hours
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Hours")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.6))
+                                
+                                HStack {
+                                    Text(String(format: "%.1f", sleepHours))
+                                        .font(.system(size: 24, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.white)
+                                    
+                                    Stepper("", value: $sleepHours, in: 0...14, step: 0.5)
+                                        .labelsHidden()
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            // Quality
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Quality (1-5)")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.6))
+                                
+                                HStack(spacing: 6) {
+                                    ForEach(1...5, id: \.self) { val in
+                                        Button {
+                                            sleepQuality = val
+                                        } label: {
+                                            Circle()
+                                                .fill(sleepQuality >= val ? Color.indigo : Color.white.opacity(0.1))
+                                                .frame(width: 28, height: 28)
+                                                .overlay(
+                                                    Text("\(val)")
+                                                        .font(.system(size: 12, weight: .bold))
+                                                        .foregroundColor(sleepQuality >= val ? .white : .white.opacity(0.4))
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                    
+                    // Life stress flags
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("ANY SPECIAL CIRCUMSTANCES?")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(1.5)
+                            .foregroundColor(.white.opacity(0.5))
+                        
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            StressToggle(label: "Illness/Sick", icon: "pills.fill", isOn: $hasIllness)
+                            StressToggle(label: "Traveling", icon: "airplane", isOn: $hasTravel)
+                            StressToggle(label: "Work Stress", icon: "briefcase.fill", isOn: $hasWorkStress)
+                            StressToggle(label: "Poor Sleep", icon: "moon.zzz.fill", isOn: $hadPoorSleep)
+                        }
+                        
+                        // Fasted toggle
+                        HStack {
+                            Image(systemName: "fork.knife")
+                                .foregroundColor(wasFasted ? neonPurple : .white.opacity(0.4))
+                            Text("Training Fasted")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Toggle("", isOn: $wasFasted)
+                                .labelsHidden()
+                                .tint(neonPurple)
+                        }
+                        .padding(.top, 8)
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                    
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 20)
+            }
+            .background(Color(red: 0.06, green: 0.06, blue: 0.08))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Skip") {
+                        onCancel()
+                    }
+                    .foregroundColor(.white.opacity(0.6))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Start Workout") {
+                        applyToSession()
+                        onStart()
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundColor(neonPurple)
+                }
+            }
+        }
+    }
+    
+    private func applyToSession() {
+        session.preWorkoutReadiness = readiness
+        session.preWorkoutSoreness = soreness
+        session.preWorkoutEnergy = energy
+        session.preWorkoutMotivation = motivation
+        session.sleepQualityLastNight = sleepQuality
+        session.sleepHoursLastNight = sleepHours
+        session.wasFasted = wasFasted
+        session.lifeStressFlags = LifeStressFlags(
+            illness: hasIllness,
+            travel: hasTravel,
+            workStress: hasWorkStress,
+            poorSleep: hadPoorSleep,
+            other: false,
+            notes: nil
+        )
+    }
+}
+
+// MARK: - Post-Workout Summary (ML Data Collection)
+/// Summary screen after finishing a workout to capture session-level feedback.
+/// Critical for ML model to learn from subjective outcomes.
+struct PostWorkoutSummarySheet: View {
+    @Binding var session: WorkoutSession
+    let neonPurple: Color
+    let onFinish: () -> Void
+    let onCancel: () -> Void
+    
+    @State private var sessionRPE: Int = 5
+    @State private var feeling: Int = 3
+    @State private var harderThanExpected: Bool = false
+    @State private var notes: String = ""
+    
+    // Pain tracking
+    @State private var hasPain: Bool = false
+    @State private var painRegion: BodyRegion = .lowerBack
+    @State private var painSeverity: Int = 3
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Summary header
+                    VStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 48, weight: .semibold))
+                            .foregroundColor(neonPurple)
+                        
+                        Text("WORKOUT COMPLETE")
+                            .font(.system(size: 20, weight: .bold))
+                            .tracking(2)
+                            .foregroundColor(.white)
+                        
+                        Text(sessionSummary)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    .padding(.top, 20)
+                    
+                    // Session RPE (1-10) - Most important metric
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("SESSION RPE")
+                                .font(.system(size: 11, weight: .bold))
+                                .tracking(1.5)
+                                .foregroundColor(.white.opacity(0.5))
+                            
+                            Spacer()
+                            
+                            Text("\(sessionRPE)/10")
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .foregroundColor(rpeColor)
+                        }
+                        
+                        Text("How hard was this session overall?")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.4))
+                        
+                        HStack(spacing: 8) {
+                            ForEach(1...10, id: \.self) { val in
+                                Button {
+                                    sessionRPE = val
+                                } label: {
+                                    Text("\(val)")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(sessionRPE == val ? .white : .white.opacity(0.4))
+                                        .frame(width: 28, height: 28)
+                                        .background(
+                                            Circle()
+                                                .fill(sessionRPE == val ? rpeColor : Color.white.opacity(0.05))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        
+                        // RPE labels
+                        HStack {
+                            Text("Easy")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.3))
+                            Spacer()
+                            Text("Maximum")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.3))
+                        }
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(rpeColor.opacity(0.3), lineWidth: 1))
+                    
+                    // Post-workout feeling (1-5)
+                    RatingRow(
+                        title: "HOW DO YOU FEEL?",
+                        subtitle: "Overall state after workout",
+                        value: $feeling,
+                        range: 1...5,
+                        labels: ["Awful", "Bad", "Okay", "Good", "Great"],
+                        color: Color.green
+                    )
+                    
+                    // Harder than expected toggle
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(harderThanExpected ? .orange : .white.opacity(0.4))
+                        Text("Harder than expected")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Toggle("", isOn: $harderThanExpected)
+                            .labelsHidden()
+                            .tint(.orange)
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(12)
+                    
+                    // Pain tracking
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "bandage.fill")
+                                .foregroundColor(hasPain ? .red : .white.opacity(0.4))
+                            Text("Any Pain or Discomfort?")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Toggle("", isOn: $hasPain)
+                                .labelsHidden()
+                                .tint(.red)
+                        }
+                        
+                        if hasPain {
+                            VStack(spacing: 12) {
+                                // Body region picker
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Location")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.5))
+                                    
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(BodyRegion.allCases, id: \.self) { region in
+                                                Button {
+                                                    painRegion = region
+                                                } label: {
+                                                    Text(region.rawValue)
+                                                        .font(.system(size: 11, weight: .medium))
+                                                        .foregroundColor(painRegion == region ? .white : .white.opacity(0.5))
+                                                        .padding(.horizontal, 10)
+                                                        .padding(.vertical, 6)
+                                                        .background(
+                                                            Capsule()
+                                                                .fill(painRegion == region ? Color.red.opacity(0.3) : Color.white.opacity(0.05))
+                                                        )
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Severity (0-10)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text("Severity")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(.white.opacity(0.5))
+                                        Spacer()
+                                        Text("\(painSeverity)/10")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.red)
+                                    }
+                                    
+                                    Slider(value: Binding(
+                                        get: { Double(painSeverity) },
+                                        set: { painSeverity = Int($0) }
+                                    ), in: 1...10, step: 1)
+                                    .tint(.red)
+                                }
+                            }
+                            .padding(.top, 8)
+                        }
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.03))
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(hasPain ? Color.red.opacity(0.3) : Color.white.opacity(0.08), lineWidth: 1))
+                    
+                    // Notes
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("NOTES (OPTIONAL)")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(1.5)
+                            .foregroundColor(.white.opacity(0.5))
+                        
+                        TextField("Anything notable about this session...", text: $notes, axis: .vertical)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white)
+                            .lineLimit(3...5)
+                            .padding(12)
+                            .background(Color.white.opacity(0.03))
+                            .cornerRadius(10)
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                    }
+                    
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 20)
+            }
+            .background(Color(red: 0.06, green: 0.06, blue: 0.08))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                    .foregroundColor(.white.opacity(0.6))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save Workout") {
+                        applyToSession()
+                        onFinish()
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundColor(neonPurple)
+                }
+            }
+        }
+    }
+    
+    private var sessionSummary: String {
+        let exercises = session.exercises.count
+        let sets = session.exercises.reduce(0) { $0 + $1.sets.filter(\.isCompleted).count }
+        let duration = session.startedAt.distance(to: Date())
+        let minutes = Int(duration / 60)
+        return "\(exercises) exercises • \(sets) sets • \(minutes) min"
+    }
+    
+    private var rpeColor: Color {
+        switch sessionRPE {
+        case 1...3: return .green
+        case 4...6: return .yellow
+        case 7...8: return .orange
+        default: return .red
+        }
+    }
+    
+    private func applyToSession() {
+        session.sessionRPE = sessionRPE
+        session.postWorkoutFeeling = feeling
+        session.harderThanExpected = harderThanExpected
+        session.sessionNotes = notes.isEmpty ? nil : notes
+        
+        if hasPain {
+            let painEntry = PainEntry(region: painRegion, severity: painSeverity)
+            session.sessionPainEntries = [painEntry]
+        }
+    }
+}
+
+// MARK: - Helper Views for Check-In/Summary
+
+private struct RatingRow: View {
+    let title: String
+    let subtitle: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let labels: [String]?
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 11, weight: .bold))
+                        .tracking(1.5)
+                        .foregroundColor(.white.opacity(0.5))
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.4))
+                }
+                Spacer()
+                Text("\(value)/\(range.upperBound)")
+                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                    .foregroundColor(color)
+            }
+            
+            HStack(spacing: 8) {
+                ForEach(Array(range), id: \.self) { val in
+                    Button {
+                        value = val
+                    } label: {
+                        VStack(spacing: 4) {
+                            Circle()
+                                .fill(value >= val ? color : Color.white.opacity(0.1))
+                                .frame(width: range.count > 6 ? 24 : 32, height: range.count > 6 ? 24 : 32)
+                                .overlay(
+                                    Text("\(val)")
+                                        .font(.system(size: range.count > 6 ? 10 : 12, weight: .bold))
+                                        .foregroundColor(value >= val ? .white : .white.opacity(0.4))
+                                )
+                            
+                            if let labels = labels, val <= labels.count {
+                                Text(labels[val - 1])
+                                    .font(.system(size: 8, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.3))
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.03))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
+    }
+}
+
+private struct StressToggle: View {
+    let label: String
+    let icon: String
+    @Binding var isOn: Bool
+    
+    var body: some View {
+        Button {
+            isOn.toggle()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(isOn ? .white : .white.opacity(0.4))
+                
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(isOn ? .white : .white.opacity(0.5))
+                
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isOn ? Color.orange.opacity(0.2) : Color.white.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isOn ? Color.orange.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
 
 // MARK: - Modification Reason Sheet (ML Data Collection)
 /// Quick picker for why the user modified the recommended weight/reps.

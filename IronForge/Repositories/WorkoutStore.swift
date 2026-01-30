@@ -93,7 +93,9 @@ final class WorkoutStore: ObservableObject {
                 sessionPlan,
                 templateId: template.id,
                 templateName: template.name,
-                computedReadinessScore: readiness
+                computedReadinessScore: readiness,
+                exerciseStates: exerciseStates,
+                sessions: sessions
             )
         } else {
             // Fallback: seed from template directly (for edge cases)
@@ -153,7 +155,9 @@ final class WorkoutStore: ObservableObject {
                 sessionPlan,
                 templateId: sessionPlan.templateId,
                 templateName: templateName,
-                computedReadinessScore: readiness
+                computedReadinessScore: readiness,
+                exerciseStates: exerciseStates,
+                sessions: sessions
             )
             // Persist active session so user can continue after closing the app
             saveActiveSession()
@@ -217,12 +221,27 @@ final class WorkoutStore: ObservableObject {
         guard var session = activeSession else { return }
         session.endedAt = Date()
         
-        // Mark all exercises with completed sets as completed
+        // Mark all exercises with completed sets as completed and compute outcomes
         for idx in session.exercises.indices {
             var performance = session.exercises[idx]
             let completedSets = performance.sets.filter { $0.isCompleted }
             if !completedSets.isEmpty {
                 performance.isCompleted = true
+                
+                // ML CRITICAL: Compute set outcomes (metRepTarget, metEffortTarget, setOutcome)
+                for setIdx in performance.sets.indices {
+                    var set = performance.sets[setIdx]
+                    if set.isCompleted && !set.isWarmup {
+                        let targetReps = set.recommendedReps ?? performance.repRangeMin
+                        let targetRIR = set.targetRIR ?? performance.targetRIR
+                        set.computeOutcome(targetReps: targetReps, targetRIR: targetRIR)
+                    }
+                    performance.sets[setIdx] = set
+                }
+                
+                // ML CRITICAL: Compute exposure outcomes (exposureOutcome, setsSuccessful, etc.)
+                performance.computeOutcomes()
+                
                 session.exercises[idx] = performance
             }
         }
@@ -278,6 +297,25 @@ final class WorkoutStore: ObservableObject {
         // Clear the persisted active session since workout is complete
         UserDefaults.standard.removeObject(forKey: activeSessionKey)
         
+        // ML CRITICAL: Log outcomes for completed exercises
+        // This links engine decisions to actual performance, enabling training data collection.
+        let teCompletedSession = TrainingEngineBridge.convertCompletedSession(
+            session,
+            previousLiftStates: priorStates
+        )
+        for (idx, result) in teCompletedSession.exerciseResults.enumerated() where !result.workingSets.isEmpty {
+            // Compute execution context based on pain data
+            let performance = session.exercises[idx]
+            let executionContext = computeExecutionContext(for: performance)
+            
+            TrainingEngine.Engine.recordOutcome(
+                sessionId: session.id,
+                exerciseResult: result,
+                readinessScore: session.computedReadinessScore,
+                executionContext: executionContext
+            )
+        }
+        
         // Sync completed session to Supabase
         let completedSession = session
         let currentLiftStates = exerciseStates
@@ -331,7 +369,45 @@ final class WorkoutStore: ObservableObject {
         }
     }
     
+    /// Compute execution context for an exercise based on pain data.
+    ///
+    /// Returns `.injuryDiscomfort` if:
+    /// - `stoppedDueToPain == true`, OR
+    /// - Any `painEntry.severity >= 5`, OR
+    /// - `overallPainLevel >= 5`
+    ///
+    /// Otherwise returns `.normal`.
+    private func computeExecutionContext(for performance: ExercisePerformance) -> TrainingEngine.ExecutionContext {
+        let painThreshold = 5
+        
+        // Check if stopped due to pain
+        if performance.stoppedDueToPain {
+            return .injuryDiscomfort
+        }
+        
+        // Check if any pain entry has severity >= threshold
+        if let painEntries = performance.painEntries,
+           painEntries.contains(where: { $0.severity >= painThreshold }) {
+            return .injuryDiscomfort
+        }
+        
+        // Check if overall pain level >= threshold
+        if let overallPain = performance.overallPainLevel, overallPain >= painThreshold {
+            return .injuryDiscomfort
+        }
+        
+        return .normal
+    }
+    
     func cancelActiveSession() {
+        // ML CRITICAL: Mark session as abandoned so pending decisions don't become orphans
+        if let session = activeSession {
+            TrainingEngine.MLDataCollector.shared.markSessionAbandoned(
+                sessionId: session.id,
+                reason: .userCancelled
+            )
+        }
+        
         activeSession = nil
         // Clear the persisted active session
         UserDefaults.standard.removeObject(forKey: activeSessionKey)

@@ -8,8 +8,28 @@ import Foundation
 /// - Only prompt for labels at high-leverage moments (triggers)
 /// - Link prescriptions to outcomes in next session
 /// - Log all manual overrides for learning
+///
+/// HARD DISABLED:
+/// This system is currently disabled due to internal inconsistencies:
+/// 1. Session IDs: onSessionStart creates a UUID but recordTrajectory uses activeSession?.id (different IDs)
+/// 2. userOverrodePrescription compares actualWeight to prescribedWeight (both are the actual weight after user edit)
+/// 3. Trajectories are keyed by exerciseId but sessions can have duplicate exercises
+/// 4. No stable join keys between trajectories and the canonical ML data path (recommendation_events)
+///
+/// Use the canonical ML data path instead:
+/// - DataSyncService.syncRecommendationEvent() for immutable recommendations
+/// - DataSyncService.syncPlannedSets() for planned prescriptions
+/// - session_exercises/session_sets with outcome fields for performed data
+///
+/// To re-enable pilot telemetry, set isHardDisabled = false after fixing the above issues.
 @MainActor
 final class PilotTelemetryService: ObservableObject {
+    
+    // MARK: - Hard Disable Flag
+    
+    /// Set to false to re-enable pilot telemetry after fixing consistency issues.
+    /// See class documentation for required fixes.
+    private static let isHardDisabled: Bool = true
     
     // MARK: - Published State
     
@@ -39,6 +59,12 @@ final class PilotTelemetryService: ObservableObject {
     
     /// Check if user is enrolled in pilot
     func checkPilotEnrollment() async {
+        // Hard disabled - always report not enrolled
+        guard !Self.isHardDisabled else {
+            isPilotUser = false
+            return
+        }
+        
         guard let userId = userId else {
             isPilotUser = false
             return
@@ -63,6 +89,9 @@ final class PilotTelemetryService: ObservableObject {
         decision: EngineDecision,
         guardrailIntervention: GuardrailIntervention? = nil
     ) {
+        // Hard disabled - no-op
+        guard !Self.isHardDisabled else { return }
+        
         let trajectory = EngineTrajectory(
             id: UUID(),
             userId: userId ?? "unknown",
@@ -149,6 +178,9 @@ final class PilotTelemetryService: ObservableObject {
         userOverrode: Bool = false,
         overrideType: String? = nil
     ) {
+        // Hard disabled - no-op
+        guard !Self.isHardDisabled else { return }
+        
         guard let trajectory = awaitingOutcome[exerciseId] else { return }
         
         let actualWeightKg = actualWeightLbs.poundsToKg()
@@ -360,6 +392,9 @@ final class PilotTelemetryService: ObservableObject {
         reason: OverrideReason,
         notes: String? = nil
     ) {
+        // Hard disabled - no-op
+        guard !Self.isHardDisabled else { return }
+        
         let override = ManualOverride(
             id: UUID(),
             userId: userId ?? "unknown",
@@ -395,6 +430,9 @@ final class PilotTelemetryService: ObservableObject {
         exerciseId: String? = nil,
         exerciseName: String? = nil
     ) {
+        // Hard disabled - no-op
+        guard !Self.isHardDisabled else { return }
+        
         let event = PilotSafetyEvent(
             id: UUID(),
             userId: userId ?? "unknown",
@@ -416,10 +454,14 @@ final class PilotTelemetryService: ObservableObject {
     // MARK: - Session Lifecycle
     
     func onSessionStart(sessionId: UUID) {
+        // Hard disabled - no-op
+        guard !Self.isHardDisabled else { return }
         currentSessionTrajectories.removeAll()
     }
     
     func onSessionEnd(sessionId: UUID) {
+        // Hard disabled - no-op
+        guard !Self.isHardDisabled else { return }
         // Batch upload any remaining trajectories
         // Clear session-specific caches
         currentSessionTrajectories.removeAll()

@@ -338,11 +338,21 @@ enum TrainingEngineBridge {
         }
     }
     
-    static func convertUserProfile(_ profile: UserProfile) -> TEUserProfile {
+    /// Convert IronForge UserProfile to TrainingEngine UserProfile.
+    ///
+    /// - Parameters:
+    ///   - profile: The app-side user profile.
+    ///   - stableUserId: A stable user identifier (e.g., Supabase `auth.users.id` or a persisted local UUID).
+    ///     If nil, falls back to anonymous but this should be avoided for ML data quality.
+    static func convertUserProfile(_ profile: UserProfile, stableUserId: String? = nil) -> TEUserProfile {
         let goals = profile.goals.map { convertGoal($0) }
         
+        // Use provided stable ID, or fall back to the profile's ID if available.
+        // CRITICAL: Never generate a new random UUID here - that breaks user-level learning.
+        let userId = stableUserId ?? profile.id?.uuidString ?? "anonymous"
+        
         return TEUserProfile(
-            id: UUID().uuidString,
+            id: userId,
             sex: convertSex(profile.sex),
             experience: convertExperience(profile.workoutExperience),
             goals: goals.isEmpty ? [.generalFitness] : goals,
@@ -355,6 +365,26 @@ enum TrainingEngineBridge {
             dailyProteinGrams: profile.dailyProteinGrams,
             sleepHours: profile.sleepHours
         )
+    }
+    
+    /// Get a stable user ID for engine calls.
+    /// Prefers Supabase auth user ID when authenticated, otherwise uses a persisted local UUID.
+    static func getStableUserId() -> String {
+        // Check if user is authenticated with Supabase
+        if let supabaseUserId = SupabaseService.shared.currentUserId {
+            return supabaseUserId
+        }
+        
+        // Fall back to a persisted local UUID for offline/anonymous users
+        let localUserIdKey = "ironforge.engine.localUserId"
+        if let existingId = UserDefaults.standard.string(forKey: localUserIdKey) {
+            return existingId
+        }
+        
+        // Generate and persist a new local UUID (only once)
+        let newId = UUID().uuidString
+        UserDefaults.standard.set(newId, forKey: localUserIdKey)
+        return newId
     }
     
     // MARK: - Template Conversion
@@ -792,11 +822,20 @@ enum TrainingEngineBridge {
     
     // MARK: - Session Plan to UI Model Conversion
     
+    /// Convert a TrainingEngine SessionPlan to UI WorkoutSession.
+    ///
+    /// CRITICAL: This method now:
+    /// 1. Uses `sessionPlan.sessionId` as the session ID (stable join key)
+    /// 2. Uses `sessionPlan.date` as the session start time
+    /// 3. Populates ML-critical fields on each set (recommendedWeight, recommendedReps, targetRIR, plannedSetId)
+    /// 4. Populates ML-critical fields on each exercise (recommendationEventId, plannedTopSet*, stateSnapshot)
     static func convertSessionPlanToUIModel(
         _ sessionPlan: TESessionPlan,
         templateId: UUID?,
         templateName: String,
-        computedReadinessScore: Int? = nil
+        computedReadinessScore: Int? = nil,
+        exerciseStates: [String: ExerciseState] = [:],
+        sessions: [WorkoutSession] = []
     ) -> WorkoutSession {
         let exercises = sessionPlan.exercises.map { exercisePlan -> ExercisePerformance in
             let exerciseRef = ExerciseRef(
@@ -807,15 +846,48 @@ enum TrainingEngineBridge {
                 target: exercisePlan.exercise.primaryMuscles.first?.rawValue ?? "unknown"
             )
             
-            let sets = exercisePlan.sets.map { setPlan -> WorkoutSet in
-                WorkoutSet(
+            // Generate a stable recommendationEventId for this exercise prescription
+            let recommendationEventId = UUID()
+            
+            // Find the top set (highest target load) for exercise-level planned fields
+            let topSetPlan = exercisePlan.sets.filter { !$0.isWarmup }.max { $0.targetLoad.value < $1.targetLoad.value }
+            let topSetWeightLbs = topSetPlan?.targetLoad.converted(to: .pounds).value
+            let topSetReps = topSetPlan?.targetReps
+            let topSetRIR = topSetPlan?.targetRIR
+            
+            // Create sets with ML-critical fields populated
+            let sets: [WorkoutSet] = exercisePlan.sets.enumerated().map { (index, setPlan) -> WorkoutSet in
+                let weightLbs = setPlan.targetLoad.converted(to: .pounds).value
+                let plannedSetId = UUID()  // Stable ID for this prescribed set
+                
+                return WorkoutSet(
                     id: UUID(),
                     reps: setPlan.targetReps,
-                    weight: setPlan.targetLoad.converted(to: .pounds).value,
+                    weight: weightLbs,
                     isCompleted: false,
+                    targetRIR: setPlan.targetRIR,
+                    targetRPE: nil,
                     rirObserved: nil,
                     rpeObserved: nil,
+                    completedAt: nil,
+                    actualRestSeconds: nil,
                     isWarmup: setPlan.isWarmup,
+                    isDropSet: false,
+                    isFailure: false,
+                    compliance: nil,
+                    complianceReason: nil,
+                    recommendedWeight: weightLbs,            // ML CRITICAL: Original prescription
+                    recommendedReps: setPlan.targetReps,     // ML CRITICAL: Original prescription
+                    tempoActual: nil,
+                    techniqueLimitations: nil,
+                    isUserModified: false,
+                    originalPrescribedWeight: weightLbs,     // ML CRITICAL: For modification tracking
+                    originalPrescribedReps: setPlan.targetReps,
+                    modificationReason: nil,
+                    setOutcome: nil,
+                    metRepTarget: nil,
+                    metEffortTarget: nil,
+                    plannedSetId: plannedSetId,              // ML CRITICAL: Stable join key
                     notes: nil
                 )
             }
@@ -833,7 +905,44 @@ enum TrainingEngineBridge {
                 }
             }()
             
-            return ExercisePerformance(
+            // Build state snapshot for ML (prevents leakage)
+            let exerciseId = exercisePlan.exercise.id
+            let state = exerciseStates[exerciseId]
+            let lastPerf = sessions.lazy.compactMap { session in
+                session.exercises.first { $0.exercise.id == exerciseId }
+            }.first
+            let daysSinceLast: Int? = {
+                guard let lastDate = state?.updatedAt else { return nil }
+                return Calendar.current.dateComponents([.day], from: lastDate, to: Date()).day
+            }()
+            
+            let stateSnapshot = LiftStateSessionSnapshot.from(
+                state: state,
+                lastPerformance: lastPerf,
+                daysSinceLast: daysSinceLast,
+                daysSinceDeload: state?.lastDeloadAt.flatMap { Calendar.current.dateComponents([.day], from: $0, to: Date()).day },
+                exposuresLast14Days: 0,  // Could compute from sessions if needed
+                volumeLast7Days: nil,
+                templateVersion: nil
+            )
+            
+            // Determine exposure role from set structure
+            let exposureRole: ExposureRole = {
+                let workingSets = exercisePlan.sets.filter { !$0.isWarmup }
+                guard workingSets.count > 1 else { return .topSetOnly }
+                let weights = workingSets.map { $0.targetLoad.value }
+                let allSameWeight = weights.allSatisfy { abs($0 - weights[0]) < 0.01 }
+                if allSameWeight {
+                    return .straightSets
+                }
+                // Check if it's backoff sets (first set is heaviest)
+                if let first = weights.first, weights.dropFirst().allSatisfy({ $0 < first }) {
+                    return .backoffSets
+                }
+                return .straightSets
+            }()
+            
+            var perf = ExercisePerformance(
                 id: UUID(),
                 exercise: exerciseRef,
                 setsTarget: prescription.setCount,
@@ -849,13 +958,24 @@ enum TrainingEngineBridge {
                 nextPrescription: nil,
                 isCompleted: false
             )
+            
+            // Populate ML-critical fields
+            perf.recommendationEventId = recommendationEventId
+            perf.plannedTopSetWeightLbs = topSetWeightLbs
+            perf.plannedTopSetReps = topSetReps
+            perf.plannedTargetRIR = topSetRIR
+            perf.stateSnapshot = stateSnapshot
+            perf.exposureRole = exposureRole
+            
+            return perf
         }
         
+        // CRITICAL: Use sessionPlan.sessionId (stable) instead of generating a new UUID
         return WorkoutSession(
-            id: UUID(),
+            id: sessionPlan.sessionId,
             templateId: templateId,
             name: templateName,
-            startedAt: Date(),
+            startedAt: sessionPlan.date,
             endedAt: nil,
             wasDeload: sessionPlan.isDeload,
             deloadReason: sessionPlan.deloadReason?.rawValue,
@@ -955,9 +1075,12 @@ enum TrainingEngineBridge {
         substitutionPool: [Exercise] = [],
         dailyBiometrics: [DailyBiometrics] = [],
         calendar: Calendar = .current,
-        programName: String? = nil
+        programName: String? = nil,
+        policySelector: ProgressionPolicySelector? = nil
     ) -> TESessionPlan {
-        let teUserProfile = convertUserProfile(userProfile)
+        // Get stable user ID for ML training data
+        let stableUserId = getStableUserId()
+        let teUserProfile = convertUserProfile(userProfile, stableUserId: stableUserId)
         let experience = teUserProfile.experience
         let plan = buildTrainingPlan(
             from: templates,
@@ -975,13 +1098,31 @@ enum TrainingEngineBridge {
             programName: programName
         )
         
+        // Build planning context with stable IDs for ML data logging
+        let planningContext = TrainingEngine.SessionPlanningContext(
+            sessionId: UUID(),  // New session gets a new stable ID
+            userId: stableUserId,
+            sessionDate: date,
+            isPlannedDeloadWeek: false,
+            calendar: calendar
+        )
+        
+        // Build policy selection provider closure
+        let policySelectionProvider: TrainingEngine.PolicySelectionProvider? = policySelector.map { selector in
+            { signals, variationContext in
+                selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
+            }
+        }
+        
         return TrainingEngine.Engine.recommendSession(
             date: date,
             userProfile: teUserProfile,
             plan: plan,
             history: history,
             readiness: readiness,
-            calendar: calendar
+            calendar: calendar,
+            planningContext: planningContext,
+            policySelectionProvider: policySelectionProvider
         )
     }
     
@@ -996,9 +1137,12 @@ enum TrainingEngineBridge {
         substitutionPool: [Exercise] = [],
         dailyBiometrics: [DailyBiometrics] = [],
         calendar: Calendar = .current,
-        programName: String? = nil
+        programName: String? = nil,
+        policySelector: ProgressionPolicySelector? = nil
     ) -> TESessionPlan {
-        let teUserProfile = convertUserProfile(userProfile)
+        // Get stable user ID for ML training data
+        let stableUserId = getStableUserId()
+        let teUserProfile = convertUserProfile(userProfile, stableUserId: stableUserId)
         let experience = teUserProfile.experience
         let plan = buildTrainingPlan(
             from: templates,
@@ -1016,6 +1160,22 @@ enum TrainingEngineBridge {
             programName: programName
         )
         
+        // Build planning context with stable IDs for ML data logging
+        let planningContext = TrainingEngine.SessionPlanningContext(
+            sessionId: UUID(),  // New session gets a new stable ID
+            userId: stableUserId,
+            sessionDate: date,
+            isPlannedDeloadWeek: false,
+            calendar: calendar
+        )
+        
+        // Build policy selection provider closure
+        let policySelectionProvider: TrainingEngine.PolicySelectionProvider? = policySelector.map { selector in
+            { signals, variationContext in
+                selector.selectPolicy(for: signals, variationContext: variationContext, userId: stableUserId)
+            }
+        }
+        
         return TrainingEngine.Engine.recommendSessionForTemplate(
             date: date,
             templateId: templateId,
@@ -1023,7 +1183,9 @@ enum TrainingEngineBridge {
             plan: plan,
             history: history,
             readiness: readiness,
-            calendar: calendar
+            calendar: calendar,
+            planningContext: planningContext,
+            policySelectionProvider: policySelectionProvider
         )
     }
     

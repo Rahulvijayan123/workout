@@ -174,6 +174,11 @@ public enum DeloadReason: String, Codable, Sendable, Hashable {
 
 /// Complete session plan output.
 public struct SessionPlan: Codable, Sendable, Hashable {
+    /// Stable identifier for this planned session.
+    ///
+    /// This is used to link engine decisions ↔ outcomes across exercises within the same session.
+    public let sessionId: UUID
+    
     /// Date this plan is for.
     public let date: Date
     
@@ -193,6 +198,7 @@ public struct SessionPlan: Codable, Sendable, Hashable {
     public let insights: [CoachingInsight]
     
     public init(
+        sessionId: UUID = UUID(),
         date: Date,
         templateId: WorkoutTemplateId?,
         exercises: [ExercisePlan],
@@ -200,6 +206,7 @@ public struct SessionPlan: Codable, Sendable, Hashable {
         deloadReason: DeloadReason?,
         insights: [CoachingInsight] = []
     ) {
+        self.sessionId = sessionId
         self.date = date
         self.templateId = templateId
         self.exercises = exercises
@@ -222,5 +229,41 @@ public struct SessionPlan: Codable, Sendable, Hashable {
             total + ep.sets.count * 60 // ~1 min per set
         }
         return (totalRestSeconds + totalWorkSeconds) / 60
+    }
+}
+
+// MARK: - Codable (backward compatible defaults)
+
+extension SessionPlan {
+    enum CodingKeys: String, CodingKey {
+        case sessionId
+        case date
+        case templateId
+        case exercises
+        case isDeload
+        case deloadReason
+        case insights
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.sessionId = try container.decodeIfPresent(UUID.self, forKey: .sessionId) ?? UUID()
+        self.date = try container.decode(Date.self, forKey: .date)
+        self.templateId = try container.decodeIfPresent(WorkoutTemplateId.self, forKey: .templateId)
+        self.exercises = try container.decode([ExercisePlan].self, forKey: .exercises)
+        self.isDeload = try container.decode(Bool.self, forKey: .isDeload)
+        self.deloadReason = try container.decodeIfPresent(DeloadReason.self, forKey: .deloadReason)
+        self.insights = try container.decodeIfPresent([CoachingInsight].self, forKey: .insights) ?? []
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(sessionId, forKey: .sessionId)
+        try container.encode(date, forKey: .date)
+        try container.encodeIfPresent(templateId, forKey: .templateId)
+        try container.encode(exercises, forKey: .exercises)
+        try container.encode(isDeload, forKey: .isDeload)
+        try container.encodeIfPresent(deloadReason, forKey: .deloadReason)
+        try container.encode(insights, forKey: .insights)
     }
 }

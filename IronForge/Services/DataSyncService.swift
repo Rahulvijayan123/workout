@@ -207,6 +207,29 @@ final class DataSyncService: ObservableObject {
         var hasTechniqueOther: Bool?
         var techniqueLimitationNotes: String?
         
+        // ML CRITICAL: Recommendation event link
+        var recommendationEventId: String?
+        
+        // ML CRITICAL: Planned prescription (frozen at session start)
+        var plannedTopSetWeightKg: Double?
+        var plannedTopSetReps: Int?
+        var plannedTargetRir: Int?
+        
+        // ML CRITICAL: State snapshot at session start (JSONB)
+        var stateAtRecommendation: String?
+        
+        // ML CRITICAL: Exposure definition
+        var exposureRole: String?
+        
+        // ML CRITICAL: Outcome labels (computed at session end)
+        var exposureOutcome: String?
+        var setsSuccessful: Int?
+        var setsFailed: Int?
+        var setsUnknownDifficulty: Int?
+        var sessionE1rmKg: Double?
+        var rawTopSetE1rmKg: Double?
+        var e1rmDeltaKg: Double?
+        
         var notes: String?
         var createdAt: Date?
         var updatedAt: Date?
@@ -245,6 +268,20 @@ final class DataSyncService: ObservableObject {
         var recommendedWeightKg: Double?
         var recommendedReps: Int?
         
+        // ML CRITICAL: Planned set link (join key)
+        var plannedSetId: String?
+        
+        // ML CRITICAL: User modification tracking
+        var isUserModified: Bool?
+        var originalPrescribedWeightKg: Double?
+        var originalPrescribedReps: Int?
+        var modificationReason: String?    // ComplianceReasonCode raw value
+        
+        // ML CRITICAL: Outcome labels
+        var setOutcome: String?
+        var metRepTarget: Bool?
+        var metEffortTarget: Bool?
+        
         // Tempo (actual, if different from prescribed)
         var tempoEccentric: Int?
         var tempoPauseBottom: Int?
@@ -271,7 +308,11 @@ final class DataSyncService: ObservableObject {
         var lastWorkingWeightKg: Double
         var rollingE1rmKg: Double?
         var e1rmTrend: String?
+        /// DEPRECATED: Raw e1rm values without dates. Use e1rmHistoryJson instead.
         var e1rmHistory: [Double]?
+        /// ML CRITICAL: JSON array of {date: ISO8601, valueKg: Double} objects.
+        /// Stores actual session dates instead of fabricated ones.
+        var e1rmHistoryJson: String?
         var consecutiveFailures: Int?
         var lastDeloadAt: Date?
         var lastSessionAt: Date?
@@ -281,6 +322,12 @@ final class DataSyncService: ObservableObject {
         var averageSessionVolumeKg: Double?
         var createdAt: Date?
         var updatedAt: Date?
+    }
+    
+    /// Helper struct for storing e1rm history with proper dates.
+    struct DBE1RMSample: Codable {
+        var date: Date
+        var valueKg: Double
     }
     
     struct DBDailyBiometrics: Codable {
@@ -645,8 +692,10 @@ final class DataSyncService: ObservableObject {
         
         let _: DBWorkoutSession? = try await supabase.upsert(into: "workout_sessions", values: dbSession)
         
-        // Delete existing exercises for this session
-        try await supabase.delete(from: "session_exercises", filter: ["session_id": session.id.uuidString])
+        // NOTE: We use upsert for session_exercises instead of delete-then-insert
+        // to avoid breaking foreign key relationships with recommendation_events and planned_sets.
+        // Orphaned session_exercises (from removed exercises) should be cleaned up
+        // by a separate maintenance job if needed.
         
         // Insert exercises and sets
         for (idx, ex) in session.exercises.enumerated() {
@@ -665,6 +714,16 @@ final class DataSyncService: ObservableObject {
                 guard let entries = ex.painEntries, !entries.isEmpty else { return nil }
                 let encoder = JSONEncoder()
                 if let data = try? encoder.encode(entries), let str = String(data: data, encoding: .utf8) {
+                    return str
+                }
+                return nil
+            }()
+            
+            // Encode state snapshot to JSON for ML
+            let stateSnapshotJson: String? = {
+                guard let snapshot = ex.stateSnapshot else { return nil }
+                let encoder = JSONEncoder()
+                if let data = try? encoder.encode(snapshot), let str = String(data: data, encoding: .utf8) {
                     return str
                 }
                 return nil
@@ -714,7 +773,25 @@ final class DataSyncService: ObservableObject {
                 hasStabilityIssue: ex.techniqueLimitations?.stabilityIssue,
                 hasBreathingIssue: ex.techniqueLimitations?.breathingIssue,
                 hasTechniqueOther: ex.techniqueLimitations?.other,
-                techniqueLimitationNotes: ex.techniqueLimitations?.notes
+                techniqueLimitationNotes: ex.techniqueLimitations?.notes,
+                // ML CRITICAL: Recommendation event link
+                recommendationEventId: ex.recommendationEventId?.uuidString,
+                // ML CRITICAL: Planned prescription
+                plannedTopSetWeightKg: ex.plannedTopSetWeightLbs.map { $0 * 0.453592 },
+                plannedTopSetReps: ex.plannedTopSetReps,
+                plannedTargetRir: ex.plannedTargetRIR,
+                // ML CRITICAL: State snapshot
+                stateAtRecommendation: stateSnapshotJson,
+                // ML CRITICAL: Exposure definition
+                exposureRole: ex.exposureRole?.rawValue,
+                // ML CRITICAL: Outcome labels
+                exposureOutcome: ex.exposureOutcome?.rawValue,
+                setsSuccessful: ex.setsSuccessful,
+                setsFailed: ex.setsFailed,
+                setsUnknownDifficulty: ex.setsUnknownDifficulty,
+                sessionE1rmKg: ex.sessionE1rmLbs.map { $0 * 0.453592 },
+                rawTopSetE1rmKg: ex.rawTopSetE1rmLbs.map { $0 * 0.453592 },
+                e1rmDeltaKg: ex.e1rmDeltaLbs.map { $0 * 0.453592 }
             )
             
             let _: DBSessionExercise? = try await supabase.upsert(into: "session_exercises", values: dbExercise)
@@ -746,6 +823,17 @@ final class DataSyncService: ObservableObject {
                     complianceReason: set.complianceReason?.rawValue,
                     recommendedWeightKg: set.recommendedWeight.map { $0 * 0.453592 },
                     recommendedReps: set.recommendedReps,
+                    // ML CRITICAL: Planned set link
+                    plannedSetId: set.plannedSetId?.uuidString,
+                    // ML CRITICAL: User modification tracking
+                    isUserModified: set.isUserModified,
+                    originalPrescribedWeightKg: set.originalPrescribedWeight.map { $0 * 0.453592 },
+                    originalPrescribedReps: set.originalPrescribedReps,
+                    modificationReason: set.modificationReason?.rawValue,
+                    // ML CRITICAL: Outcome labels
+                    setOutcome: set.setOutcome?.rawValue,
+                    metRepTarget: set.metRepTarget,
+                    metEffortTarget: set.metEffortTarget,
                     // Tempo actual
                     tempoEccentric: set.tempoActual?.eccentric,
                     tempoPauseBottom: set.tempoActual?.pauseBottom,
@@ -765,6 +853,77 @@ final class DataSyncService: ObservableObject {
             if !dbSets.isEmpty {
                 try await supabase.insertBatch(into: "session_sets", values: dbSets)
             }
+            
+            // ML CRITICAL: Generate and sync RecommendationEvent (immutable)
+            if let recEventId = ex.recommendationEventId {
+                // Build state snapshot for recommendation event
+                let recStateSnapshot = RecommendationEvent.LiftStateSnapshot(
+                    rollingE1rmLbs: ex.stateSnapshot?.rollingE1rmLbs,
+                    rawE1rmLbs: ex.stateSnapshot?.rawE1rmLbs,
+                    consecutiveFailures: ex.stateSnapshot?.consecutiveFailures ?? 0,
+                    consecutiveSuccesses: ex.stateSnapshot?.consecutiveSuccesses ?? 0,
+                    highRPEStreak: ex.stateSnapshot?.highRPEStreak ?? 0,
+                    daysSinceLastExposure: ex.stateSnapshot?.daysSinceLastExposure,
+                    daysSinceLastDeload: ex.stateSnapshot?.daysSinceLastDeload,
+                    lastSessionWeightLbs: ex.stateSnapshot?.lastWeightLbs,
+                    lastSessionReps: ex.stateSnapshot?.lastReps,
+                    lastSessionRIR: ex.stateSnapshot?.lastRIR,
+                    lastSessionOutcome: ex.stateSnapshot?.lastOutcome,
+                    exposuresLast14Days: ex.stateSnapshot?.exposuresLast14Days ?? 0,
+                    volumeLast7DaysLbs: ex.stateSnapshot?.volumeLast7DaysLbs,
+                    successfulSessionsCount: ex.stateSnapshot?.successfulSessionsCount ?? 0,
+                    totalSessionsCount: ex.stateSnapshot?.totalSessionsCount ?? 0,
+                    e1rmTrend: ex.stateSnapshot?.e1rmTrend,
+                    templateVersion: ex.stateSnapshot?.templateVersion
+                )
+                
+                // Determine action type from planned values
+                let actionType: RecommendationEvent.RecommendationActionType = {
+                    if session.wasDeload { return .deload }
+                    return .holdLoad  // Default - could be refined based on direction
+                }()
+                
+                let recommendationEvent = RecommendationEvent(
+                    id: recEventId,
+                    sessionId: session.id,
+                    sessionExerciseId: ex.id,
+                    exerciseId: ex.exercise.id,
+                    recommendedWeightLbs: ex.plannedTopSetWeightLbs ?? 0,
+                    recommendedReps: ex.plannedTopSetReps ?? ex.repRangeMin,
+                    recommendedSets: ex.setsTarget,
+                    recommendedRIR: ex.plannedTargetRIR ?? ex.targetRIR,
+                    policyVersion: "v1.0",
+                    policyType: .deterministic,
+                    actionType: actionType,
+                    stateSnapshot: recStateSnapshot,
+                    generatedAt: session.startedAt
+                )
+                
+                // Insert recommendation event (immutable - never update)
+                try? await syncRecommendationEvent(recommendationEvent)
+            }
+            
+            // ML CRITICAL: Generate and sync PlannedSet objects (immutable)
+            let plannedSets: [PlannedSet] = ex.sets.enumerated().compactMap { setIdx, set in
+                guard let plannedSetId = set.plannedSetId else { return nil }
+                return PlannedSet(
+                    id: plannedSetId,
+                    sessionExerciseId: ex.id,
+                    recommendationEventId: ex.recommendationEventId,
+                    setNumber: setIdx + 1,
+                    targetWeightLbs: set.recommendedWeight ?? set.weight,
+                    targetReps: set.recommendedReps ?? set.reps,
+                    targetRIR: set.targetRIR ?? ex.targetRIR,
+                    targetRestSeconds: ex.restSeconds,
+                    targetTempo: ex.tempo,
+                    isWarmup: set.isWarmup,
+                    createdAt: session.startedAt
+                )
+            }
+            
+            if !plannedSets.isEmpty {
+                try? await syncPlannedSets(plannedSets)
+            }
         }
     }
     
@@ -776,9 +935,25 @@ final class DataSyncService: ObservableObject {
         
         for (_, state) in states {
             let rollingKg = state.rollingE1RM.map { $0 * 0.453592 }
+            
+            // DEPRECATED: Keep for backwards compatibility
             let historyKg: [Double]? = {
                 guard !state.e1rmHistory.isEmpty else { return nil }
                 return state.e1rmHistory.map { $0.value * 0.453592 }
+            }()
+            
+            // ML CRITICAL: Store history with actual dates (not fabricated)
+            let historyJson: String? = {
+                guard !state.e1rmHistory.isEmpty else { return nil }
+                let samples = state.e1rmHistory.map { sample in
+                    DBE1RMSample(date: sample.date, valueKg: sample.value * 0.453592)
+                }
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                if let data = try? encoder.encode(samples), let str = String(data: data, encoding: .utf8) {
+                    return str
+                }
+                return nil
             }()
             
             let dbState = DBLiftState(
@@ -789,6 +964,7 @@ final class DataSyncService: ObservableObject {
                 rollingE1rmKg: rollingKg,
                 e1rmTrend: state.e1rmTrend.rawValue,
                 e1rmHistory: historyKg,
+                e1rmHistoryJson: historyJson,
                 consecutiveFailures: state.failuresCount,
                 lastDeloadAt: state.lastDeloadAt,
                 lastSessionAt: state.updatedAt,
@@ -1287,12 +1463,36 @@ final class DataSyncService: ObservableObject {
             let weightLbs = db.lastWorkingWeightKg / 0.453592  // Convert kg to lbs
             let rollingE1rmLbs = db.rollingE1rmKg.map { $0 / 0.453592 }
             let trend = ExerciseState.E1RMTrend(rawValue: db.e1rmTrend ?? "insufficient") ?? .insufficient
-            let history: [ExerciseState.E1RMSampleLite] = (db.e1rmHistory ?? []).enumerated().map { idx, valueKg in
-                ExerciseState.E1RMSampleLite(
-                    date: db.lastSessionAt ?? Date().addingTimeInterval(TimeInterval(-idx * 86400)),
-                    value: valueKg / 0.453592
-                )
-            }
+            
+            // ML CRITICAL: Use e1rmHistoryJson with real dates when available
+            let history: [ExerciseState.E1RMSampleLite] = {
+                // Prefer JSON history with actual dates
+                if let jsonStr = db.e1rmHistoryJson,
+                   let jsonData = jsonStr.data(using: .utf8) {
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    if let samples = try? decoder.decode([DBE1RMSample].self, from: jsonData) {
+                        return samples.map { sample in
+                            ExerciseState.E1RMSampleLite(
+                                date: sample.date,
+                                value: sample.valueKg / 0.453592
+                            )
+                        }
+                    }
+                }
+                
+                // DEPRECATED FALLBACK: Use old format with fabricated dates for backwards compatibility
+                // This should only happen for old data that hasn't been re-synced.
+                // NOTE: These dates are NOT real - they are fabricated based on index offset.
+                // Any ML model using these dates for temporal features will learn from noise.
+                guard let oldHistory = db.e1rmHistory, !oldHistory.isEmpty else { return [] }
+                return oldHistory.enumerated().map { idx, valueKg in
+                    ExerciseState.E1RMSampleLite(
+                        date: db.lastSessionAt ?? Date().addingTimeInterval(TimeInterval(-idx * 86400)),
+                        value: valueKg / 0.453592
+                    )
+                }
+            }()
             
             let state = ExerciseState(
                 exerciseId: db.exerciseId,

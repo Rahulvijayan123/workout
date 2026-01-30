@@ -3,7 +3,20 @@ import Foundation
 // MARK: - Pilot Integration
 /// Bridges the pilot telemetry and guardrails into the main workout flow.
 /// This extension adds pilot-aware versions of key WorkoutStore methods.
+///
+/// DEPRECATED:
+/// This integration is deprecated because PilotTelemetryService is hard-disabled.
+/// Use the standard session flow (startSession/finishActiveSession) instead.
+/// The canonical ML data path through DataSyncService handles recommendation tracking.
+///
+/// Issues that require fixing before re-enabling:
+/// 1. Session ID mismatch between onSessionStart and recordTrajectory
+/// 2. userOverrodePrescription uses wrong comparison values
+/// 3. No stable join keys to canonical ML tables
+///
+/// See PilotTelemetryService for more details.
 
+@available(*, deprecated, message: "Use standard session flow instead; pilot telemetry is hard-disabled")
 extension WorkoutStore {
     
     // MARK: - Pilot-Aware Session Start

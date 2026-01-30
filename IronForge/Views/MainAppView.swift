@@ -2547,6 +2547,7 @@ struct GoalsEditorSheet: View {
     @State private var selectedSplit: WorkoutSplit
     @State private var frequency: Int
     @State private var selectedGymType: GymType
+    @State private var selectedTrainingPhase: TrainingPhase
     
     let neonPurple = Color(red: 0.6, green: 0.3, blue: 1.0)
     
@@ -2556,6 +2557,7 @@ struct GoalsEditorSheet: View {
         _selectedSplit = State(initialValue: appState.userProfile.workoutSplit)
         _frequency = State(initialValue: appState.userProfile.weeklyFrequency)
         _selectedGymType = State(initialValue: appState.userProfile.gymType)
+        _selectedTrainingPhase = State(initialValue: appState.userProfile.trainingPhase)
     }
     
     var body: some View {
@@ -2646,6 +2648,40 @@ struct GoalsEditorSheet: View {
                             }
                         }
                         
+                        // Training Phase Section (Critical for ML)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("TRAINING PHASE")
+                                    .font(IronFont.label(11))
+                                    .tracking(2)
+                                    .foregroundColor(.ironTextTertiary)
+                                
+                                Spacer()
+                                
+                                // Info badge
+                                Text("AFFECTS PROGRESSION")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .tracking(1)
+                                    .foregroundColor(neonPurple)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(neonPurple.opacity(0.15))
+                                    )
+                            }
+                            
+                            ForEach(TrainingPhase.allCases, id: \.self) { phase in
+                                TrainingPhaseOptionRow(
+                                    phase: phase,
+                                    isSelected: selectedTrainingPhase == phase,
+                                    neonPurple: neonPurple
+                                ) {
+                                    selectedTrainingPhase = phase
+                                }
+                            }
+                        }
+                        
                         Spacer(minLength: 100)
                     }
                     .padding(.horizontal, 20)
@@ -2664,6 +2700,7 @@ struct GoalsEditorSheet: View {
                         appState.userProfile.workoutSplit = selectedSplit
                         appState.userProfile.weeklyFrequency = frequency
                         appState.userProfile.gymType = selectedGymType
+                        appState.userProfile.trainingPhase = selectedTrainingPhase
                         appState.saveUserProfile()
                         dismiss()
                     }
@@ -2769,6 +2806,67 @@ private struct GymTypeOptionRow: View {
                 Text(gymType.rawValue)
                     .font(IronFont.bodySemibold(14))
                     .foregroundColor(isSelected ? .white : .white.opacity(0.8))
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(neonPurple)
+                }
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isSelected ? neonPurple.opacity(0.1) : Color.white.opacity(0.02))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(isSelected ? neonPurple.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Training Phase Option Row (ML Critical)
+private struct TrainingPhaseOptionRow: View {
+    let phase: TrainingPhase
+    let isSelected: Bool
+    let neonPurple: Color
+    let action: () -> Void
+    
+    private var phaseColor: Color {
+        switch phase {
+        case .cut: return .orange
+        case .maintenance: return .blue
+        case .bulk: return .green
+        case .recomp: return .purple
+        }
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                // Phase icon with color indicator
+                ZStack {
+                    Circle()
+                        .fill(phaseColor.opacity(0.2))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: phase.icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(phaseColor)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(phase.rawValue.uppercased())
+                        .font(IronFont.bodySemibold(14))
+                        .foregroundColor(isSelected ? .white : .white.opacity(0.8))
+                    
+                    Text(phase.description)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.4))
+                }
                 
                 Spacer()
                 

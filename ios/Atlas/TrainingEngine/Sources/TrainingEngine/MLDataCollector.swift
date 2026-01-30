@@ -237,6 +237,22 @@ public struct MLPendingRecord: Codable, Sendable {
 /// 6. Persist pending records for crash recovery
 /// 7. Rate limiting to prevent spam
 /// 8. Duplicate detection
+///
+/// DEPRECATION NOTICE:
+/// This collector is being phased out in favor of the canonical ML data path through
+/// DataSyncService which uses:
+/// - recommendation_events (immutable, created at session start)
+/// - planned_sets (immutable prescription per set)
+/// - session_exercises/session_sets (performed data with outcome fields)
+///
+/// The new approach ensures:
+/// - Stable join keys between recommendations and outcomes
+/// - Consistent state snapshots frozen at recommendation time
+/// - Proper outcome labeling at session finalization
+///
+/// This collector is kept for backwards compatibility but should not be used for
+/// new ML training data collection.
+@available(*, deprecated, message: "Use DataSyncService recommendation_events/planned_sets instead")
 public final class MLDataCollector: @unchecked Sendable {
     
     /// Shared singleton instance.
@@ -307,8 +323,10 @@ public final class MLDataCollector: @unchecked Sendable {
         processedDecisionIds.insert(entry.id)
         
         // Keep processed IDs bounded (last 1000)
-        if processedDecisionIds.count > 1000 {
-            processedDecisionIds.removeFirst()
+        // NOTE: Set doesn't maintain order, so we remove an arbitrary element.
+        // For proper LRU behavior, would need OrderedSet or different data structure.
+        while processedDecisionIds.count > 1000 {
+            _ = processedDecisionIds.popFirst()
         }
         lock.unlock()
         
@@ -379,6 +397,25 @@ public final class MLDataCollector: @unchecked Sendable {
         // Update the log entry with outcome
         var entry = pending.logEntry
         entry.outcome = outcome
+        
+        // CRITICAL: Persist the updated pending record with outcome immediately.
+        // This ensures retryFailedUploads() can work if the upload fails below.
+        let updatedPending = MLPendingRecord(
+            decisionId: pending.decisionId,
+            exerciseId: pending.exerciseId,
+            userId: pending.userId,
+            decisionTimestamp: pending.decisionTimestamp,
+            sessionDate: pending.sessionDate,
+            prescribedLoadValue: pending.prescribedLoadValue,
+            prescribedLoadUnit: pending.prescribedLoadUnit,
+            targetReps: pending.targetReps,
+            direction: pending.direction,
+            logEntry: entry
+        )
+        lock.lock()
+        pendingRecords[decisionId] = updatedPending
+        lock.unlock()
+        persistPendingRecords()
         
         // Additional outcome validations
         let outcomeValidation = validateOutcome(outcome, entry: entry)
@@ -956,10 +993,11 @@ public final class MLDataCollector: @unchecked Sendable {
     
     /// Marks a session as abandoned (user started but didn't finish).
     /// This prevents false negatives from incomplete data.
+    /// CRITICAL: Filters by sessionId, not by date, to avoid deleting unrelated decisions.
     public func markSessionAbandoned(sessionId: UUID, reason: SessionAbandonmentReason) {
         lock.lock()
         let sessionPendingIds = pendingRecords.values
-            .filter { Calendar.current.isDate($0.sessionDate, inSameDayAs: Date()) }
+            .filter { $0.logEntry.sessionId == sessionId }
             .map { $0.decisionId }
         lock.unlock()
         
@@ -1122,12 +1160,28 @@ public struct MLDataQualityAlert: Sendable {
 public extension TrainingDataLogger {
     
     /// Configures the logger to use ML data collector for validation.
+    ///
+    /// Routes entries based on their state:
+    /// - Decision-only entries (outcome == nil) → collectDecision
+    /// - Outcome-updated entries (outcome != nil) → recordOutcome (triggers validation + upload)
     func useMLDataCollector() {
         MLDataCollector.shared.isEnabled = true
         
-        // Route log entries through collector
+        // Route log entries through collector based on whether they have outcomes
         self.logHandler = { entry in
-            MLDataCollector.shared.collectDecision(entry)
+            if let outcome = entry.outcome {
+                // Entry has outcome attached - route to recordOutcome for validation and upload
+                Task {
+                    await MLDataCollector.shared.recordOutcome(
+                        decisionId: entry.id,
+                        outcome: outcome,
+                        executionContext: .normal
+                    )
+                }
+            } else {
+                // New decision without outcome - collect and await outcome
+                MLDataCollector.shared.collectDecision(entry)
+            }
         }
     }
     

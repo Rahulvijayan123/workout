@@ -42,6 +42,7 @@ public enum Engine {
     ///   - history: Recent workout history.
     ///   - readiness: Today's readiness score (0-100).
     ///   - plannedDeloadWeek: If true, forces a scheduled deload regardless of other triggers.
+    ///   - policySelectionProvider: Optional closure to select policy configs per-exercise (for bandit/shadow mode).
     /// - Returns: A `SessionPlan` with exercises, sets, target loads/reps, and substitutions.
     public static func recommendSession(
         date: Date,
@@ -50,11 +51,22 @@ public enum Engine {
         history: WorkoutHistory,
         readiness: Int,
         plannedDeloadWeek: Bool = false,
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        planningContext: SessionPlanningContext? = nil,
+        policySelectionProvider: PolicySelectionProvider? = nil
     ) -> SessionPlan {
+        let context = SessionPlanningContext(
+            sessionId: planningContext?.sessionId ?? UUID(),
+            userId: planningContext?.userId ?? "anonymous",
+            sessionDate: date,
+            isPlannedDeloadWeek: plannedDeloadWeek,
+            calendar: calendar
+        )
+        
         let scheduler = TemplateScheduler(plan: plan, history: history, calendar: calendar)
         guard let templateId = scheduler.selectTemplate(for: date) else {
             return SessionPlan(
+                sessionId: context.sessionId,
                 date: date,
                 templateId: nil,
                 exercises: [],
@@ -72,7 +84,9 @@ public enum Engine {
             readiness: readiness,
             plannedDeloadWeek: plannedDeloadWeek,
             excludingExerciseIds: [],
-            calendar: calendar
+            calendar: calendar,
+            planningContext: context,
+            policySelectionProvider: policySelectionProvider
         )
     }
     
@@ -81,6 +95,7 @@ public enum Engine {
     ///
     /// - Parameters:
     ///   - plannedDeloadWeek: If true, forces a scheduled deload regardless of other triggers.
+    ///   - policySelectionProvider: Optional closure to select policy configs per-exercise (for bandit/shadow mode).
     public static func recommendSessionForTemplate(
         date: Date,
         templateId: WorkoutTemplateId,
@@ -90,11 +105,22 @@ public enum Engine {
         readiness: Int,
         plannedDeloadWeek: Bool = false,
         excludingExerciseIds: Set<String> = [],
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        planningContext: SessionPlanningContext? = nil,
+        policySelectionProvider: PolicySelectionProvider? = nil
     ) -> SessionPlan {
+        
+        let context = SessionPlanningContext(
+            sessionId: planningContext?.sessionId ?? UUID(),
+            userId: planningContext?.userId ?? "anonymous",
+            sessionDate: date,
+            isPlannedDeloadWeek: plannedDeloadWeek,
+            calendar: calendar
+        )
         
         guard let template = plan.templates[templateId] else {
             return SessionPlan(
+                sessionId: context.sessionId,
                 date: date,
                 templateId: templateId,
                 exercises: [],
@@ -569,12 +595,31 @@ public enum Engine {
                 calendar: calendar
             )
             
-            // Compute direction and magnitude.
-            let (finalLoad, directionDecision, magnitudeParams, volumeAdjustment, policyChecks) = computeTargetLoadWithDirectionMagnitude(
+            // Build variation context for policy selection and logging
+            let variationContext = VariationContext(
+                isPrimaryExercise: exercise.id == originalExercise.id,
+                isSubstitution: exercise.id != originalExercise.id,
+                originalExerciseId: exercise.id != originalExercise.id ? originalExercise.id : nil,
+                familyReferenceKey: familyResolution.referenceStateKey,
+                familyUpdateKey: familyResolution.updateStateKey,
+                familyCoefficient: familyResolution.coefficient,
+                movementPattern: exercise.movementPattern,
+                equipment: exercise.equipment,
+                stateIsExerciseSpecific: stateIsExerciseSpecific
+            )
+            
+            // Get policy selection (for bandit/shadow mode)
+            let signalsSnapshot = LiftSignalsSnapshot(from: signals)
+            let policySelection = policySelectionProvider?(signalsSnapshot, variationContext) ?? .baselineControl()
+            
+            // Compute direction and magnitude using selected policy configs.
+            let (finalLoad, directionDecision, magnitudeParams, volumeAdjustment, policyChecks, magnitudeConfigUsed) = computeTargetLoadWithDirectionMagnitude(
                 signals: signals,
                 baseTargetLoad: baselineLoad,
                 liftState: liftState,
-                plan: plan
+                plan: plan,
+                directionConfig: policySelection.directionConfig,
+                magnitudeConfig: policySelection.magnitudeConfig
             )
             
             // Output loads in the plan's rounding unit.
@@ -687,15 +732,16 @@ public enum Engine {
             
             // Log decision for ML training data collection
             logDecisionIfEnabled(
-                sessionId: UUID(), // Caller can override via context
-                userId: "anonymous",
-                sessionDate: date,
+                sessionId: context.sessionId,
+                userId: context.userId,
+                sessionDate: context.sessionDate,
                 exerciseId: effectiveExerciseId,
                 history: history,
                 liftState: liftState,
                 signals: signals,
                 direction: directionDecision,
                 magnitude: magnitudeParams,
+                microloadingEnabled: magnitudeConfigUsed.enableMicroloading,
                 baselineLoad: baselineLoad,
                 finalLoad: sessionBaseLoad,
                 targetReps: targetReps,
@@ -707,16 +753,15 @@ public enum Engine {
                 policyChecks: policyChecks,
                 plan: plan,
                 userProfile: userProfile,
-                exercise: exercise,
-                originalExercise: originalExercise,
-                familyResolution: familyResolution,
-                stateIsExerciseSpecific: stateIsExerciseSpecific,
-                isPlannedDeloadWeek: plannedDeloadWeek,
-                calendar: calendar
+                variationContext: variationContext,
+                policySelection: policySelection,
+                isPlannedDeloadWeek: context.isPlannedDeloadWeek,
+                calendar: context.calendar
             )
         }
         
         return SessionPlan(
+            sessionId: context.sessionId,
             date: date,
             templateId: templateId,
             exercises: exercisePlans,
@@ -853,7 +898,7 @@ public enum Engine {
         plan: TrainingPlan,
         directionConfig: DirectionPolicyConfig? = nil,
         magnitudeConfig: MagnitudePolicyConfig? = nil
-    ) -> (load: Load, direction: DirectionDecision, magnitude: MagnitudeParams, volumeAdjustment: Int, checks: [PolicyCheckResult]) {
+    ) -> (load: Load, direction: DirectionDecision, magnitude: MagnitudeParams, volumeAdjustment: Int, checks: [PolicyCheckResult], magnitudeConfigUsed: MagnitudePolicyConfig) {
         // Build direction config, deriving readiness thresholds from plan.deloadConfig when available.
         // This ensures test harnesses and production code use consistent thresholds.
         let effectiveDirectionConfig: DirectionPolicyConfig = {
@@ -994,7 +1039,7 @@ public enum Engine {
             }
         }
         
-        return (finalLoad, direction, magnitude, magnitude.volumeAdjustment, policyChecks)
+        return (finalLoad, direction, magnitude, magnitude.volumeAdjustment, policyChecks, effectiveMagnitudeConfig)
     }
     
     // MARK: - Cold start / initial loading
@@ -1370,6 +1415,7 @@ public enum Engine {
         signals: LiftSignals,
         direction: DirectionDecision,
         magnitude: MagnitudeParams,
+        microloadingEnabled: Bool,
         baselineLoad: Load,
         finalLoad: Load,
         targetReps: Int,
@@ -1381,26 +1427,11 @@ public enum Engine {
         policyChecks: [PolicyCheckResult],
         plan: TrainingPlan,
         userProfile: UserProfile,
-        exercise: Exercise,
-        originalExercise: Exercise,
-        familyResolution: LiftFamilyResolution,
-        stateIsExerciseSpecific: Bool,
+        variationContext: VariationContext,
+        policySelection: PolicySelection,
         isPlannedDeloadWeek: Bool,
         calendar: Calendar
     ) {
-        // Build variation context
-        let variationContext = VariationContext(
-            isPrimaryExercise: exercise.id == originalExercise.id,
-            isSubstitution: exercise.id != originalExercise.id,
-            originalExerciseId: exercise.id != originalExercise.id ? originalExercise.id : nil,
-            familyReferenceKey: familyResolution.referenceStateKey,
-            familyUpdateKey: familyResolution.updateStateKey,
-            familyCoefficient: familyResolution.coefficient,
-            movementPattern: exercise.movementPattern,
-            equipment: exercise.equipment,
-            stateIsExerciseSpecific: stateIsExerciseSpecific
-        )
-        
         TrainingDataLogger.shared.logDecision(
             sessionId: sessionId,
             exerciseId: exerciseId,
@@ -1411,6 +1442,7 @@ public enum Engine {
             signals: signals,
             direction: direction,
             magnitude: magnitude,
+            microloadingEnabled: microloadingEnabled,
             baselineLoad: baselineLoad,
             finalLoad: finalLoad,
             targetReps: targetReps,
@@ -1423,6 +1455,7 @@ public enum Engine {
             plan: plan,
             userProfile: userProfile,
             variationContext: variationContext,
+            policySelection: policySelection,
             isPlannedDeloadWeek: isPlannedDeloadWeek,
             calendar: calendar
         )
@@ -1433,13 +1466,15 @@ public enum Engine {
     public static func recordOutcome(
         sessionId: UUID,
         exerciseResult: ExerciseSessionResult,
-        readinessScore: Int?
+        readinessScore: Int?,
+        executionContext: ExecutionContext = .normal
     ) {
         TrainingDataLogger.shared.recordOutcome(
             sessionId: sessionId,
             exerciseId: exerciseResult.exerciseId,
             exerciseResult: exerciseResult,
-            readinessScore: readinessScore
+            readinessScore: readinessScore,
+            executionContext: executionContext
         )
     }
     

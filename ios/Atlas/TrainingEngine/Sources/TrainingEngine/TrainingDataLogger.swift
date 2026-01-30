@@ -483,6 +483,9 @@ public struct OutcomeRecord: Codable, Sendable, Hashable {
     /// Readiness score at session time.
     public let readinessScore: Int?
     
+    /// Execution context (normal, injury, time constraint, etc.)
+    public let executionContext: ExecutionContext
+    
     public init(
         repsPerSet: [Int],
         avgReps: Double,
@@ -497,7 +500,8 @@ public struct OutcomeRecord: Codable, Sendable, Hashable {
         wasGrinder: Bool,
         totalVolume: Double,
         inSessionAdjustments: [InSessionAdjustmentLog],
-        readinessScore: Int?
+        readinessScore: Int?,
+        executionContext: ExecutionContext = .normal
     ) {
         self.repsPerSet = repsPerSet
         self.avgReps = avgReps
@@ -513,6 +517,7 @@ public struct OutcomeRecord: Codable, Sendable, Hashable {
         self.totalVolume = totalVolume
         self.inSessionAdjustments = inSessionAdjustments
         self.readinessScore = readinessScore
+        self.executionContext = executionContext
     }
 }
 
@@ -727,6 +732,23 @@ public struct DecisionLogEntry: Codable, Sendable, Hashable {
     /// What alternative policies would have prescribed.
     public let counterfactuals: [CounterfactualRecord]
     
+    // MARK: - Policy Selection (for bandit/shadow mode)
+    
+    /// The policy ID that was actually executed.
+    public let executedPolicyId: String
+    
+    /// The probability of selecting the executed policy (for importance weighting).
+    public let executedActionProbability: Double
+    
+    /// Exploration mode: "control", "shadow", or "explore".
+    public let explorationMode: String
+    
+    /// Shadow policy ID (what would have been chosen if exploring, for offline evaluation).
+    public let shadowPolicyId: String?
+    
+    /// Shadow policy's action probability.
+    public let shadowActionProbability: Double?
+    
     // MARK: - Outcome (filled after session completion)
     
     /// Outcome of the session (nil until session is completed).
@@ -762,6 +784,11 @@ public struct DecisionLogEntry: Codable, Sendable, Hashable {
         action: ActionRecord,
         policyChecks: [PolicyCheckResult],
         counterfactuals: [CounterfactualRecord],
+        executedPolicyId: String = "baseline",
+        executedActionProbability: Double = 1.0,
+        explorationMode: String = "control",
+        shadowPolicyId: String? = nil,
+        shadowActionProbability: Double? = nil,
         outcome: OutcomeRecord? = nil,
         nextSessionPerformance: NextSessionPerformance? = nil,
         engineVersion: String,
@@ -785,6 +812,11 @@ public struct DecisionLogEntry: Codable, Sendable, Hashable {
         self.action = action
         self.policyChecks = policyChecks
         self.counterfactuals = counterfactuals
+        self.executedPolicyId = executedPolicyId
+        self.executedActionProbability = executedActionProbability
+        self.explorationMode = explorationMode
+        self.shadowPolicyId = shadowPolicyId
+        self.shadowActionProbability = shadowActionProbability
         self.outcome = outcome
         self.nextSessionPerformance = nextSessionPerformance
         self.engineVersion = engineVersion
@@ -973,6 +1005,7 @@ public final class TrainingDataLogger: @unchecked Sendable {
         signals: LiftSignals,
         direction: DirectionDecision,
         magnitude: MagnitudeParams,
+        microloadingEnabled: Bool,
         baselineLoad: Load,
         finalLoad: Load,
         targetReps: Int,
@@ -985,6 +1018,7 @@ public final class TrainingDataLogger: @unchecked Sendable {
         plan: TrainingPlan,
         userProfile: UserProfile,
         variationContext: VariationContext,
+        policySelection: PolicySelection,
         isPlannedDeloadWeek: Bool,
         calendar: Calendar = .current
     ) {
@@ -1009,11 +1043,14 @@ public final class TrainingDataLogger: @unchecked Sendable {
             from: sessionDate,
             calendar: calendar
         )
+        // CRITICAL: Use actual context values for data quality.
+        // - equipmentAvailable: from userProfile.availableEquipment for the exercise's equipment type
+        // - microloadingEnabled: from the actual magnitude config used in the decision
         let constraintInfo = ConstraintInfo(
-            equipmentAvailable: true,
+            equipmentAvailable: userProfile.availableEquipment.isAvailable(variationContext.equipment),
             roundingIncrement: magnitude.roundingPolicy.increment,
             roundingUnit: magnitude.roundingPolicy.unit,
-            microloadingEnabled: MagnitudePolicyConfig.default.enableMicroloading,
+            microloadingEnabled: microloadingEnabled,
             minLoadFloor: nil,
             maxLoadCeiling: nil,
             sessionTimeLimit: nil,
@@ -1049,6 +1086,19 @@ public final class TrainingDataLogger: @unchecked Sendable {
             plan: plan
         )
         
+        // Build structured policy tags for easy filtering/grepping
+        var policyTags: [String] = [
+            "policy=\(policySelection.executedPolicyId)",
+            "p=\(String(format: "%.4f", policySelection.executedActionProbability))",
+            "mode=\(policySelection.explorationMode.rawValue)"
+        ]
+        if let shadowId = policySelection.shadowPolicyId {
+            policyTags.append("shadow_policy=\(shadowId)")
+        }
+        if let shadowP = policySelection.shadowActionProbability {
+            policyTags.append("shadow_p=\(String(format: "%.4f", shadowP))")
+        }
+        
         let entry = DecisionLogEntry(
             sessionId: sessionId,
             exerciseId: exerciseId,
@@ -1067,7 +1117,13 @@ public final class TrainingDataLogger: @unchecked Sendable {
             action: action,
             policyChecks: policyChecks,
             counterfactuals: counterfactuals,
-            engineVersion: Self.engineVersion
+            executedPolicyId: policySelection.executedPolicyId,
+            executedActionProbability: policySelection.executedActionProbability,
+            explorationMode: policySelection.explorationMode.rawValue,
+            shadowPolicyId: policySelection.shadowPolicyId,
+            shadowActionProbability: policySelection.shadowActionProbability,
+            engineVersion: Self.engineVersion,
+            tags: policyTags
         )
         
         // Store pending entry for outcome linkage
@@ -1085,6 +1141,7 @@ public final class TrainingDataLogger: @unchecked Sendable {
         exerciseId: String,
         exerciseResult: ExerciseSessionResult,
         readinessScore: Int?,
+        executionContext: ExecutionContext = .normal,
         inSessionAdjustments: [InSessionAdjustmentLog] = []
     ) {
         guard isEnabled else { return }
@@ -1129,7 +1186,8 @@ public final class TrainingDataLogger: @unchecked Sendable {
             wasGrinder: wasGrinder,
             totalVolume: exerciseResult.totalVolume,
             inSessionAdjustments: inSessionAdjustments,
-            readinessScore: readinessScore
+            readinessScore: readinessScore,
+            executionContext: executionContext
         )
         
         // Find and update matching pending entry

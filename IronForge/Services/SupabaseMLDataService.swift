@@ -47,6 +47,10 @@ extension SupabaseService {
         TrainingDataLogger.shared.isEnabled = true
         TrainingDataLogger.shared.useMLDataCollector()
         
+        // CRITICAL: Treat explicit enable as user consent for data collection.
+        // Without this, MLDataCollector will silently drop all decisions/outcomes.
+        MLDataCollector.shared.hasUserConsent = true
+        
         // Set up upload handler
         TrainingDataLogger.shared.setMLUploadHandler { [weak self] record in
             try await self?.uploadMLDecisionRecord(record)
@@ -65,6 +69,7 @@ extension SupabaseService {
         Self.mlCollectionEnabled = false
         TrainingDataLogger.shared.isEnabled = false
         MLDataCollector.shared.isEnabled = false
+        MLDataCollector.shared.hasUserConsent = false
         print("[MLData] Collection disabled")
     }
     
