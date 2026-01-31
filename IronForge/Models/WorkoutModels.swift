@@ -1504,7 +1504,15 @@ struct WorkoutSet: Codable, Identifiable, Hashable {
     /// Compute outcome based on targets
     mutating func computeOutcome(targetReps: Int, targetRIR: Int) {
         metRepTarget = reps >= targetReps
-        metEffortTarget = rirObserved == nil || rirObserved! >= (targetRIR - 1)
+        
+        // IMPORTANT (ML label integrity):
+        // If effort (RIR) is missing, do NOT silently treat it as "met target".
+        // Leave the effort label as unknown so downstream reward/label code can handle it explicitly.
+        if let rir = rirObserved {
+            metEffortTarget = rir >= (targetRIR - 1)
+        } else {
+            metEffortTarget = nil
+        }
         
         setOutcome = SetOutcome.compute(
             repsAchieved: reps,

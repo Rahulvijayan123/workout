@@ -1190,7 +1190,7 @@ public final class TrainingDataLogger: @unchecked Sendable {
             executionContext: executionContext
         )
         
-        // Find and update matching pending entries.
+        // Find and update the matching pending entry.
         //
         // IMPORTANT: Do NOT call `logHandler` while holding the lock.
         // The handler may do work that calls back into the logger (or does IO), risking deadlocks
@@ -1199,11 +1199,31 @@ public final class TrainingDataLogger: @unchecked Sendable {
         
         lock.lock()
         // Avoid mutating the dictionary while iterating it (can trap at runtime).
-        let idsToUpdate: [UUID] = pendingEntries.compactMap { (id, entry) in
-            (entry.sessionId == sessionId && entry.exerciseId == exerciseId) ? id : nil
+        //
+        // IMPORTANT:
+        // - There may be multiple pending entries for the same (sessionId, exerciseId) if:
+        //   - the same exercise appears multiple times in a session, OR
+        //   - the caller replans using the same sessionId.
+        // - Updating ALL matches would double-count outcomes and can poison any downstream learner (e.g., a bandit).
+        //
+        // Strategy:
+        // - Prefer the most recent entry that has not yet had an outcome attached.
+        // - If all matches already have outcomes, update the most recent match (idempotent overwrite).
+        let candidates: [(id: UUID, entry: DecisionLogEntry)] = pendingEntries.compactMap { (id, entry) in
+            guard entry.sessionId == sessionId, entry.exerciseId == exerciseId else { return nil }
+            return (id: id, entry: entry)
         }
-        for id in idsToUpdate {
-            guard var entry = pendingEntries[id] else { continue }
+
+        let targetId: UUID? = {
+            if let bestPending = candidates
+                .filter({ $0.entry.outcome == nil })
+                .max(by: { $0.entry.timestamp < $1.entry.timestamp }) {
+                return bestPending.id
+            }
+            return candidates.max(by: { $0.entry.timestamp < $1.entry.timestamp })?.id
+        }()
+
+        if let id = targetId, var entry = pendingEntries[id] {
             entry.outcome = outcome
             pendingEntries[id] = entry
             toEmit.append(entry)
